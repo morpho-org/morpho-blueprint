@@ -6,6 +6,7 @@ import type { ApyWindow } from "@/config/types";
  * The `VaultV1LookbackPeriod` and `VaultV2LookbackPeriod` enums share these members.
  */
 const APY_LOOKBACK_PERIOD = {
+  "6h": "SIX_HOURS",
   "1d": "ONE_DAY",
   "7d": "SEVEN_DAYS",
   "30d": "THIRTY_DAYS",
@@ -28,6 +29,7 @@ export function rateLabel(base: string): string {
 }
 
 const APY_WINDOW_HOURS = {
+  "6h": 6,
   "1d": 24,
   "7d": 24 * 7,
   "30d": 24 * 30,
@@ -57,3 +59,13 @@ export const vaultV2HistoryLookbackHours = Math.min(
  */
 export const vaultV2HistoryApyWindow: ApyWindow =
   APY_WINDOW_HOURS[APP_CONFIG.apyWindow] > VAULT_V2_HISTORY_MAX_LOOKBACK_HOURS ? "1d" : APP_CONFIG.apyWindow;
+
+/**
+ * The window a plotted market borrow-APY series is *actually* smoothed over. Market history serves
+ * `daily`/`weekly`/`monthly` net borrow APY series only — there is no sub-daily one — so a `6h`
+ * deployment plots the daily series, and naming it `6h` would claim a smoothing the points do not
+ * have. Same honesty rule as `vaultV2HistoryApyWindow`, in the opposite direction: there the
+ * configured window is too long for the series, here it is too short.
+ */
+export const marketHistoryApyWindow: Exclude<ApyWindow, "6h"> =
+  APP_CONFIG.apyWindow === "6h" ? "1d" : APP_CONFIG.apyWindow;

@@ -10,8 +10,8 @@ import type { Erc4626VaultProtocol } from "./vault-protocol";
 // Used for type safety. SUPPORTED_CHAIN_IDS comes from ./index.ts and should contain all chain IDs your app supports
 export type SupportedChainId = (typeof SUPPORTED_CHAIN_IDS)[number];
 
-// Windows available for native apy smoothing (1 day, 7 days, 30 days)
-export type ApyWindow = "1d" | "7d" | "30d";
+// Windows available for native apy smoothing (6 hours, 1 day, 7 days, 30 days)
+export type ApyWindow = "6h" | "1d" | "7d" | "30d";
 
 export type VaultTag = (typeof VAULT_TAG_OPTIONS)[number];
 
@@ -116,6 +116,17 @@ export interface AppConfig {
 
   // Controls the apy window used for native apy metrics and charts (rewards remain instantanious).
   // Instantaneous APYs can be misleading, so we've opted to show windowed instead which is generlly more useful for users.
+  //
+  // Every window is served natively for headline (current state) numbers, on every protocol. Charts
+  // are where the windows differ, because the API serves per-point smoothing at a coarser
+  // granularity than it serves current-state averages:
+  //   - Vault V2 history caps each point's smoothing at 24h, so `7d` and `30d` plot a 24h-smoothed
+  //     line. The app relabels that series `1d` rather than claiming a smoothing it does not have,
+  //     which means a `7d`/`30d` deployment holding V2 vaults shows a headline and a chart under
+  //     two different window labels. Vault V1 history serves every window natively.
+  //   - Market history serves daily/weekly/monthly borrow APY series only, so `6h` plots the 1d
+  //     series (relabelled the same way).
+  // `1d` is the only window that plots at full fidelity everywhere, which is why it is the default.
   readonly apyWindow: ApyWindow;
 
   // Note the default value is false to preserve backwards compatibility when upgrading versions (new features are opt-in, i.e upgrading won't add any new features)

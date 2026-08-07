@@ -179,7 +179,7 @@ export const APP_CONFIG: AppConfig = {
     },
   },
 
-  apyWindow: "7d",
+  apyWindow: "1d",
 
   featureFlags: {
     enableDarkModeToggle: true,
