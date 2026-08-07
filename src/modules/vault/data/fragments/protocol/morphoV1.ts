@@ -96,10 +96,6 @@ graphql(`
       x
       y
     }
-    netApy(options: $options) {
-      x
-      y
-    }
     dailyNetApy(options: $options) {
       x
       y

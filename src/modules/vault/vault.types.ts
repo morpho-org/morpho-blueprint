@@ -106,10 +106,12 @@ export type VaultV2CollateralAllocation =
 /* -------------------------------------------------------------------------------------------- */
 
 /**
- * `netApy.total` is the net (post-fee, rewards-inclusive) APY over `APP_CONFIG.apyWindow`. The
- * window is a global config value rather than a per-entry dimension, so a single series is carried
- * and `rateLabel()` stamps the window on the chart label. Null where the upstream series has no
- * sample at the bucket — the chart connects across those gaps.
+ * `netApy.total` is the net (post-fee, rewards-inclusive) APY series fetched for
+ * `APP_CONFIG.apyWindow` — smoothed over that window where the API serves it, and over the nearest
+ * window it does serve otherwise (`vaultV1HistoryApyWindow` / `vaultV2HistoryApyWindow`). The
+ * window is a global config value rather than a per-entry dimension, so a single series is carried;
+ * the chart labels it with the configured window and discloses the plotted one when they differ.
+ * Null where the upstream series has no sample at the bucket — the chart connects across those gaps.
  */
 export interface VaultHistoricalEntry {
   bucketTimestamp: number;

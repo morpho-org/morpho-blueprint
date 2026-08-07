@@ -438,9 +438,10 @@ interface VaultHistorySeries {
   totalAssets: readonly { x: number; y: BigIntish | null }[];
   totalAssetsUsd: readonly DataPoint[];
   /**
-   * Net (post-fee, rewards-inclusive) APY series, keyed by the window it was requested for. A
-   * protocol that serves every window natively fills all four; one that fetches only the configured
-   * window fills that key alone.
+   * Net (post-fee, rewards-inclusive) APY series, filed under the configured window. Every protocol
+   * fills exactly that one key — whichever series it can actually serve for that window, which is
+   * not always smoothed over it (see `vaultV1HistoryApyWindow` / `vaultV2HistoryApyWindow`); the
+   * chart is what discloses the difference. The remaining keys are always absent.
    */
   netApy: Partial<Record<"6h" | "1d" | "7d" | "30d", readonly DataPoint[]>>;
 }

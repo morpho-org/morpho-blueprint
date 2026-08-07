@@ -241,16 +241,16 @@ async function MarketHistoricalApyChartWrapper({ chainId, marketId }: MarketIden
   }
 
   // The headline uses the configured window, which every protocol serves natively; the plotted
-  // series uses the coarsest window the market history actually carries. Those agree except on a
-  // `6h` deployment, where the history has no sub-daily series — same split, and same labelling
-  // rule, as the vault V2 chart: the label tracks the headline sitting against it, and the
+  // series uses the configured window floored at daily, since market history serves nothing
+  // averaged below that. Those agree except on a `6h` deployment — same split, and same labelling
+  // rule, as the vault charts: the label tracks the headline sitting against it, and the
   // description discloses the series window when it differs.
   const key = `borrowApy${marketHistoryApyWindow}` as const;
   const totalApy = extractMarketBorrowApy(market).total;
   const description =
     marketHistoryApyWindow === APP_CONFIG.apyWindow
       ? "Net borrow APY, including rewards."
-      : `Net borrow APY, including rewards. The headline is averaged over ${APP_CONFIG.apyWindow}; the plotted line is smoothed over ${marketHistoryApyWindow}, the shortest window the API serves for a market history point.`;
+      : `Net borrow APY, including rewards. The headline is averaged over ${APP_CONFIG.apyWindow}; the plotted line is smoothed over ${marketHistoryApyWindow}, the shortest averaged window the API serves for a market history point.`;
 
   // The API serves no realized borrow-APY averages (those are a vault concept), so no reference
   // line is drawn for any range.
