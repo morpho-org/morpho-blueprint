@@ -4,6 +4,8 @@ import type { MarketBorrowApyWindows } from "@/modules/market/market.types";
 
 export function extractMarketBorrowApy(market: MarketBorrowApyWindows): Apy {
   switch (APP_CONFIG.apyWindow) {
+    case "6h":
+      return market.borrowApy6h;
     case "1d":
       return market.borrowApy1d;
     case "7d":

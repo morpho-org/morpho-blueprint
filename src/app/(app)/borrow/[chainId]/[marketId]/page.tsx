@@ -9,7 +9,7 @@ import { Button } from "@/common/components/ui/button";
 import { Card, CardHeader } from "@/common/components/ui/card";
 import { Skeleton } from "@/common/components/ui/skeleton";
 import { DATA_RANGES, type DataRange } from "@/common/utils/chart-ranges";
-import { rateLabel } from "@/common/utils/timeframe";
+import { marketHistoryApyWindow, rateLabel } from "@/common/utils/timeframe";
 import { APP_CONFIG } from "@/config";
 import type { SupportedChainId } from "@/config/types";
 import { IrmChart } from "@/modules/market/components/IrmChart";
@@ -23,6 +23,7 @@ import { VaultAllocationTable } from "@/modules/market/components/VaultAllocatio
 import { getMarket, isNonIdleMarket } from "@/modules/market/data/getMarket";
 import { getSupportedMarketIds } from "@/modules/market/data/getSupportedMarketIds";
 import type { MarketIdentifier } from "@/modules/market/market.types";
+import { extractMarketBorrowApy } from "@/modules/market/utils/extractMarketBorrowApy";
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.metadata.name} | Market`,
@@ -239,22 +240,17 @@ async function MarketHistoricalApyChartWrapper({ chainId, marketId }: MarketIden
     return null;
   }
 
-  let key: "borrowApy1d" | "borrowApy7d" | "borrowApy30d";
-  let totalApy: number;
-  switch (APP_CONFIG.apyWindow) {
-    case "1d":
-      key = "borrowApy1d";
-      totalApy = market.borrowApy1d.total;
-      break;
-    case "7d":
-      key = "borrowApy7d";
-      totalApy = market.borrowApy7d.total;
-      break;
-    case "30d":
-      key = "borrowApy30d";
-      totalApy = market.borrowApy30d.total;
-      break;
-  }
+  // The headline uses the configured window, which every protocol serves natively; the plotted
+  // series uses the configured window floored at daily, since market history serves nothing
+  // averaged below that. Those agree except on a `6h` deployment — same split, and same labelling
+  // rule, as the vault charts: the label tracks the headline sitting against it, and the
+  // description discloses the series window when it differs.
+  const key = `borrowApy${marketHistoryApyWindow}` as const;
+  const totalApy = extractMarketBorrowApy(market).total;
+  const description =
+    marketHistoryApyWindow === APP_CONFIG.apyWindow
+      ? "Net borrow APY, including rewards."
+      : `Net borrow APY, including rewards. The headline is averaged over ${APP_CONFIG.apyWindow}; the plotted line is smoothed over ${marketHistoryApyWindow}, the shortest averaged window the API serves for a market history point.`;
 
   // The API serves no realized borrow-APY averages (those are a vault concept), so no reference
   // line is drawn for any range.
@@ -269,7 +265,7 @@ async function MarketHistoricalApyChartWrapper({ chainId, marketId }: MarketIden
         {
           type: "apy",
           key,
-          description: "Net borrow APY, including rewards.",
+          description,
           title: rateLabel("Net Borrow APY"),
           totalApy,
           averageApy,

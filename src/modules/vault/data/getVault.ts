@@ -4,7 +4,7 @@ import { cache } from "react";
 import type { Address } from "viem";
 import { HISTORY_RANGE_KEYS, type HistoryRange, historyOptions } from "@/common/data/adapters/timeseries";
 import { executeMorphoQuery } from "@/common/utils/executeMorphoQuery";
-import { apyLookbackPeriod, vaultV2HistoryLookbackHours } from "@/common/utils/timeframe";
+import { apyLookbackPeriod, vaultV1HistoryApyWindow, vaultV2HistoryLookbackHours } from "@/common/utils/timeframe";
 import { APP_CONFIG } from "@/config";
 import type { SupportedChainId } from "@/config/types";
 import { Erc4626VaultProtocol } from "@/config/vault-protocol";
@@ -100,17 +100,21 @@ export const getVault = cache(
       if (!vault) throw new Error(`Vault not found: ${chainId}:${vaultAddress}`);
 
       const decimals = Math.round(vault.asset.decimals);
-      // Vault V1 history serves every net APY window natively as its own series.
+      // Vault V1 history serves each *averaged* net APY window as its own series, from daily up.
+      // It has no sub-daily averaged series — the bare `netApy` is instantaneous — so a `6h`
+      // deployment plots the daily one (`vaultV1HistoryApyWindow`). Filed under the configured
+      // window like the V2 path below; the chart discloses the window actually plotted.
       const historical: VaultHistoricalData = buildHistoricalData(history, (series) =>
         toVaultHistoricalEntries(
           {
             totalAssets: series.totalAssets,
             totalAssetsUsd: series.totalAssetsUsd,
             netApy: {
-              "6h": series.netApy,
-              "1d": series.dailyNetApy,
-              "7d": series.weeklyNetApy,
-              "30d": series.monthlyNetApy,
+              [APP_CONFIG.apyWindow]: {
+                "1d": series.dailyNetApy,
+                "7d": series.weeklyNetApy,
+                "30d": series.monthlyNetApy,
+              }[vaultV1HistoryApyWindow],
             },
           },
           decimals,
