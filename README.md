@@ -45,6 +45,23 @@ Two things the API does not serve are sourced elsewhere:
 
 Every chain in `SUPPORTED_CHAIN_IDS` must be indexed by the configured API instance — the public endpoint rejects queries for chains it does not serve. You can check the served set with `{ chains { id network } }` against the endpoint.
 
+### REST runtime access check
+
+`GET /api/health-check/rest` makes one uncached, keyless server-side request to
+`https://api.morpho.org/v1/blue/markets?chain_id=1&limit=1`, with a five-second timeout.
+It returns HTTP 200 only when the public REST API returns a valid Ethereum market;
+upstream errors, invalid responses and timeouts return HTTP 503. The response includes
+the UTC check time, Vercel environment/commit, upstream status and request ID, but no
+market data or credentials. Both the probe response and upstream request bypass caches.
+
+Invoke this operator check once on each preview and production deployment and record
+the deployment URL/ID with its JSON response. Observe the public API's per-IP rate
+limits; this is not a load test or proof that the app has migrated off GraphQL.
+No new environment variables or API key are required. Existing `MORPHO_API_URL` and
+`MORPHO_API_KEY` remain GraphQL-only overrides and are not used by this probe.
+DevEx owns the Blueprint runtime; API/Platform own public API access and edge operations.
+The access contract and runbook links are recorded in [API-5436](https://linear.app/morpho-labs/issue/API-5436).
+
 ## Environment
 
 See [.env.example](.env.example) for the full list. Notes:
