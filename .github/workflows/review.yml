@@ -1,0 +1,45 @@
+name: Lupin
+
+on: # zizmor: ignore[dangerous-triggers] -- lupin.yml checks out trusted base code; PR content is inspected, not executed
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+    branches: [main]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  lupin:
+    # The shared workflow narrows this ceiling for each job; review is read-only.
+    permissions:
+      actions: write
+      contents: write
+      issues: write
+      pull-requests: write
+    uses: morpho-org/internal-tools/.github/workflows/lupin.yml@7809d05eff007e924d47fa65dd9c9a3074f8b509 # @morpho-org/review-cli@0.37.0
+    with:
+      runner-provider: github
+      lupin-version: 0.37.0
+      delivery: review
+      pr: ${{ inputs.pr }}
+    secrets:
+      LUPIN_APP_PRIVATE_KEY: ${{ secrets.LUPIN_APP_PRIVATE_KEY }}
+      AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      LUPIN_LINEAR_CLIENT_SECRET: ${{ secrets.LUPIN_LINEAR_CLIENT_SECRET }}
+      LUPIN_BETTERSTACK_API_TOKEN: ${{ secrets.LUPIN_BETTERSTACK_API_TOKEN }}
+      LUPIN_OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.LUPIN_OTEL_EXPORTER_OTLP_HEADERS }}
