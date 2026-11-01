@@ -52,7 +52,9 @@ Every chain in `SUPPORTED_CHAIN_IDS` must be indexed by the configured API insta
 It returns HTTP 200 only when the public REST API returns a valid Ethereum market;
 upstream errors, invalid responses and timeouts return HTTP 503. The response includes
 the UTC check time, Vercel environment/commit, upstream status and request ID, but no
-market data or credentials. Both the probe response and upstream request bypass caches.
+market data or credentials. The probe response is uncached and the request bypasses
+the Next.js data cache; a public API CDN hit still establishes runtime access, not
+origin availability or data freshness.
 
 Invoke this operator check once on each preview and production deployment and record
 the deployment URL/ID with its JSON response. Observe the public API's per-IP rate
