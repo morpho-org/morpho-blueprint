@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Automated reviewer:** Lupin through `.github/workflows/review.yml`, pinned to release 0.37.0. Request a review with a PR comment whose first line is exactly `/lupin review`, or dispatch `review.yml` with the PR number. Automatic review is controlled by the repository's `LUPIN_AUTO_REVIEW` variable; the caller does not enable it.
 - **Review criteria:** `.review/review.md` supplements the architecture below; shared Lupin defaults supply the review method. There is no legacy automated reviewer to retire.
-- **Bootstrap:** comment triggers and workflow dispatch require the caller on the default branch. An unmerged adoption PR does not enable them. Do not merge or mark a PR ready to work around a required pre-ready Lupin approval; record the activation blocker instead.
+- **Bootstrap:** comment triggers and workflow dispatch require the caller on the default branch. Initial installation needs a separately human-reviewed bootstrap PR and a one-time human merge; an unmerged caller cannot review feature PRs. Keep those PRs draft until installation and the required Lupin approval are verified.
 - **Access:** the Lupin App must have access to this repository and `morpho-org/internal-tools`; organization-level Actions secrets/variables are passed by reference, never committed. See the [integration documentation](https://github.com/morpho-org/internal-tools/blob/main/packages/review-cli/README.md#run-lupin-in-another-repository).
 
 ## Common Commands

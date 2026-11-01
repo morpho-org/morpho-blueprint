@@ -1,14 +1,4 @@
 {
   "version": 2,
-  "guidance": "review.md",
-  "routing": {
-    "pathRules": [
-      {
-        "id": "workflow-authority",
-        "paths": [".github/workflows/**"],
-        "minimumRisk": "high",
-        "minimumDepth": "thorough"
-      }
-    ]
-  }
+  "guidance": "review.md"
 }
