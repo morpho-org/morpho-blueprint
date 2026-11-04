@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { createPublicClient, fallback, getAddress, http } from "viem";
+import { createPublicClient, getAddress, http } from "viem";
 import { mainnet } from "viem/chains";
 import { redactError } from "@/common/utils/redactError";
 
@@ -25,21 +25,16 @@ const SANCTIONS_ORACLE_ABI = [
 // RPC_TIMEOUT_MS each, ~8s worst case.
 const RPC_TIMEOUT_MS = 4_000;
 
-// Read against the configured mainnet RPC URLs directly rather than through the app's
+// Read against the configured mainnet RPC URL directly rather than through the app's
 // /api/rpc/[chainId] proxy: the proxy requires an Origin header, so it rejects server-to-server
 // calls, and under the fail-closed semantics below that would block every transaction.
 function getMainnetTransport() {
-  const rpcUrls = [process.env.MAINNET_RPC_URL_1, process.env.MAINNET_RPC_URL_2].filter((url) => !!url);
-  if (rpcUrls.length === 0) {
+  const rpcUrl = process.env.MAINNET_RPC_URL_1;
+  if (!rpcUrl) {
     throw new Error("No mainnet RPC URL configured");
   }
-  // Spend the same two attempts either way: across both providers when two are configured, or on a
-  // retry of the only one when it is alone. Deployments that configure a single RPC URL would
-  // otherwise turn any transient blip into a blocked transaction, since this read fails closed.
-  return fallback(
-    rpcUrls.map((url) => http(url, { timeout: RPC_TIMEOUT_MS, retryCount: 0 })),
-    { retryCount: rpcUrls.length > 1 ? 0 : 1 },
-  );
+  // One retry: this read fails closed, so without it any transient blip would block a transaction.
+  return http(rpcUrl, { timeout: RPC_TIMEOUT_MS, retryCount: 1 });
 }
 
 /**

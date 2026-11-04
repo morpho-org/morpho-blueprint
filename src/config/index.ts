@@ -90,7 +90,7 @@ export const APP_CONFIG: AppConfig = {
   chainConfig: {
     [mainnet.id]: {
       chain: mainnet,
-      rpcUrls: [process.env.MAINNET_RPC_URL_1!, process.env.MAINNET_RPC_URL_2!],
+      rpcUrls: [process.env.MAINNET_RPC_URL_1!],
     },
     [base.id]: {
       chain: base,

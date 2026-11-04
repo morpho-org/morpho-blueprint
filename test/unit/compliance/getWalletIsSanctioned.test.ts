@@ -25,58 +25,37 @@ describe("getWalletIsSanctioned", () => {
 
   test("blocks an address flagged by the sanctions oracle", async ({ client }) => {
     vi.stubEnv("MAINNET_RPC_URL_1", client.transport.url);
-    vi.stubEnv("MAINNET_RPC_URL_2", "");
 
     await expect(getWalletIsSanctioned(SANCTIONED_ADDRESS)).resolves.toBe(true);
   });
 
   test("allows an address the sanctions oracle does not flag", async ({ client }) => {
     vi.stubEnv("MAINNET_RPC_URL_1", client.transport.url);
-    vi.stubEnv("MAINNET_RPC_URL_2", "");
 
     await expect(getWalletIsSanctioned(CLEAN_ADDRESS)).resolves.toBe(false);
   });
 
-  test("falls back to the second RPC URL when the first is unreachable", async ({ client }) => {
+  test("fails closed when the RPC URL is unreachable", async () => {
     vi.stubEnv("MAINNET_RPC_URL_1", UNREACHABLE_RPC_URL);
-    vi.stubEnv("MAINNET_RPC_URL_2", client.transport.url);
 
-    await expect(getWalletIsSanctioned(SANCTIONED_ADDRESS)).resolves.toBe(true);
-    await expect(getWalletIsSanctioned(CLEAN_ADDRESS)).resolves.toBe(false);
-  });
-
-  test("fails closed when every RPC URL is unreachable", async () => {
-    vi.stubEnv("MAINNET_RPC_URL_1", UNREACHABLE_RPC_URL);
-    vi.stubEnv("MAINNET_RPC_URL_2", UNREACHABLE_RPC_URL);
-
-    await expect(getWalletIsSanctioned(CLEAN_ADDRESS)).resolves.toBe(true);
-  });
-
-  test("fails closed when the only configured RPC URL is unreachable", async () => {
-    vi.stubEnv("MAINNET_RPC_URL_1", UNREACHABLE_RPC_URL);
-    vi.stubEnv("MAINNET_RPC_URL_2", "");
-
-    // Exercises the retry the transport adds when there is no second provider to fall back to.
+    // Exercises the transport's retry before it gives up.
     await expect(getWalletIsSanctioned(CLEAN_ADDRESS)).resolves.toBe(true);
   });
 
   test("fails closed when no RPC URL is configured", async () => {
     vi.stubEnv("MAINNET_RPC_URL_1", "");
-    vi.stubEnv("MAINNET_RPC_URL_2", "");
 
     await expect(getWalletIsSanctioned(CLEAN_ADDRESS)).resolves.toBe(true);
   });
 
   test("fails closed on a malformed address", async ({ client }) => {
     vi.stubEnv("MAINNET_RPC_URL_1", client.transport.url);
-    vi.stubEnv("MAINNET_RPC_URL_2", "");
 
     await expect(getWalletIsSanctioned("not-an-address")).resolves.toBe(true);
   });
 
   test("normalizes casing instead of failing closed on it", async ({ client }) => {
     vi.stubEnv("MAINNET_RPC_URL_1", client.transport.url);
-    vi.stubEnv("MAINNET_RPC_URL_2", "");
 
     // viem's getAddress re-checksums case-mangled input rather than throwing, so a clean address
     // in the wrong case is screened normally — not blocked as malformed.
