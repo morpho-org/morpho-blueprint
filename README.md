@@ -50,7 +50,7 @@ Every chain in `SUPPORTED_CHAIN_IDS` must be indexed by the configured API insta
 See [.env.example](.env.example) for the full list. Notes:
 
 -   `MORPHO_API_URL` / `MORPHO_API_KEY` are optional; without them the app uses the public keyless endpoint.
--   A mainnet RPC URL (`MAINNET_RPC_URL_1`, optionally `MAINNET_RPC_URL_2`) is **required for all deployments, even ones that don't serve mainnet vaults or markets**: the OFAC sanctions screening reads Chainalysis's on-chain oracle on mainnet and fails closed, so without a mainnet RPC every transaction flow is blocked.
+-   A mainnet RPC URL (`MAINNET_RPC_URL_1`) is **required for all deployments, even ones that don't serve mainnet vaults or markets**: the OFAC sanctions screening reads Chainalysis's on-chain oracle on mainnet and fails closed, so without a mainnet RPC every transaction flow is blocked.
 -   Each supported chain needs its RPC URLs (`<CHAIN>_RPC_URL_1`, optionally `<CHAIN>_RPC_URL_2`).
 
 ## Local Development
