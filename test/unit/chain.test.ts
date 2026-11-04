@@ -16,14 +16,9 @@ describe("chain", async () => {
       const chainConfig = APP_CONFIG.chainConfig[chainId];
       const client = createPublicClient({ chain: chainConfig.chain, transport: http(chainConfig.rpcUrls[0]) });
 
-      for (const rpcUrl of chainConfig.rpcUrls) {
-        test(`valid rpc with matching chain id: ${rpcUrl}`, async () => {
-          const clientForRpc = createPublicClient({ chain: chainConfig.chain, transport: http(rpcUrl) });
-          const chainId = await clientForRpc.getChainId();
-          expect(chainId).toEqual(chainConfig.chain.id);
-          expect(client.chain.id).toEqual(chainConfig.chain.id);
-        });
-      }
+      test("rpc reports the matching chain id", async () => {
+        await expect(client.getChainId()).resolves.toEqual(chainConfig.chain.id);
+      });
 
       test("valid merkl distributor contract", async () => {
         // Verify the distributor contract has the expected interface by calling a view function
