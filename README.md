@@ -36,6 +36,8 @@ Read-only data comes from Morpho's Core REST API through one server-only chokepo
 
 The public endpoints are keyless, so the app runs as-is with no data credential. To point a deployment at a dedicated API instance, set `MORPHO_REST_API_URL` and `MORPHO_API_KEY` (sent as an `x-api-key` header). `MORPHO_API_URL`, the former GraphQL endpoint, is still read as a fallback for the host when `MORPHO_REST_API_URL` is unset.
 
+The app does not call Morpho's GraphQL API. [no-graphql.test.ts](test/unit/no-graphql.test.ts) fails if a GraphQL endpoint, client, query, dependency or schema comes back.
+
 Two things the API does not serve are sourced elsewhere:
 
 -   Wallet ERC-20 balances are joined in server-side with a multicall `balanceOf` against the configured RPC URLs.
