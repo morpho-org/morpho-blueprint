@@ -1,11 +1,11 @@
-import { type Address, getAddress } from "viem";
+import { type Address, getAddress, zeroAddress } from "viem";
 import { toDecimals } from "@/common/data/adapters/amount";
 import type { ChainInfo, CuratorInfo, TokenInfo } from "@/common/data/types";
 import { capitalizeFirstLetter } from "@/common/utils/format";
 import { APP_CONFIG } from "@/config";
 
 /**
- * The GraphQL API exposes no chain icon, but the Morpho CDN hosts them under
+ * The Morpho API exposes no chain icon, but the Morpho CDN hosts them under
  * `/assets/chains/<slug>.<ext>`, keyed by a short name rather than the chain id or `Chain.network`.
  * Most assets are `.svg`; a few (Base, World Chain) exist only as `.png`, so a slug may carry an
  * explicit extension and defaults to `.svg` without one.
@@ -88,6 +88,15 @@ export function toChainInfo(chain: { id: number; network: string }): ChainInfo {
   };
 }
 
+/**
+ * Core REST carries only a chain id. The configured viem chain's name matches GraphQL's
+ * `Chain.network` for every chain the API serves (Ethereum, Base, Arbitrum One, World Chain, ...).
+ */
+export function toChainInfoById(chainId: number): ChainInfo {
+  const configured = Object.entries(APP_CONFIG.chainConfig).find(([id]) => Number(id) === chainId)?.[1];
+  return toChainInfo({ id: chainId, network: configured?.chain.name ?? `Chain ${chainId}` });
+}
+
 interface RawCurator {
   name: string;
   image: string | null;
@@ -103,4 +112,14 @@ export function toCuratorInfo(curator: RawCurator | null | undefined): CuratorIn
     image: curator.image ?? null,
     url: website?.url ?? null,
   };
+}
+
+/**
+ * A role address (curator, owner, guardian, fee recipient) as Core REST serves it: `null` when unset.
+ * REST serves the zero address for a role that was cleared on chain, which is no role either.
+ */
+export function toRoleAddress(value: string | null | undefined): Address | null {
+  if (!value) return null;
+  const address = getAddress(value);
+  return address === zeroAddress ? null : address;
 }

@@ -15,6 +15,7 @@ import type { SupportedChainId } from "@/config/types";
 import type { MarketNonIdle } from "@/modules/market/data/getMarket";
 import type { MarketPosition } from "@/modules/market/data/getMarketPositions";
 import { useMarketPosition } from "@/modules/market/hooks/useMarketPositions";
+import { capAvailableToBorrowByLiquidity } from "@/modules/market/utils/capAvailableToBorrowByLiquidity";
 import { computeMarketPositonChange } from "@/modules/market/utils/computeMarketPositionChange";
 import { computeMaxBorrow } from "@/modules/market/utils/computeMaxBorrow";
 import {
@@ -184,15 +185,22 @@ function useDerivedFormValues({
 
   const maxBorrowable = useMemo(() => {
     const maxBorrowAmount = computeMaxBorrow(market, supplyCollateralAmount, position);
-    return MathLib.max(maxBorrowAmount - BigInt(position?.borrowAmount?.raw ?? 0), 0n);
+    const healthyMax = MathLib.max(maxBorrowAmount - BigInt(position?.borrowAmount?.raw ?? 0), 0n);
+    // Also bounded by what the borrow can reach: the market's liquidity plus Public Allocator V1.
+    return MathLib.min(healthyMax, BigInt(market.availableToBorrow.raw));
   }, [position, market, supplyCollateralAmount]);
 
   const positionChange = useMemo(() => {
-    return computeMarketPositonChange({
-      market,
-      currentPosition: position,
-      collateralAmountChange: supplyCollateralAmount,
-      loanAmountChange: borrowAmount,
+    // The summary's "Available to borrow" matches the borrow input's cap: bounded by what the market can still lend.
+    return capAvailableToBorrowByLiquidity({
+      positionChange: computeMarketPositonChange({
+        market,
+        currentPosition: position,
+        collateralAmountChange: supplyCollateralAmount,
+        loanAmountChange: borrowAmount,
+      }),
+      marketAvailableToBorrow: BigInt(market.availableToBorrow.raw),
+      borrowAmount,
     });
   }, [market, position, supplyCollateralAmount, borrowAmount]);
 

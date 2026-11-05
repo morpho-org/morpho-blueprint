@@ -43,6 +43,15 @@ export function createMarketSupplyCollateralAndBorrowFormSchema(market: MarketNo
           message: "Causes unhealthy position.",
         });
       }
+
+      // The market's liquidity plus what the borrow can reallocate in: above it the simulation reverts.
+      if (data.borrowAmount > BigInt(market.availableToBorrow.raw)) {
+        ctx.addIssue({
+          path: ["borrowAmount"],
+          code: "custom",
+          message: "Amount exceeds available liquidity.",
+        });
+      }
     });
 }
 

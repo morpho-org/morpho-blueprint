@@ -1,433 +1,223 @@
-import { formatUnits, getAddress, zeroAddress } from "viem";
-import { descale, toAmount, toBigInt, toRatio } from "@/common/data/adapters/amount";
-import { assembleApy, toApyAverages, toRewardApys } from "@/common/data/adapters/apy";
-import { toChainInfo, toCuratorInfo, toTokenInfo } from "@/common/data/adapters/entity";
-import { warnIfTruncated } from "@/common/data/adapters/pagination";
+import { formatUnits, getAddress, type Hex } from "viem";
+import { descale, toAmount, toAmountWithPrice, toBigInt } from "@/common/data/adapters/amount";
+import { assembleApyWithRewards } from "@/common/data/adapters/apy";
+import { toChainInfoById, toTokenInfo } from "@/common/data/adapters/entity";
 import { type DataPoint, descaleSeries, zipTimeseries } from "@/common/data/adapters/timeseries";
-import type { ChainInfo } from "@/common/data/types";
+import type { RestToken } from "@/common/data/rest/tokens";
+import type { ChainInfo, CuratorInfo, RewardApy, TokenInfo } from "@/common/data/types";
 import { numberToString } from "@/common/utils/format";
 import { APP_CONFIG } from "@/config";
-import type {
-  MorphoVaultV1CollateralFragmentFragment,
-  MorphoVaultV1DetailsFragmentFragment,
-  MorphoVaultV1SummaryFragmentFragment,
-  MorphoVaultV2CollateralFragmentFragment,
-  MorphoVaultV2DetailsFragmentFragment,
-  MorphoVaultV2SummaryFragmentFragment,
-  UnderlyingMorphoVaultV1FragmentFragment,
-  VaultAllocationFragmentFragment,
-  VaultCollateralAllocationFragmentFragment,
-} from "@/generated/gql/morpho/graphql";
-import { toMarketInfo } from "@/modules/market/data/adapters";
+import type { MarketInfo } from "@/modules/market/market.types";
 import type {
   MorphoVaultV1,
   MorphoVaultV1Summary,
   MorphoVaultV2,
   MorphoVaultV2Summary,
-  UnderlyingMorphoVaultV1,
   VaultCollateralAllocation,
   VaultHistoricalEntry,
   VaultMarketAllocation,
-  VaultV2AdapterCap,
-  VaultV2Allocation,
-  VaultV2CollateralAllocation,
-  VaultV2MarketCap,
 } from "@/modules/vault/vault.types";
 import type { BigIntish } from "@/morpho-types";
-import { matchVaultV2Adapter } from "./matchVaultV2Adapter";
+import type { VaultV1Details } from "./getVaultV1Details";
+import type { VaultV2Details } from "./getVaultV2Details";
 
 /**
  * The shape an adapter produces, before `normalizeVault` applies the vault config: `isHidden` is
  * not known yet and the chain id has not been narrowed to a configured chain.
  */
-type Adapted<T> = Omit<T, "isHidden" | "chain"> & { chain: ChainInfo };
-
-function priceOf(asset: { price?: { usd: number } | null }): number | null {
-  return asset.price?.usd ?? null;
-}
+export type Adapted<T> = Omit<T, "isHidden" | "chain"> & { chain: ChainInfo };
 
 function usdOf(raw: BigIntish | null | undefined, decimals: number, priceUsd: number | null): number | null {
   return priceUsd == null ? null : descale(raw, decimals) * priceUsd;
-}
-
-function share(part: BigIntish | null | undefined, whole: BigIntish | null | undefined, decimals: number): number {
-  const total = descale(whole, decimals);
-  return total > 0 ? descale(part, decimals) / total : 0;
 }
 
 /* -------------------------------------------------------------------------------------------- */
 /* Vault V1 allocations                                                                           */
 /* -------------------------------------------------------------------------------------------- */
 
-export function toVaultMarketAllocations(
-  allocations: readonly VaultAllocationFragmentFragment[],
-  vaultTotalAssets: BigIntish | null | undefined,
-  assetDecimals: number,
-): VaultMarketAllocation[] {
-  return allocations.map((allocation) => ({
-    // Whisk exposed `enabled` directly; a non-zero supply cap is the equivalent condition.
-    enabled: toBigInt(allocation.supplyCap) > 0n,
-    vaultSupplyShare: share(allocation.supplyAssets, vaultTotalAssets, assetDecimals),
-    position: {
-      supplyAmount: toAmount(allocation.supplyAssets, assetDecimals, allocation.supplyAssetsUsd),
-      supplyShares: toBigInt(allocation.supplyShares).toString(),
-    },
-    supplyCap: toAmount(allocation.supplyCap, assetDecimals, allocation.supplyCapUsd),
-    market: toMarketInfo(allocation.market),
-  }));
+/** One row of Core REST's `/v0/vaults-v1/{vault}/allocations`. */
+export interface RestVaultV1Allocation {
+  market_id: Hex;
+  supply_assets: string;
+  supply_shares: string;
+  supply_cap: string;
+  /** Null when the market is not in the withdraw queue (only a pending cap or removal ties it to the vault). */
+  withdraw_queue_index?: number | null;
 }
 
-function toVaultCollateralAllocations(
-  allocations: readonly VaultCollateralAllocationFragmentFragment[],
-  vaultTotalAssets: BigIntish | null | undefined,
-  assetDecimals: number,
+/**
+ * The allocations in the withdraw queue, in queue order, as GraphQL listed them: REST also serves
+ * markets tied to the vault only by a pending cap or removal.
+ */
+export function withdrawQueueAllocations<T extends RestVaultV1Allocation>(rows: readonly T[]): T[] {
+  return rows
+    .flatMap((row) => (row.withdraw_queue_index == null ? [] : [{ row, index: row.withdraw_queue_index }]))
+    .sort((a, b) => a.index - b.index)
+    .map(({ row }) => row);
+}
+
+/**
+ * A vault V1's market allocations, each priced at the vault asset's price. `totalRaw` is the vault
+ * total each share is taken of. A market missing from `markets` (REST could not describe it) is left
+ * out.
+ */
+export function toRestVaultMarketAllocations(
+  rows: readonly RestVaultV1Allocation[],
+  markets: ReadonlyMap<string, MarketInfo>,
+  decimals: number,
+  priceUsd: number | null,
+  totalRaw: bigint,
+): VaultMarketAllocation[] {
+  const total = Number(formatUnits(totalRaw, decimals));
+  return rows.flatMap((row): VaultMarketAllocation[] => {
+    const market = markets.get(row.market_id.toLowerCase());
+    if (!market) return [];
+    const supply = toAmountWithPrice(row.supply_assets, decimals, priceUsd);
+    return [
+      {
+        // A non-zero supply cap is what makes a market enabled.
+        enabled: toBigInt(row.supply_cap) > 0n,
+        vaultSupplyShare: total > 0 ? Number(supply.formatted) / total : 0,
+        position: { supplyAmount: supply, supplyShares: toBigInt(row.supply_shares).toString() },
+        supplyCap: toAmountWithPrice(row.supply_cap, decimals, priceUsd),
+        market,
+      },
+    ];
+  });
+}
+
+/** The trimmed rows the earn-table exposure tooltip reads, from the same allocations. */
+export function toRestVaultCollateralAllocations(
+  rows: readonly RestVaultV1Allocation[],
+  collateralByMarket: ReadonlyMap<string, TokenInfo | null>,
+  decimals: number,
+  priceUsd: number | null,
+  totalRaw: BigIntish,
 ): VaultCollateralAllocation[] {
-  return allocations.map((allocation) => ({
-    enabled: toBigInt(allocation.supplyCap) > 0n,
-    vaultSupplyShare: share(allocation.supplyAssets, vaultTotalAssets, assetDecimals),
-    position: { supplyAmount: { usd: allocation.supplyAssetsUsd ?? null } },
-    market: {
-      collateralAsset: allocation.market.collateralAsset
-        ? {
-            icon: allocation.market.collateralAsset.logoURI ?? null,
-            name: allocation.market.collateralAsset.name,
-            symbol: allocation.market.collateralAsset.symbol,
-          }
-        : null,
+  const total = descale(totalRaw, decimals);
+  return rows.flatMap((row): VaultCollateralAllocation[] => {
+    const key = row.market_id.toLowerCase();
+    // A market REST could not describe is left out rather than shown as idle.
+    if (!collateralByMarket.has(key)) return [];
+    const collateral = collateralByMarket.get(key) ?? null;
+    return [
+      {
+        enabled: toBigInt(row.supply_cap) > 0n,
+        vaultSupplyShare: total > 0 ? descale(row.supply_assets, decimals) / total : 0,
+        position: { supplyAmount: { usd: usdOf(row.supply_assets, decimals, priceUsd) } },
+        market: {
+          collateralAsset: collateral && { icon: collateral.icon, name: collateral.name, symbol: collateral.symbol },
+        },
+      },
+    ];
+  });
+}
+
+/* -------------------------------------------------------------------------------------------- */
+/* Vault summaries (both protocols)                                                               */
+/* -------------------------------------------------------------------------------------------- */
+
+/** Core REST's reads behind one vault summary, joined by `getVaultSummaries`. */
+export interface RestVaultSummarySource {
+  chainId: number;
+  /** `/v0/vaults-v{1,2}/{vault}`. Core REST serves the names and symbols as nullable. */
+  root: {
+    address: string;
+    name: string | null;
+    asset: { address: string; name: string | null; symbol: string | null };
+  };
+  /** Already checked to be a uint8. */
+  decimals: number;
+  /** The `state` route's total, accrued as of the last indexed block. */
+  totalAssets: string;
+  /** The `apy-averages` route over `APP_CONFIG.apyWindow`, net of fees, no rewards. */
+  apy: number | null;
+  /** Current Merkl reward APRs, one per token; empty when Merkl is down. */
+  rewards: RewardApy[];
+  token: RestToken | null;
+  priceUsd: number | null;
+  curator: CuratorInfo | null;
+  description: string | null;
+}
+
+type RestVaultSummaryBase = Omit<Adapted<MorphoVaultV2Summary>, "__typename" | "allocations">;
+
+/**
+ * The fields both protocols' summaries share. `total` is the native APY plus the current Merkl
+ * reward APRs. Curator AUM is set afterwards from one batched Blueprint API read for every summary
+ * (`getVaultSummaries`).
+ */
+function toRestVaultSummaryBase(source: RestVaultSummarySource): RestVaultSummaryBase {
+  const { root, token, decimals, priceUsd } = source;
+  // The earn page calls string methods on these: a null would fail the whole page, not one row.
+  const assetName = token?.name ?? root.asset.name;
+  const assetSymbol = token?.symbol ?? root.asset.symbol ?? assetName ?? "UNKNOWN";
+  return {
+    chain: toChainInfoById(source.chainId),
+    vaultAddress: getAddress(root.address),
+    name: root.name ?? getAddress(root.address),
+    asset: {
+      ...toTokenInfo({
+        address: root.asset.address,
+        name: assetName ?? assetSymbol,
+        symbol: assetSymbol,
+        decimals,
+        logoURI: token?.logo_uri ?? null,
+        tags: token?.tags,
+      }),
+      priceUsd,
     },
-  }));
+    totalAssets: toAmount(source.totalAssets, decimals, usdOf(source.totalAssets, decimals, priceUsd)),
+    apy: assembleApyWithRewards(source.apy, source.rewards),
+    metadata: { description: source.description, curator: source.curator },
+    curatorAum: undefined,
+  };
 }
 
 /* -------------------------------------------------------------------------------------------- */
 /* Vault V1                                                                                       */
 /* -------------------------------------------------------------------------------------------- */
 
-type MorphoVaultV1Base = Omit<Adapted<MorphoVaultV1Summary>, "marketAllocations">;
-
-function toMorphoVaultV1Base(vault: MorphoVaultV1SummaryFragmentFragment): MorphoVaultV1Base {
-  const asset = toTokenInfo(vault.asset);
-  const state = vault.state;
-  const curator = state?.curators?.[0];
-
-  return {
-    __typename: "MorphoVault",
-    chain: toChainInfo(vault.chain),
-    vaultAddress: getAddress(vault.address),
-    name: vault.name,
-    asset: { ...asset, priceUsd: priceOf(vault.asset) },
-    totalAssets: toAmount(state?.totalAssets, asset.decimals, state?.totalAssetsUsd),
-    apy: assembleApy({
-      netApy: state?.avgNetApy,
-      apyExcludingRewards: state?.avgNetApyExcludingRewards,
-      rewards: toRewardApys(state?.allRewards, "supply"),
-    }),
-    metadata: {
-      description: vault.metadata?.description ?? null,
-      curator: toCuratorInfo(curator),
-    },
-    // Native `Curator.state.aum`, replacing the previous name-matched join against a second query.
-    curatorAum: curator?.state?.aum,
-  };
-}
-
-export function toMorphoVaultV1Summary(
-  vault: MorphoVaultV1SummaryFragmentFragment & MorphoVaultV1CollateralFragmentFragment,
+/** `marketAllocations` feeds the exposure tooltip; the vault page reads none and passes `[]`. */
+export function toRestVaultV1Summary(
+  source: RestVaultSummarySource,
+  marketAllocations: VaultCollateralAllocation[],
 ): Adapted<MorphoVaultV1Summary> {
-  const decimals = Math.round(vault.asset.decimals);
-  return {
-    ...toMorphoVaultV1Base(vault),
-    marketAllocations: toVaultCollateralAllocations(vault.state?.allocation ?? [], vault.state?.totalAssets, decimals),
-  };
+  return { __typename: "MorphoVault", ...toRestVaultSummaryBase(source), marketAllocations };
 }
 
+/**
+ * The vault page's vault V1: the header fields from the REST summary, every detail field (fees,
+ * roles, allocations, liquidity, APY averages) from `getVaultV1Details`, which wins.
+ */
 export function toMorphoVaultV1Details(
-  vault: MorphoVaultV1SummaryFragmentFragment & MorphoVaultV1DetailsFragmentFragment,
+  summary: Adapted<MorphoVaultV1Summary>,
+  details: VaultV1Details,
 ): Adapted<Omit<MorphoVaultV1, "historical">> {
-  const decimals = Math.round(vault.asset.decimals);
-  const state = vault.state;
-
-  return {
-    ...toMorphoVaultV1Base(vault),
-    marketAllocations: toVaultMarketAllocations(state?.allocation ?? [], state?.totalAssets, decimals),
-    totalLiquidity: { usd: vault.liquidity?.usd ?? null },
-    apyAverages: toApyAverages(state),
-    performanceFeeRaw: state?.fee ?? 0,
-    feeRecipientAddress: state?.feeRecipient ? getAddress(state.feeRecipient) : null,
-    ownerAddress: getAddress(state?.owner ?? zeroAddress),
-    curatorAddress: getAddress(state?.curator ?? zeroAddress),
-    guardianAddress: getAddress(state?.guardian ?? zeroAddress),
-  };
-}
-
-export function toUnderlyingMorphoVaultV1(vault: UnderlyingMorphoVaultV1FragmentFragment): UnderlyingMorphoVaultV1 {
-  const asset = toTokenInfo(vault.asset);
-  const state = vault.state;
-
-  return {
-    __typename: "MorphoVault",
-    vaultAddress: getAddress(vault.address),
-    name: vault.name,
-    chain: toChainInfo(vault.chain),
-    asset,
-    apy: assembleApy({
-      netApy: state?.avgNetApy,
-      apyExcludingRewards: state?.avgNetApyExcludingRewards,
-      rewards: toRewardApys(state?.allRewards, "supply"),
-    }),
-    totalAssets: toAmount(state?.totalAssets, asset.decimals, state?.totalAssetsUsd),
-    marketAllocations: toVaultMarketAllocations(state?.allocation ?? [], state?.totalAssets, asset.decimals),
-  };
+  return { ...summary, ...details };
 }
 
 /* -------------------------------------------------------------------------------------------- */
 /* Vault V2                                                                                       */
 /* -------------------------------------------------------------------------------------------- */
 
-type RawV2Cap = NonNullable<MorphoVaultV2DetailsFragmentFragment["caps"]["items"]>[number];
-
-function toAdapterCap(
-  cap: RawV2Cap | undefined,
-  adapter: { assets: BigIntish; assetsUsd?: number | null },
-  decimals: number,
-  priceUsd: number | null,
-): VaultV2AdapterCap {
-  if (!cap) {
-    // Defensive: every adapter should carry an `Adapter` cap. Fall back to the adapter's own
-    // assets so the allocation column still renders, with no cap information.
-    return {
-      allocation: toAmount(adapter.assets, decimals, adapter.assetsUsd ?? null),
-      relativeCap: toRatio(0),
-      absoluteCap: toAmount(0, decimals, null),
-    };
-  }
-  return {
-    // `cap.allocation` is only refreshed on (de)allocation while `adapter.assets` includes
-    // virtually accrued interest, so the adapter is the current value; the cap only supplies limits.
-    allocation: toAmount(adapter.assets, decimals, adapter.assetsUsd ?? usdOf(adapter.assets, decimals, priceUsd)),
-    // `relativeCap` is WAD-scaled, so `formatted` is the [0, 1] fraction the UI renders as a percent.
-    relativeCap: toRatio(cap.relativeCap),
-    absoluteCap: toAmount(cap.absoluteCap, decimals, usdOf(cap.absoluteCap, decimals, priceUsd)),
-  };
-}
-
-type RawV2MarketPosition = NonNullable<
-  Extract<
-    NonNullable<MorphoVaultV2DetailsFragmentFragment["adapters"]["items"]>[number],
-    { __typename: "MorphoMarketV1Adapter" }
-  >["positions"]["items"]
->[number];
-
-function toMarketCaps(
-  caps: readonly RawV2Cap[],
-  positionByMarketId: ReadonlyMap<string, RawV2MarketPosition>,
-  decimals: number,
-  priceUsd: number | null,
-): VaultV2MarketCap[] {
-  return caps.flatMap((cap): VaultV2MarketCap[] => {
-    const market = cap.data?.__typename === "MarketV1CapData" ? cap.data.market : null;
-    if (!market) return [];
-    // `cap.allocation` is only refreshed on (de)allocation, while the adapter's position on the
-    // market accrues interest and losses — prefer the position for the current amount and keep the
-    // cap only for limits (and as a fallback while the position is not indexed yet).
-    const position = positionByMarketId.get(market.marketId)?.state;
-    const allocation = position?.supplyAssets ?? cap.allocation;
-    // A curator can leave a cap configured on a market the vault has not allocated to. Whisk
-    // omitted those, and the allocation breakdown table renders every row it is given, so drop
-    // them here to keep the table showing only markets the vault is actually in.
-    if (toBigInt(allocation) === 0n) return [];
-    return [
-      {
-        allocation: toAmount(allocation, decimals, position?.supplyAssetsUsd ?? usdOf(allocation, decimals, priceUsd)),
-        absoluteCap: toAmount(cap.absoluteCap, decimals, usdOf(cap.absoluteCap, decimals, priceUsd)),
-        relativeCap: toRatio(cap.relativeCap),
-        market: toMarketInfo(market),
-      },
-    ];
-  });
+/**
+ * The exposure tooltip only expands MetaMorpho adapters, which REST summaries do not read, so
+ * `allocations` is empty.
+ */
+export function toRestVaultV2Summary(source: RestVaultSummarySource): Adapted<MorphoVaultV2Summary> {
+  return { __typename: "MorphoVaultV2", ...toRestVaultSummaryBase(source), allocations: [] };
 }
 
 /**
- * Whisk served one `allocations[]` list with an inline `adapterCap`; Morpho splits it into an
- * `adapters` list and a `caps` list. This joins them back on the cap's `adapterAddress`, filtering
- * cap types client-side (the paginated `caps` field takes no type argument).
+ * The vault page's vault V2: the header fields from the REST summary, every detail field (fees,
+ * roles, breakdown, APY averages, the accrued total) from `getVaultV2Details`, which wins.
  */
-function joinVaultV2Allocations(
-  vault: MorphoVaultV2DetailsFragmentFragment,
-  decimals: number,
-  priceUsd: number | null,
-): VaultV2Allocation[] {
-  const caps = vault.caps.items ?? [];
-  warnIfTruncated("vault V2 caps", vault.caps.pageInfo);
-  warnIfTruncated("vault V2 adapters", vault.adapters.pageInfo);
-
-  const adapterCapByAddress = new Map<string, RawV2Cap>();
-  const marketCapsByAdapter = new Map<string, RawV2Cap[]>();
-
-  for (const cap of caps) {
-    const data = cap.data;
-    if (cap.type === "Adapter" && data?.__typename === "AdapterCapData") {
-      adapterCapByAddress.set(data.adapterAddress.toLowerCase(), cap);
-    } else if (cap.type === "MarketV1" && data?.__typename === "MarketV1CapData") {
-      const key = data.adapterAddress.toLowerCase();
-      marketCapsByAdapter.set(key, [...(marketCapsByAdapter.get(key) ?? []), cap]);
-    }
-  }
-
-  return (vault.adapters.items ?? []).map((adapter): VaultV2Allocation => {
-    const key = adapter.address.toLowerCase();
-    const base = {
-      adapterAddress: getAddress(adapter.address),
-      adapterCap: toAdapterCap(adapterCapByAddress.get(key), adapter, decimals, priceUsd),
-    };
-
-    return matchVaultV2Adapter<typeof adapter, VaultV2Allocation>(adapter, {
-      metaMorpho: (metaMorphoAdapter) => {
-        const underlying = toUnderlyingMorphoVaultV1(metaMorphoAdapter.metaMorpho);
-        return { ...base, __typename: "Erc4626VaultAdapter", name: underlying.name, vault: underlying };
-      },
-      marketV1: (marketAdapter) => {
-        warnIfTruncated("vault V2 adapter positions", marketAdapter.positions.pageInfo);
-        const positionByMarketId = new Map(
-          (marketAdapter.positions.items ?? []).map((position) => [position.market.marketId, position]),
-        );
-        return {
-          ...base,
-          __typename: "MarketV1Adapter",
-          name: "Morpho Market Adapter",
-          marketCaps: toMarketCaps(marketCapsByAdapter.get(key) ?? [], positionByMarketId, decimals, priceUsd),
-        };
-      },
-      // The API exposes no handle on the underlying vault V2, so there is no breakdown to expand.
-      // Rendered as an adapter row with no nested allocations.
-      vaultV2: () => ({ ...base, __typename: "Erc4626VaultAdapter", name: "Morpho Vault V2 Adapter", vault: null }),
-      // Same shape as the vault V2 row: an adapter the app cannot expand still holds assets, so it
-      // belongs in the breakdown rather than vanishing from a table whose shares should total 100%.
-      unknown: () => ({ ...base, __typename: "Erc4626VaultAdapter", name: "Vault Adapter", vault: null }),
-    });
-  });
-}
-
-function toVaultV2CollateralAllocations(
-  vault: MorphoVaultV2CollateralFragmentFragment,
-  decimals: number,
-): VaultV2CollateralAllocation[] {
-  warnIfTruncated("vault V2 adapters", vault.adapters.pageInfo);
-
-  return (vault.adapters.items ?? []).map((adapter): VaultV2CollateralAllocation => {
-    const adapterCap = { allocation: { formatted: formatUnits(toBigInt(adapter.assets), decimals) } };
-
-    return matchVaultV2Adapter<typeof adapter, VaultV2CollateralAllocation>(adapter, {
-      metaMorpho: (metaMorphoAdapter) => {
-        const state = metaMorphoAdapter.metaMorpho.state;
-        const underlyingDecimals = Math.round(metaMorphoAdapter.metaMorpho.asset.decimals);
-
-        return {
-          __typename: "Erc4626VaultAdapter",
-          adapterCap,
-          vault: {
-            __typename: "MorphoVault",
-            totalAssets: { formatted: formatUnits(toBigInt(state?.totalAssets), underlyingDecimals) },
-            marketAllocations: toVaultCollateralAllocations(
-              state?.allocation ?? [],
-              state?.totalAssets,
-              underlyingDecimals,
-            ),
-          },
-        };
-      },
-      marketV1: () => ({ __typename: "MarketV1Adapter", adapterCap }),
-      // Same classification as the detail path: no handle on the underlying vault V2, so the row
-      // carries no nested allocations.
-      vaultV2: () => ({ __typename: "Erc4626VaultAdapter", adapterCap, vault: null }),
-      unknown: () => ({ __typename: "Erc4626VaultAdapter", adapterCap, vault: null }),
-    });
-  });
-}
-
-type MorphoVaultV2Base = Omit<Adapted<MorphoVaultV2Summary>, "allocations">;
-
-function toMorphoVaultV2Base(vault: MorphoVaultV2SummaryFragmentFragment): MorphoVaultV2Base {
-  const asset = toTokenInfo(vault.asset);
-  const curator = vault.curators.items?.[0];
-
-  return {
-    __typename: "MorphoVaultV2",
-    chain: toChainInfo(vault.chain),
-    vaultAddress: getAddress(vault.address),
-    name: vault.name,
-    asset: { ...asset, priceUsd: priceOf(vault.asset) },
-    totalAssets: toAmount(vault.totalAssets, asset.decimals, vault.totalAssetsUsd),
-    apy: assembleApy({
-      netApy: vault.avgNetApy,
-      apyExcludingRewards: vault.avgNetApyExcludingRewards,
-      rewards: toRewardApys(vault.rewards, "supply"),
-    }),
-    metadata: {
-      description: vault.metadata?.description ?? null,
-      curator: toCuratorInfo(curator),
-    },
-    curatorAum: curator?.state?.aum,
-  };
-}
-
-export function toMorphoVaultV2Summary(
-  vault: MorphoVaultV2SummaryFragmentFragment & MorphoVaultV2CollateralFragmentFragment,
-): Adapted<MorphoVaultV2Summary> {
-  const decimals = Math.round(vault.asset.decimals);
-  return {
-    ...toMorphoVaultV2Base(vault),
-    totalAssets: currentV2TotalAssets(vault, decimals, priceOf(vault.asset)),
-    allocations: toVaultV2CollateralAllocations(vault, decimals),
-  };
-}
-
-/**
- * `VaultV2.totalAssets` is not virtually accrued, while the adapter assets are — dividing one by
- * the other makes the breakdown percentages drift after accrual. When the adapter page is complete
- * the current total is the accrued adapter assets plus the vault's idle assets; on a truncated
- * page the sum would undercount, so the API total is kept instead.
- */
-function currentV2TotalAssets(
-  vault: {
-    adapters: {
-      pageInfo?: { count: number; countTotal: number } | null;
-      items?: readonly { assets: BigIntish }[] | null;
-    };
-    idleAssets: BigIntish;
-    totalAssets?: BigIntish | null;
-    totalAssetsUsd?: number | null;
-  },
-  decimals: number,
-  priceUsd: number | null,
-) {
-  const pageInfo = vault.adapters.pageInfo;
-  if (!pageInfo || pageInfo.countTotal > pageInfo.count) {
-    return toAmount(vault.totalAssets, decimals, vault.totalAssetsUsd);
-  }
-  const raw = (vault.adapters.items ?? []).reduce(
-    (acc, adapter) => acc + toBigInt(adapter.assets),
-    toBigInt(vault.idleAssets),
-  );
-  return toAmount(raw, decimals, usdOf(raw, decimals, priceUsd) ?? vault.totalAssetsUsd);
-}
-
 export function toMorphoVaultV2Details(
-  vault: MorphoVaultV2SummaryFragmentFragment & MorphoVaultV2DetailsFragmentFragment,
+  summary: Adapted<MorphoVaultV2Summary>,
+  details: VaultV2Details,
 ): Adapted<Omit<MorphoVaultV2, "historical">> {
-  const decimals = Math.round(vault.asset.decimals);
-  const priceUsd = priceOf(vault.asset);
-
-  return {
-    ...toMorphoVaultV2Base(vault),
-    totalAssets: currentV2TotalAssets(vault, decimals, priceUsd),
-    apyAverages: toApyAverages(vault),
-    allocations: joinVaultV2Allocations(vault, decimals, priceUsd),
-    curatorAddress: getAddress(vault.curator.address),
-    sentinelAddresses: vault.sentinels.map((entry) => getAddress(entry.sentinel.address)),
-    // Unitless fractions; the UI formats them as percentages.
-    performanceFee: { formatted: String(vault.performanceFee) },
-    managementFee: { formatted: String(vault.managementFee) },
-  };
+  return { ...summary, ...details };
 }
 
 /* -------------------------------------------------------------------------------------------- */
@@ -438,10 +228,9 @@ interface VaultHistorySeries {
   totalAssets: readonly { x: number; y: BigIntish | null }[];
   totalAssetsUsd: readonly DataPoint[];
   /**
-   * Net (post-fee, rewards-inclusive) APY series, filed under the configured window. Every protocol
-   * fills exactly that one key — whichever series it can actually serve for that window, which is
-   * not always smoothed over it (see `vaultV1HistoryApyWindow` / `vaultV2HistoryApyWindow`); the
-   * chart is what discloses the difference. The remaining keys are always absent.
+   * Net (post-fee, rewards-inclusive) APY series, keyed by the window it was requested for. A
+   * protocol that serves every window natively fills all four; one that fetches only the configured
+   * window fills that key alone.
    */
   netApy: Partial<Record<"6h" | "1d" | "7d" | "30d", readonly DataPoint[]>>;
 }

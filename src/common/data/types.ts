@@ -4,7 +4,7 @@ import type { Address } from "viem";
  * App-owned data-layer types.
  *
  * The server data functions map Morpho API responses into these shapes, so components, hooks and
- * the transaction layer never see a generated GraphQL type. Keeping these stable is what makes the
+ * the transaction layer never see a raw API type. Keeping these stable is what makes the
  * backend swappable: only the data-function bodies change when the upstream does.
  */
 

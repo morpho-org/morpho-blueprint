@@ -88,7 +88,7 @@ export interface AppConfig {
   // `iconSlug` (optional) names the chain's icon on the Morpho CDN
   // (https://cdn.morpho.org/assets/chains/<slug>), overriding the built-in defaults in
   // `getChainIconUrl` (which cover all demo chains). A slug without an extension resolves as .svg;
-  // a few CDN assets are .png only (e.g. "base.png", "world.png"). The GraphQL API serves no chain
+  // a few CDN assets are .png only (e.g. "base.png", "world.png"). The Morpho API serves no chain
   // icon, so a chain with no slug and no default simply renders without one.
   readonly chainConfig: Record<
     SupportedChainId,
@@ -131,6 +131,17 @@ export interface AppConfig {
   // default. `6h` is served natively only by vault V2 history; `7d`/`30d` only by vault V1 history
   // and market history.
   readonly apyWindow: ApyWindow;
+
+  // Which Morpho API deployment the server reads (see the README's Data section).
+  readonly morphoApi: {
+    // true: every Morpho API read (Core REST and the Blueprint API routes) goes to the internal deployment,
+    // MORPHO_INTERNAL_API_URL with MORPHO_INTERNAL_API_KEY. With either unset, reads throw: the app never falls back
+    // to the public or a partner API.
+    // false: the internal deployment is used when MORPHO_INTERNAL_API_KEY is set. Without it, Core REST reads
+    // MORPHO_REST_API_URL, else the MORPHO_API_URL host, else the public keyless API, and the Blueprint API routes
+    // are off (their features fall back).
+    readonly requireInternal: boolean;
+  };
 
   // Note the default value is false to preserve backwards compatibility when upgrading versions (new features are opt-in, i.e upgrading won't add any new features)
   readonly featureFlags: {
