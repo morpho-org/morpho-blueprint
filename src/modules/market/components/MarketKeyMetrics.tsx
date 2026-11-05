@@ -18,16 +18,11 @@ export function MarketKeyMetrics({ market }: MarketKeyMetricsProps) {
   return (
     <MarketKeyMetricsLayout
       totalSupplyValue={<NumberFlow value={market.totalSupplied.usd ?? 0} format={{ currency: "USD" }} />}
-      availableToBorrowValue={
-        <NumberFlow
-          value={(market.liquidityInMarket.usd ?? 0) + (market.publicAllocatorSharedLiquidity.usd ?? 0)}
-          format={{ currency: "USD" }}
-        />
-      }
+      availableToBorrowValue={<NumberFlow value={market.availableToBorrow.usd ?? 0} format={{ currency: "USD" }} />}
       availableToBorrowTooltip={
         <AvailableLiquidityTooltipContent
           marketLiquidity={market.liquidityInMarket.usd ?? 0}
-          publicAllocatorLiquidity={market.publicAllocatorSharedLiquidity.usd ?? 0}
+          publicAllocatorLiquidity={market.publicAllocatorV1Liquidity.usd ?? 0}
         />
       }
       borrowApyValue={<ApyTooltipTrigger totalApy={borrowApy.total} showSparkle={borrowApy.rewards.length > 0} />}

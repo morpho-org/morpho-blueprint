@@ -188,7 +188,9 @@ function useDerivedFormValues({
 
   const maxBorrowable = useMemo(() => {
     const maxBorrowAmount = computeMaxBorrow(market, supplyCollateralAmount, position);
-    return MathLib.max(maxBorrowAmount - BigInt(position?.borrowAmount?.raw ?? 0), 0n);
+    const healthyMax = MathLib.max(maxBorrowAmount - BigInt(position?.borrowAmount?.raw ?? 0), 0n);
+    // Also bounded by what the borrow can reach: the market's liquidity plus Public Allocator V1.
+    return MathLib.min(healthyMax, BigInt(market.availableToBorrow.raw));
   }, [position, market, supplyCollateralAmount]);
 
   const positionChange = useMemo(() => {

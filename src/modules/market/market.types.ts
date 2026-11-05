@@ -92,8 +92,14 @@ export interface Market extends MarketSummary {
   isIdle: boolean;
   totalSupplied: Amount;
   liquidityInMarket: Amount;
-  /** Core REST `reallocatable_liquidity`: what the Public Allocator V2 can move in. */
-  publicAllocatorSharedLiquidity: Amount;
+  /**
+   * What the borrow bundle can move in through the Public Allocator V1 from the configured V1 vaults
+   * that supply the market (read on chain). Public Allocator V2 liquidity is left out: the bundle
+   * cannot reallocate from a vault V2.
+   */
+  publicAllocatorV1Liquidity: Amount;
+  /** `liquidityInMarket` + `publicAllocatorV1Liquidity`: the most a borrow can take. */
+  availableToBorrow: Amount;
   collateralAsset: (TokenInfo & { priceUsd: number | null }) | null;
   loanAsset: TokenInfo & { priceUsd: number | null };
   vaultAllocations: MarketVaultAllocation[];

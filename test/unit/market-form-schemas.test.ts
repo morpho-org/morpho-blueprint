@@ -32,6 +32,29 @@ describe("Market Form Schema Tests", () => {
       }
     });
 
+    it("blocks a borrow above the available liquidity and allows one at it", () => {
+      // 10 WETH at 2,000 allows ~16,000 USDC healthy: liquidity is the binding limit.
+      const market = createMockMarket({
+        collateralPrice: parseUnits("2000", 36 + 6 - 18),
+        lltv: parseUnits("0.8", 18),
+        availableToBorrow: parseUnits("1000", 6),
+      });
+      const schema = createMarketSupplyCollateralAndBorrowFormSchema(market);
+
+      const above = schema.safeParse({
+        supplyCollateralAmount: "10",
+        isMaxSupplyCollateral: false,
+        borrowAmount: "1000.000001",
+      });
+      expect(above.success).toBe(false);
+      if (!above.success) {
+        expect(above.error.issues.map((i) => i.message)).toEqual(["Amount exceeds available liquidity."]);
+      }
+
+      const at = schema.safeParse({ supplyCollateralAmount: "10", isMaxSupplyCollateral: false, borrowAmount: "1000" });
+      expect(at.success).toBe(true);
+    });
+
     it("should require at least one amount (can't both be zero)", () => {
       const market = createMockMarket({
         collateralPrice: parseUnits("2000", 18),
@@ -274,8 +297,17 @@ describe("Market Form Schema Tests", () => {
   });
 });
 
-function createMockMarket({ collateralPrice, lltv }: { collateralPrice: bigint; lltv: bigint }): MarketNonIdle {
+function createMockMarket({
+  collateralPrice,
+  lltv,
+  availableToBorrow = parseUnits("1000000000", 6),
+}: {
+  collateralPrice: bigint;
+  lltv: bigint;
+  availableToBorrow?: bigint;
+}): MarketNonIdle {
   return {
+    availableToBorrow: { raw: availableToBorrow.toString() },
     collateralAsset: { decimals: 18 },
     loanAsset: { decimals: 6 },
     collateralPriceInLoanAsset: {
