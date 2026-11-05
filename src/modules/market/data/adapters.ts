@@ -125,6 +125,8 @@ export function computeUtilization(totalSupplyAssets: BigIntish, totalBorrowAsse
 export interface RestMarketSupplier {
   protocol: Erc4626VaultProtocol;
   vaultAddress: string;
+  /** The vault is in the app's config, so it has a vault page. */
+  configured: boolean;
   name: string;
   curatorAddress: string | null;
   curator: CuratorInfo | null;
@@ -155,6 +157,7 @@ export function toMarketVaultAllocation(
       metadata: { curator: supplier.curator },
     },
     enabled: supplier.supplyCap > 0n,
+    configured: supplier.configured,
     position: {
       supplyAmount: toAmountWithPrice(supplier.supplyAssets, decimals, market.loanPriceUsd),
       supplyShares: supplier.supplyShares,
