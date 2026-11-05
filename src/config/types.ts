@@ -138,7 +138,7 @@ export interface AppConfig {
     // MORPHO_INTERNAL_API_URL with MORPHO_INTERNAL_API_KEY. With either unset, reads throw: the app never falls back
     // to the public or a partner API.
     // false: the internal deployment is used when MORPHO_INTERNAL_API_KEY is set. Without it, Core REST reads
-    // MORPHO_REST_API_URL, else the MORPHO_API_URL host, else the public keyless API, and the Blueprint API routes
+    // MORPHO_REST_API_URL, else the MORPHO_API_URL host, else the public API, and the Blueprint API routes
     // are off (their features fall back).
     readonly requireInternal: boolean;
   };
