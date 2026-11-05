@@ -25,7 +25,12 @@ const ZERO = "0x0000000000000000000000000000000000000000";
 type ConfiguredVaults = Record<number, { address: string; protocol: string; description?: string }[]>;
 const CONFIG = vi.hoisted(() => {
   const supportedVaults: ConfiguredVaults = {};
-  return { apyWindow: "6h", chainConfig: { 1: { chain: { name: "Ethereum" }, iconSlug: "eth" } }, supportedVaults };
+  return {
+    apyWindow: "6h",
+    chainConfig: { 1: { chain: { name: "Ethereum" }, iconSlug: "eth" } },
+    featureFlags: {},
+    supportedVaults,
+  };
 });
 vi.mock("@/config", () => ({ APP_CONFIG: CONFIG }));
 
