@@ -30,3 +30,7 @@ export function resolutionLookback(resolution: ChartResolution): HistoryLookback
   if (!widest) throw new Error(`No chart range is served by the ${resolution} resolution.`);
   return RANGE_LOOKBACK[widest];
 }
+
+// Core serves absurd APY on some first rows (1e75, -100%). The Vaults app plots its series
+// unfiltered, so this bound is ours: outside (-100%, 1000%] a row becomes a gap.
+export const isPlausibleApy = (apy: number | null) => apy !== null && apy > -1 && apy <= 10;

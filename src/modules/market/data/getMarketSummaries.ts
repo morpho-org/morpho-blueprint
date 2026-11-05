@@ -16,7 +16,7 @@ export type { MarketSummary };
 
 // Prices move: a minute old is close enough for a list, and spares the API one read per loan token
 // on every render.
-const PRICE_REVALIDATE_SECONDS = 60;
+export const PRICE_REVALIDATE_SECONDS = 60;
 
 interface RestMarketRoot {
   chain_id: number;

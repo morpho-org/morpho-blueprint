@@ -3,8 +3,10 @@
 //
 //   node scripts/verify/parity-dump.mjs --app <checkout> --out <file.json>
 //     [--providers summaries,vaults] [--vaults 1:0xabc,1:0xdef] [--account 0x...] [--max-requests 50]
+//     [--markets 1:0xid,8453:0xid]
 //
-// Providers: summaries, vaults (default), market-summaries, vault-positions, market-positions (need --account).
+// Providers: summaries, vaults (default), market-summaries, vault-positions, market-positions (need --account),
+// markets (the market page, needs --markets).
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -21,6 +23,7 @@ const { values } = parseArgs({
     providers: { type: "string", default: "summaries,vaults" },
     vaults: { type: "string", default: "" },
     account: { type: "string", default: "" },
+    markets: { type: "string", default: "" },
     "max-requests": { type: "string", default: "50" },
   },
 });
@@ -59,6 +62,7 @@ const result = spawnSync(
       PARITY_PROVIDERS: values.providers,
       PARITY_VAULTS: values.vaults,
       PARITY_ACCOUNT: values.account,
+      PARITY_MARKETS: values.markets,
       PARITY_MAX_REQUESTS: values["max-requests"],
       PARITY_GIT_SHA: gitSha ?? "",
     },
