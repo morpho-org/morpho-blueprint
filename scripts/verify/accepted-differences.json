@@ -490,6 +490,77 @@
       "kind": "extra",
       "reason": "Request-time rows: each source appends a row at its own request time, seconds apart between the two dumps",
       "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.vaults.480:0x348831b46876d3dF2Db98BdEc5E3B4083329Ab9f.apyAverages.*",
+      "kind": "value",
+      "reason": "Re7 WLD on World Chain earns WLD through Merkl (1.6%): GraphQL's averages included windowed rewards (1.60%), REST's are native only (0.00%), as accepted for Re7 WETH (VAU-3620). The header APY still adds the current reward APR",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.vaults.480:0xb1E80387EbE53Ff75a89736097D34dC8D9E9045B.apyAverages.*",
+      "kind": "value",
+      "reason": "Re7 USDC on World Chain earns WLD through Merkl (4.2%): GraphQL's averages included windowed rewards (7.2% 7d), REST's are native only (3.0%), as accepted for Re7 WETH (VAU-3620)",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.vaults.8453:0xa0E430870c4604CcfC7B38Ca7845B1FF653D0ff1.apyAverages.*",
+      "kind": "value",
+      "reason": "Moonwell Flagship ETH earns WELL through Merkl (0.12%): GraphQL's averages included windowed rewards, REST's are native only (1.24% vs 1.12% 7d), as accepted for Re7 WETH (VAU-3620)",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.vaults.8453:0x543257eF2161176D7C8cD90BA65C2d4CaEF5a796.apyAverages.*",
+      "kind": "value",
+      "reason": "Moonwell Frontier cbBTC earns WELL through Merkl (0.12%): GraphQL's averages included windowed rewards, REST's are native only (0.14% vs 0.02% 7d), as accepted for Re7 WETH (VAU-3620)",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.vaults.747474:0x5BD1D75d45EdB622d0ea50946F2f741CE8dC5b75.totalLiquidity.usd",
+      "kind": "value",
+      "reason": "BTCK has no USD price on either API: GraphQL served 0 USD of liquidity, REST derives none (null), as accepted for rUSDC (VAU-3620)",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.vaults.480:0x348831b46876d3dF2Db98BdEc5E3B4083329Ab9f.**.usd",
+      "kind": "value",
+      "relative": 0.006,
+      "reason": "Re7 WLD USD values: GraphQL priced its USD fields at its own cached WLD price (0.3742), REST at Core's current price (0.3760, the asset price both dumps report); 0.47% seen",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.vaults.137:0xfD06859A671C21497a2EB8C5E3fEA48De924D6c8.marketAllocations[0x267f344f5af0d85e95f253a2f250985a9fb9fca34a3342299e20c83b6906fc80].market.supplyApy6h.*",
+      "kind": "value",
+      "relative": 0.3,
+      "reason": "Polygon WPOL / USDT0 market 6h supply APY (Compound USDT allocation): GraphQL 3.75% vs REST 4.72% over the volatile 6h window, while the 1d APY matches within 0.3%; same computation gap as the other supply_apy_averages entries",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.marketSummaries.markets.1:0x27b9a0a5bfee98a31eb51e3850250d103a9f8e41673c782defc66aa943af0e65",
+      "kind": "missing",
+      "reason": "Steakhouse High Yield Instant (vault V2) zeroed its cap on this PT-srUSDe market (absolute cap 0, nothing allocated): the REST supported-market walk drops a zeroed cap, GraphQL listed it, as accepted for positions (VAU-3618)",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.marketSummaries.markets.137:0x267f344f5af0d85e95f253a2f250985a9fb9fca34a3342299e20c83b6906fc80.borrowApy6h.*",
+      "kind": "value",
+      "relative": 0.3,
+      "reason": "Polygon WPOL / USDT0 6h borrow APY: GraphQL 4.07% vs REST 5.02% over the volatile 6h window (the same market's 6h supply APY gap); the 1d, 7d and 30d windows match within the global entries",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.markets.137:0x267f344f5af0d85e95f253a2f250985a9fb9fca34a3342299e20c83b6906fc80.borrowApy6h.*",
+      "kind": "value",
+      "relative": 0.3,
+      "reason": "Polygon WPOL / USDT0 6h borrow APY on the market page: the same 6h gap as its borrow-table row (GraphQL 4.07% vs REST 5.02%)",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.markets.137:0x267f344f5af0d85e95f253a2f250985a9fb9fca34a3342299e20c83b6906fc80.historical.hourly[*].borrowApy1d.*",
+      "kind": "value",
+      "relative": 0.03,
+      "reason": "Polygon WPOL / USDT0 last hourly row (04:00 UTC): Core's 1d-smoothed sample vs GraphQL's, 1.6% relative while its 6h rate moved (the VAU-3622 entry bounds the other markets at 1%)",
+      "ticket": "VAU-3623"
     }
   ]
 }

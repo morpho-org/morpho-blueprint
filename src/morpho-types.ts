@@ -1,8 +1,7 @@
-// Scalar shims for the Morpho GraphQL API, referenced from codegen.ts.
-// These are app-owned: nothing outside the data layer should need to import generated types.
+// App-owned scalar shims for amounts the Morpho API serves.
 
 export type { Address, Hex } from "viem";
 
-// `BigInt` scalars come back as a JSON number when the value fits in a safe integer, and as a
-// string otherwise. Normalize with `toBigInt` from @/common/data/adapters/amount before use.
+// Raw amounts come back as a decimal string (or a JSON number when small enough). Normalize with
+// `toBigInt` from @/common/data/adapters/amount before use.
 export type BigIntish = string | number | bigint;

@@ -5,12 +5,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Common Commands
 
 **Development:**
-- `pnpm dev` - Start development server with Next.js and GraphQL codegen watch mode
-- `pnpm build` - Build for production (runs codegen first)
+- `pnpm dev` - Start the Next.js development server
+- `pnpm build` - Build for production
 - `pnpm check` - Lint and auto-fix codebase with Biome
 - `pnpm check:types` - TypeScript type checking without emit
 - `pnpm test` - Run Vitest tests
-- `pnpm codegen` - Generate GraphQL types from schema
 
 **Testing:**
 - Tests use Vitest with jsdom environment
@@ -32,17 +31,16 @@ The app is designed as a whitelabel frontend where all customization happens in 
 - `src/config/types.ts` - TypeScript definitions for configuration
 
 **Data Layer:**
-- Powered by the Morpho GraphQL API (`api.morpho.org/graphql`) for read-only data, behind the server-only
-  `executeMorphoQuery` chokepoint. The public endpoint is keyless; `MORPHO_API_URL`/`MORPHO_API_KEY` are
-  optional overrides for a dedicated instance.
-- Codegen runs against a committed schema snapshot in `schema/morpho-api.graphql` (builds are hermetic); generated
-  types land in `src/generated/gql/morpho/`
-- Shared GraphQL fragments in `src/common/data/fragments.ts`
+- Powered by the Morpho Core REST API (`api.morpho.org/v0`) for read-only data, behind the server-only
+  `fetchMorphoRest` chokepoint; Blueprint API routes (descriptions, price history) only when their key is set.
+  The public endpoint is keyless; `MORPHO_REST_API_URL`/`MORPHO_API_KEY` are optional overrides for a dedicated
+  instance.
+- Reward APRs come from Merkl (`src/modules/reward/data/`)
 - App-owned data types in `src/common/data/types.ts`; adapters mapping API responses onto them in
   `src/common/data/adapters/` and each module's `data/adapters.ts`. Components never see a generated type.
 - Data fetching functions organized by domain in module-specific `data/` directories
-- Wallet ERC-20 balances are joined in via a server-side multicall (`src/common/data/rpc/`), not the GraphQL API
-- Chain icons are not in the GraphQL schema; they come from the Morpho CDN via the per-chain `iconSlug` config,
+- Wallet ERC-20 balances are joined in via a server-side multicall (`src/common/data/rpc/`), not the Morpho API
+- Chain icons are not served by the Morpho API; they come from the Morpho CDN via the per-chain `iconSlug` config,
   which does not cover every chain (missing ones render without an icon)
 
 **Action System:**

@@ -6,7 +6,7 @@ Morpho Blueprint is an open-source [Next.js](https://nextjs.org/) white-label fr
 
 ## Quickstart
 
-The app reads all protocol data from the public, keyless Morpho GraphQL API, so no data credential is needed:
+The app reads all protocol data from the public, keyless Morpho Core REST API, so no data credential is needed:
 
 ```bash
 pnpm i
@@ -32,11 +32,9 @@ All configuration happens via files in the [config folder](src/config/), which s
 
 ## Data
 
-Read-only data comes from Morpho's API, through two server-only chokepoints: the Core REST API (`/v0` routes) via [fetchMorphoRest](src/common/utils/fetchMorphoRest.ts) for positions, the supported-market list and Vault V1 history, and the [Morpho GraphQL API](https://api.morpho.org/graphql) via [executeMorphoQuery](src/common/utils/executeMorphoQuery.ts) for everything else. The browser only ever talks to the app's own `/api/*` routes.
+Read-only data comes from Morpho's Core REST API through one server-only chokepoint, [fetchMorphoRest](src/common/utils/fetchMorphoRest.ts), plus the Blueprint API routes when `MORPHO_INTERNAL_API_KEY` and `MORPHO_INTERNAL_API_URL` are set (vault descriptions, USD price history) and Merkl for reward APRs. The browser only ever talks to the app's own `/api/*` routes.
 
-The public endpoints are keyless, so the app runs as-is with no data credential. To point a deployment at a dedicated API instance, set `MORPHO_API_URL` (GraphQL), `MORPHO_REST_API_URL` (REST) and `MORPHO_API_KEY` (sent to both as an `x-api-key` header).
-
-GraphQL types are generated from a committed schema snapshot in [`schema/`](schema/), so builds never depend on a live upstream. See [`schema/README.md`](schema/README.md) for how to refresh it.
+The public endpoints are keyless, so the app runs as-is with no data credential. To point a deployment at a dedicated API instance, set `MORPHO_REST_API_URL` and `MORPHO_API_KEY` (sent as an `x-api-key` header). `MORPHO_API_URL`, the former GraphQL endpoint, is still read as a fallback for the host when `MORPHO_REST_API_URL` is unset.
 
 Two things the API does not serve are sourced elsewhere:
 
@@ -97,7 +95,7 @@ A data-layer change proves it serves the same data as before with the scripts in
 
 ```bash
 git worktree add ../morpho-blueprint-main origin/main
-(cd ../morpho-blueprint-main && pnpm install && pnpm codegen)
+(cd ../morpho-blueprint-main && pnpm install && pnpm run --if-present codegen)
 
 node scripts/verify/parity-dump.mjs --app ../morpho-blueprint-main --out /tmp/parity/base.json
 node scripts/verify/parity-dump.mjs --app . --out /tmp/parity/head.json

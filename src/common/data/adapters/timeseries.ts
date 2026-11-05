@@ -1,4 +1,4 @@
-import { type ChartResolution, DAY, maxDurationSeconds } from "@/common/utils/chart-ranges";
+import type { ChartResolution } from "@/common/utils/chart-ranges";
 import type { BigIntish } from "@/morpho-types";
 
 export interface DataPoint {
@@ -11,55 +11,8 @@ export interface BigIntDataPoint {
   y: BigIntish | null;
 }
 
-/**
- * Slack past the widest window a resolution serves, covering the chart's leading-edge padding.
- * Anything older is filtered out client-side, so over-fetching only inflates the RSC payload —
- * hence a tighter margin on the denser hourly series.
- */
-const LOOKBACK_MARGIN_SECONDS: Record<ChartResolution, number> = {
-  hourly: 2 * DAY,
-  daily: 10 * DAY,
-  weekly: 0,
-};
-
-/** `undefined` (fetch from inception) for a resolution serving a range with no fixed window. */
-function lookbackSeconds(resolution: ChartResolution): number | undefined {
-  const widest = maxDurationSeconds(resolution);
-  return widest === 0 ? undefined : widest + LOOKBACK_MARGIN_SECONDS[resolution];
-}
-
-/**
- * The three chart resolutions the UI offers, and how far back each is fetched. Which ranges a
- * resolution serves — and therefore how far back it has to reach — comes from `CHART_RANGES`, so
- * widening a range in the component layer widens the fetch instead of silently truncating it.
- */
-export const HISTORY_RANGES = {
-  hourly: { interval: "HOUR", lookbackSeconds: lookbackSeconds("hourly") },
-  daily: { interval: "DAY", lookbackSeconds: lookbackSeconds("daily") },
-  weekly: { interval: "WEEK", lookbackSeconds: lookbackSeconds("weekly") },
-} as const satisfies Record<ChartResolution, { interval: string; lookbackSeconds: number | undefined }>;
-
 export type HistoryRange = ChartResolution;
 export const HISTORY_RANGE_KEYS = ["hourly", "daily", "weekly"] as const satisfies readonly HistoryRange[];
-
-export interface HistoryOptions {
-  interval: (typeof HISTORY_RANGES)[HistoryRange]["interval"];
-  startTimestamp?: number;
-}
-
-/**
- * The `options` argument for one chart resolution.
- *
- * History is fetched one request per resolution with the interval passed as a variable, rather than
- * three aliased blocks in a single operation: the API caps an operation at 30 aliases, and the
- * market chart alone needs 12 series per resolution.
- */
-export function historyOptions(range: HistoryRange, now = Date.now()): HistoryOptions {
-  const { interval, lookbackSeconds } = HISTORY_RANGES[range];
-  return lookbackSeconds === undefined
-    ? { interval }
-    : { interval, startTimestamp: Math.floor(now / 1000) - lookbackSeconds };
-}
 
 type SeriesMap = Record<string, readonly DataPoint[]>;
 type ZippedValues<S extends SeriesMap> = { [K in keyof S]: number | null };

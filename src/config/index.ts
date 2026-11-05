@@ -11,9 +11,7 @@ import type { AppConfig } from "./types";
 import { Erc4626VaultProtocol } from "./vault-protocol";
 
 // Specify all chains your app supports.
-// Every chain here must be served by the configured Morpho API instance — the public endpoint
-// rejects queries for chains it does not index (`unsupported chainId`), which fails the whole
-// vault list. Check with: `{ chains { id network } }` against https://api.morpho.org/graphql
+// Every chain here must be indexed by the configured Morpho API instance.
 export const SUPPORTED_CHAIN_IDS = [
   mainnet.id,
   base.id,

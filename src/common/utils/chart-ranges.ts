@@ -35,14 +35,3 @@ export const CHART_RANGES: Record<DataRange, ChartRange> = {
 };
 
 export const DATA_RANGES = Object.keys(CHART_RANGES) as DataRange[];
-
-/**
- * Widest window any range served by `resolution` plots, in seconds. Returns 0 when the resolution
- * only serves `All`, which has no fixed window and is therefore fetched from inception.
- */
-export function maxDurationSeconds(resolution: ChartResolution): number {
-  const durations = DATA_RANGES.filter((range) => CHART_RANGES[range].resolution === resolution).map(
-    (range) => CHART_RANGES[range].durationSeconds,
-  );
-  return Math.max(0, ...durations);
-}

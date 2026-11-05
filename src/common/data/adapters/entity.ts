@@ -5,7 +5,7 @@ import { capitalizeFirstLetter } from "@/common/utils/format";
 import { APP_CONFIG } from "@/config";
 
 /**
- * The GraphQL API exposes no chain icon, but the Morpho CDN hosts them under
+ * The Morpho API exposes no chain icon, but the Morpho CDN hosts them under
  * `/assets/chains/<slug>.<ext>`, keyed by a short name rather than the chain id or `Chain.network`.
  * Most assets are `.svg`; a few (Base, World Chain) exist only as `.png`, so a slug may carry an
  * explicit extension and defaults to `.svg` without one.
