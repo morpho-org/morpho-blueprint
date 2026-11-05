@@ -38,6 +38,8 @@ Read-only data comes from Morpho's Core REST API through one server-only chokepo
 -   Without it, the Blueprint API routes are off (descriptions come from the config, USD history is hidden), and Core REST goes to `MORPHO_REST_API_URL`, else the host of `MORPHO_API_URL` (the former GraphQL endpoint), else the public keyless API, with `MORPHO_API_KEY` when set. The template runs as-is with no data credential.
 -   `morphoApi.requireInternal` in [the config](src/config/index.ts) (`false` here) makes the internal deployment mandatory: with it `true` and either internal variable unset, every server read throws instead of using another host. `next build` prerenders the pages, so a build without the variables fails; a running server fails the affected pages and API routes. Set it for deployments that must never read the public or a partner API.
 
+The app does not call Morpho's GraphQL API. [no-graphql.test.ts](test/unit/no-graphql.test.ts) fails if a GraphQL endpoint, client, query, dependency or schema comes back.
+
 Two things the API does not serve are sourced elsewhere:
 
 -   Wallet ERC-20 balances are joined in server-side with a multicall `balanceOf` against the configured RPC URLs.
