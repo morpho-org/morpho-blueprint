@@ -134,6 +134,17 @@ export interface AppConfig {
   // and market history.
   readonly apyWindow: ApyWindow;
 
+  // Which Morpho API deployment the server reads (see the README's Data section).
+  readonly morphoApi: {
+    // true: every Morpho API read (Core REST and the Blueprint API routes) goes to the internal deployment,
+    // MORPHO_INTERNAL_API_URL with MORPHO_INTERNAL_API_KEY. With either unset, reads throw: the app never falls back
+    // to the public or a partner API.
+    // false: the internal deployment is used when MORPHO_INTERNAL_API_KEY is set. Without it, Core REST reads
+    // MORPHO_REST_API_URL, else the MORPHO_API_URL host, else the public keyless API, and the Blueprint API routes
+    // are off (their features fall back).
+    readonly requireInternal: boolean;
+  };
+
   // Note the default value is false to preserve backwards compatibility when upgrading versions (new features are opt-in, i.e upgrading won't add any new features)
   readonly featureFlags: {
     readonly enableDarkModeToggle?: boolean; // (optional) Controls if the dark mode toggle is shown in the footer. If so .dark should be defined in theme.css

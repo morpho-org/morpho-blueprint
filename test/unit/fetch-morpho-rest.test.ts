@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const trackEvent = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 vi.mock("@/common/utils/trackEvent", () => ({ trackEvent }));
+// The host rules live in morpho-api-config.test.ts; these tests run on the optional-internal setup.
+vi.mock("@/config", () => ({ APP_CONFIG: { morphoApi: { requireInternal: false } } }));
 
 const fetchMock = vi.fn();
 
@@ -19,6 +21,8 @@ describe("fetchMorphoRest", () => {
     fetchMock.mockReset();
     trackEvent.mockClear();
     vi.stubGlobal("fetch", fetchMock);
+    // Off unless a test sets it, whatever the shell exports.
+    vi.stubEnv("MORPHO_INTERNAL_API_KEY", "");
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
   });
@@ -89,7 +93,7 @@ describe("fetchMorphoRest", () => {
     expect(trackEvent).not.toHaveBeenCalled();
   });
 
-  it("reads Core REST on the GraphQL API's host, and Blueprint API routes on the internal host", async () => {
+  it("reads Core REST and Blueprint API routes on the internal host when its key is set", async () => {
     vi.stubEnv("MORPHO_REST_API_URL", "");
     vi.stubEnv("MORPHO_API_URL", "https://partner.example/graphql");
     vi.stubEnv("MORPHO_API_KEY", "core-key");
@@ -106,7 +110,7 @@ describe("fetchMorphoRest", () => {
       key: new Headers(init?.headers).get("x-api-key"),
     }));
     expect(calls).toEqual([
-      { url: "https://partner.example/v0/tokens/1:0xabc", key: "core-key" },
+      { url: "https://internal.example/v0/tokens/1:0xabc", key: "internal-key" },
       { url: "https://internal.example/v0/blueprint-app-api/curators", key: "internal-key" },
     ]);
   });
@@ -209,6 +213,8 @@ describe("fetchAllMorphoRestPages", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.stubGlobal("fetch", fetchMock);
+    // Off unless a test sets it, whatever the shell exports.
+    vi.stubEnv("MORPHO_INTERNAL_API_KEY", "");
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
