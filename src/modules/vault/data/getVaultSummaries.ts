@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { type Address, getAddress, type Hex, zeroAddress } from "viem";
+import { toRoleAddress } from "@/common/data/adapters/entity";
 import { getCuratorInfo } from "@/common/data/rest/curators";
 import { getTokenInfo, getTokenMetadata, getTokenPriceUsd, getVaultAssetDecimals } from "@/common/data/rest/tokens";
 import type { CuratorInfo, TokenInfo } from "@/common/data/types";
@@ -164,10 +165,11 @@ async function getVaultV2Summaries(
     if (!root || !state) return null;
 
     const asset = getAddress(root.data.asset.address);
+    const curatorRole = toRoleAddress(root.data.curator);
     const [token, priceUsd, curator] = await Promise.all([
       tokenOf(chainId, asset),
       priceOf(chainId, asset),
-      root.data.curator ? curatorOf(chainId, getAddress(root.data.curator)) : Promise.resolve<CuratorInfo | null>(null),
+      curatorRole ? curatorOf(chainId, curatorRole) : Promise.resolve<CuratorInfo | null>(null),
     ]);
     return {
       chainId,
@@ -273,10 +275,12 @@ async function getVaultV1Summaries(
     if (!root || !state) return null;
 
     const asset = getAddress(root.data.asset.address);
+    // A cleared curator role comes back as null or the zero address: both fall back to the owner.
+    const curatorRole = toRoleAddress(root.data.curator) ?? toRoleAddress(root.data.owner);
     const [token, priceUsd, curator] = await Promise.all([
       tokenOf(chainId, asset),
       priceOf(chainId, asset),
-      curatorOf(chainId, getAddress(root.data.curator ?? root.data.owner)),
+      curatorRole ? curatorOf(chainId, curatorRole) : Promise.resolve<CuratorInfo | null>(null),
     ]);
     return {
       chainId,

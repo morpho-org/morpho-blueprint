@@ -4,6 +4,7 @@ import { Time } from "@morpho-org/morpho-ts";
 import { type Address, formatUnits, getAddress, type Hex, zeroAddress } from "viem";
 import { toAmountWithPrice, toBigInt, toRatio } from "@/common/data/adapters/amount";
 import { assembleApyWithRewards } from "@/common/data/adapters/apy";
+import { toRoleAddress } from "@/common/data/adapters/entity";
 import { getTokenInfo } from "@/common/data/rest/tokens";
 import type { ChainInfo, TokenInfo } from "@/common/data/types";
 import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
@@ -235,7 +236,7 @@ export async function getVaultV2Details(
     allocations: rows,
     totalAssets: toAmountWithPrice(totalRaw, decimals, price),
     apyAverages,
-    curatorAddress: getAddress(root.curator ?? zeroAddress),
+    curatorAddress: toRoleAddress(root.curator) ?? zeroAddress,
     sentinelAddresses: (sentinels?.data ?? []).map((sentinel) => getAddress(sentinel.role_address)),
     performanceFee: toFee(root.performance_fee_wad),
     managementFee: toAnnualManagementFee(root.management_fee_wad),

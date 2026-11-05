@@ -219,13 +219,13 @@
     {
       "path": "data.vaultSummaries*.metadata.curator",
       "kind": "value",
-      "reason": "The three Re7 vaults on World Chain: GraphQL's vault-scoped curators returned none, REST's curator details for the curator role return RE7 Labs; the earn row and header now name the curator",
+      "reason": "The three Re7 vaults on World Chain have no curator role: GraphQL's vault-scoped curators returned none, the REST path looks the curator up from the owner, as the ticket asks, and finds RE7 Labs",
       "ticket": "VAU-3620"
     },
     {
       "path": "data.vaults.*.metadata.curator",
       "kind": "value",
-      "reason": "The three Re7 vaults on World Chain: GraphQL's vault-scoped curators returned none, REST's curator details for the curator role return RE7 Labs; the earn row and header now name the curator",
+      "reason": "The three Re7 vaults on World Chain have no curator role: GraphQL's vault-scoped curators returned none, the REST path looks the curator up from the owner, as the ticket asks, and finds RE7 Labs",
       "ticket": "VAU-3620"
     },
     {

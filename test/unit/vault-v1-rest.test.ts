@@ -20,6 +20,7 @@ const WETH_MARKET = `0x${"11".repeat(32)}`;
 const IDLE_MARKET = `0x${"22".repeat(32)}`;
 const PENDING_MARKET = `0x${"33".repeat(32)}`;
 const BASE = `/v0/vaults-v1/1:${VAULT}`;
+const ZERO = "0x0000000000000000000000000000000000000000";
 
 type ConfiguredVaults = Record<number, { address: string; protocol: string; description?: string }[]>;
 const CONFIG = vi.hoisted(() => {
@@ -74,7 +75,17 @@ const curatorDetails = (name: string) => ({
   data: { curators: [{ name, logo_uri: null, socials: [{ type: "url", url: `https://${name}.xyz` }] }] },
 });
 
-function seedVault({ curator = CURATOR, decimals = 6 }: { curator?: string | null; decimals?: number | null } = {}) {
+function seedVault({
+  curator = CURATOR,
+  guardian = GUARDIAN,
+  feeRecipient = FEE_RECIPIENT,
+  decimals = 6,
+}: {
+  curator?: string | null;
+  guardian?: string | null;
+  feeRecipient?: string | null;
+  decimals?: number | null;
+} = {}) {
   routes.set(BASE, {
     data: {
       chain_id: 1,
@@ -82,10 +93,10 @@ function seedVault({ curator = CURATOR, decimals = 6 }: { curator?: string | nul
       name: "Steakhouse USDC",
       asset: { address: USDC, decimals, name: "USD Coin", symbol: "USDC" },
       fee_wad: "50000000000000000",
-      fee_recipient: FEE_RECIPIENT,
+      fee_recipient: feeRecipient,
       owner: OWNER,
       curator,
-      guardian: GUARDIAN,
+      guardian,
     },
   });
   routes.set(`${BASE}/state`, { data: { total_assets: "4000000", withdrawable_assets: "1500000" } });
@@ -205,6 +216,15 @@ describe("getVaultSummaries (vault V1 from Core REST)", () => {
         },
       ],
     });
+  });
+
+  it("looks up the curator from the owner when REST serves a cleared curator role as the zero address", async () => {
+    seedVault({ curator: ZERO });
+
+    const [summary] = await loadSummaries();
+
+    expect(summary?.metadata?.curator).toEqual({ name: "Owner", image: null, url: "https://Owner.xyz" });
+    expect(calls).not.toContain(`/v0/curators/1:${ZERO}/details`);
   });
 
   it("looks up the curator from the owner when the vault has no curator role", async () => {
@@ -348,6 +368,19 @@ describe("getVault (vault V1 details from Core REST)", () => {
       `/v0/blue/markets?${IDLE_MARKET},${WETH_MARKET}`,
     ]);
     expect(merkl.reads).toBe(1);
+  });
+
+  it("hides a zero fee recipient and shows cleared roles as the zero address", async () => {
+    seedVault({ curator: ZERO, guardian: ZERO, feeRecipient: ZERO });
+
+    const vault = await loadVault();
+
+    expect(vault).toMatchObject({
+      feeRecipientAddress: null,
+      curatorAddress: ZERO,
+      guardianAddress: ZERO,
+      metadata: { curator: { name: "Owner" } },
+    });
   });
 
   it("throws not found when REST does not know the vault", async () => {

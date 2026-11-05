@@ -2,6 +2,7 @@ import "server-only";
 
 import { type Address, formatUnits, getAddress, zeroAddress } from "viem";
 import { toBigInt } from "@/common/data/adapters/amount";
+import { toRoleAddress } from "@/common/data/adapters/entity";
 import type { ChainInfo } from "@/common/data/types";
 import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
 import { getMarketInfos } from "@/modules/market/data/getMarketInfos";
@@ -81,9 +82,11 @@ export async function getVaultV1Details(
     apyAverages,
     // REST serves null for a fee never set: 0, as GraphQL did.
     performanceFeeRaw: Number(formatUnits(toBigInt(root.fee_wad), 18)),
-    feeRecipientAddress: root.fee_recipient ? getAddress(root.fee_recipient) : null,
-    ownerAddress: getAddress(root.owner),
-    curatorAddress: getAddress(root.curator ?? zeroAddress),
-    guardianAddress: getAddress(root.guardian ?? zeroAddress),
+    // A zero fee recipient is no fee recipient: the row is hidden, as for an unset one.
+    feeRecipientAddress: toRoleAddress(root.fee_recipient),
+    // The info panel shows an unset or cleared role as the zero address, as GraphQL served it.
+    ownerAddress: toRoleAddress(root.owner) ?? zeroAddress,
+    curatorAddress: toRoleAddress(root.curator) ?? zeroAddress,
+    guardianAddress: toRoleAddress(root.guardian) ?? zeroAddress,
   };
 }
