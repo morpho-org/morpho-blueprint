@@ -88,6 +88,15 @@ export function toChainInfo(chain: { id: number; network: string }): ChainInfo {
   };
 }
 
+/**
+ * Core REST carries only a chain id. The configured viem chain's name matches GraphQL's
+ * `Chain.network` for every chain the API serves (Ethereum, Base, Arbitrum One, World Chain, ...).
+ */
+export function toChainInfoById(chainId: number): ChainInfo {
+  const configured = Object.entries(APP_CONFIG.chainConfig).find(([id]) => Number(id) === chainId)?.[1];
+  return toChainInfo({ id: chainId, network: configured?.chain.name ?? `Chain ${chainId}` });
+}
+
 interface RawCurator {
   name: string;
   image: string | null;

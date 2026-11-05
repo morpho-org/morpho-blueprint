@@ -164,6 +164,35 @@ describe("fetchMorphoRest", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("keeps at most 16 calls in flight across every read, and runs the rest as slots free up", async () => {
+    let inFlight = 0;
+    let peak = 0;
+    const pending: (() => void)[] = [];
+    fetchMock.mockImplementation(async () => {
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+      await new Promise<void>((resolve) => pending.push(resolve));
+      inFlight -= 1;
+      return json(200, { data: 1 });
+    });
+    const { fetchMorphoRest, fetchMorphoRestResource } = await load();
+
+    const reads = Array.from({ length: 20 }, (_, i) =>
+      i % 2 ? fetchMorphoRest(`/v0/tokens/1:0x${i}`) : fetchMorphoRestResource(`/v0/tokens/1:0x${i}`),
+    );
+    await vi.waitFor(() => expect(pending).toHaveLength(16));
+    expect(fetchMock).toHaveBeenCalledTimes(16);
+
+    // Each finished call lets one queued call start, until every read is served.
+    while (fetchMock.mock.calls.length < 20 || pending.length > 0) {
+      pending.shift()?.();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    await expect(Promise.all(reads)).resolves.toHaveLength(20);
+    expect(fetchMock).toHaveBeenCalledTimes(20);
+    expect(peak).toBe(16);
+  });
+
   it("only passes a cache lifetime when one is asked for", async () => {
     fetchMock.mockImplementation(async () => json(200, { data: 1 }));
     const { fetchMorphoRest } = await load();

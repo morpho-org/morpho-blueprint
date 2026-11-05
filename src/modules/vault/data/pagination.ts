@@ -13,16 +13,6 @@
  * from here.
  */
 export const CAPS_PAGE_SIZE = 100;
-export const ADAPTERS_PAGE_SIZE = 50;
-
-/**
- * The summaries query fans this out across every configured vault, and the API multiplies a
- * paginated field's cost by `first` at each nesting level — so unlike the single-vault detail read,
- * this one's cost scales with the vault count. At 50 the 1,000,000 complexity cap is reached around
- * 65 configured vaults; at 20 it is around 160. Truncation past this is reported by
- * `warnIfTruncated`, so an over-wide vault logs instead of silently dropping exposure rows.
- */
-export const SUMMARY_ADAPTERS_PAGE_SIZE = 20;
 
 /**
  * A MarketV1 adapter's `positions` list has one entry per market the adapter supplies, so it is

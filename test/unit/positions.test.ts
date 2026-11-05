@@ -130,6 +130,15 @@ describe("getVaultPositions", () => {
     expect(Object.keys(positions[1])).toEqual([vault(3)]);
   });
 
+  it("falls back to the token's decimals when the vault root serves none", async () => {
+    routes.set(`/v0/vaults-v2/1:${vault(1)}`, { data: { asset: { address: USDC, decimals: null } } });
+    routes.set(`/v0/tokens/1:${USDC}`, { data: { decimals: 6 } });
+
+    const positions = await load();
+
+    expect(positions[1]).toMatchObject({ [vault(1)]: { assets: { raw: "2500000", formatted: "2.5", usd: 5 } } });
+  });
+
   it("degrades a failed price read to no USD value", async () => {
     routes.set(`/v0/tokens/1:${USDC}/price`, new Error("Morpho REST 500"));
 

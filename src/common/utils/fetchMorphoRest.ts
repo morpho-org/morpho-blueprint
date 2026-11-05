@@ -14,6 +14,33 @@ export const REST_MAX_FILTER_ITEMS = 100;
 // list that reaches it throws rather than returning a silently truncated result.
 const MAX_PAGES = 50;
 
+// The parallel calls the app allows itself against the API, across every read in the process (the
+// vault page runs summary, details and history at once). Retries queue like any other call.
+const MAX_CONCURRENT_REQUESTS = 16;
+let requestsInFlight = 0;
+const waitingForSlot: (() => void)[] = [];
+
+function acquireRequestSlot(): Promise<void> {
+  if (requestsInFlight < MAX_CONCURRENT_REQUESTS) {
+    requestsInFlight += 1;
+    return Promise.resolve();
+  }
+  // `releaseRequestSlot` hands its slot straight to the next waiter, so the count stays the same.
+  return new Promise((resolve) => waitingForSlot.push(resolve));
+}
+
+function releaseRequestSlot() {
+  const next = waitingForSlot.shift();
+  if (next) next();
+  else requestsInFlight -= 1;
+}
+
+/** Runs one HTTP call in a request slot; the timeout starts once the slot is taken. */
+async function withRequestSlot<T>(call: () => Promise<T>): Promise<T> {
+  await acquireRequestSlot();
+  return call().finally(releaseRequestSlot);
+}
+
 type QueryValue = string | number | boolean | readonly (string | number)[] | undefined;
 export type RestQuery = Record<string, QueryValue>;
 
@@ -118,7 +145,7 @@ async function readMorphoRest<T, M>(
   };
 
   try {
-    return await promiseWithRetry(attempt, { shouldRetry: isRetryable });
+    return await promiseWithRetry(() => withRequestSlot(attempt), { shouldRetry: isRetryable });
   } catch (error) {
     if (missing && isMissingResource(error)) return missing.value;
     if (options.quiet) {

@@ -96,6 +96,79 @@
       "kind": "missing",
       "reason": "Steakhouse High Yield Instant (vault V2) zeroed its cap on this market (absolute cap 0, nothing allocated): the REST walk drops a zeroed cap, GraphQL listed it. The account only held the loan token in its wallet there",
       "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaultSummaries*.curatorAum",
+      "kind": "missing",
+      "reason": "Curator AUM is hidden: its REST route (VAU-3630) is not in production yet. The template never displayed it",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.*.curatorAum",
+      "kind": "missing",
+      "reason": "Curator AUM is hidden on the vault page: its REST route (VAU-3630) is not in production yet. The template never displayed it",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaultSummaries*.allocations*",
+      "kind": "missing",
+      "reason": "REST vault V2 summaries read no adapters. The exposure tooltip only expands MetaMorpho adapters, and both configured vault V2s use a market adapter, so the column renders nothing either way",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaultSummaries*.totalAssets.*",
+      "kind": "value",
+      "relative": 0.001,
+      "reason": "Vault V2 totals: REST serves the total accrued as of its last indexed block, GraphQL lagged it (1,000 USDC on 5.14M, 1.9e-4, on Gauntlet USDC Frontier v2)",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.*.totalAssets.*",
+      "kind": "value",
+      "relative": 0.001,
+      "reason": "Vault V2 totals: REST serves the total accrued as of its last indexed block, GraphQL lagged it (1,000 USDC on 5.14M, 1.9e-4, on Gauntlet USDC Frontier v2)",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.*.allocations*.adapterCap.allocation.*",
+      "kind": "value",
+      "relative": 0.001,
+      "reason": "Same accrual lag as totalAssets, on the adapter allocation",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.*.allocations*.marketCaps*.allocation.*",
+      "kind": "value",
+      "relative": 0.001,
+      "reason": "Same accrual lag as totalAssets, on a market allocation",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.*.apyAverages.inception",
+      "kind": "value",
+      "absolute": 1,
+      "reason": "Inception APY: GraphQL served inflated values (63% for Steakhouse High Yield Instant), REST serves the realized average from share-price growth (5.6%); REST is correct, as on Anchorage (VAU-3614). Bounded to 100 percentage points",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.**.marketCaps[*].market.supplyApy*.*",
+      "kind": "value",
+      "relative": 0.08,
+      "reason": "Market 6h/1d/7d supply APYs: GraphQL and REST supply_apy_averages are computed differently; up to 5.9% relative seen (Base market 0x7662 1d), as on Anchorage (VAU-3614)",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.**.marketCaps[*].market.supplyApy*.*",
+      "kind": "value",
+      "absolute": 0.0001,
+      "reason": "Market supply APYs within 0.01 percentage points: near-zero-APY markets differ by more relative between GraphQL and REST while the displayed value is the same",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.*.historical.*[*]",
+      "kind": "extra",
+      "reason": "Vault V2 history on Core REST ends on a request-time row (a non-aligned timestamp) that GraphQL's bucketed series did not have. One row per vault and series",
+      "ticket": "VAU-3619"
     }
   ]
 }

@@ -129,14 +129,25 @@ export const APP_CONFIG: AppConfig = {
       { address: getAddress("0xbEef047a543E45807105E51A8BBEFCc5950fcfBa"), protocol: Erc4626VaultProtocol.MorphoV1 }, // Steakhouse USDT
       { address: getAddress("0xBeEf11eCb698f4B5378685C05A210bdF71093521"), protocol: Erc4626VaultProtocol.MorphoV1 }, // Steakhouse RUSD
       { address: getAddress("0xBEeFFF209270748ddd194831b3fa287a5386f5bC"), protocol: Erc4626VaultProtocol.MorphoV1 }, // Smokehouse USDC
-      { address: getAddress("0xbeeff2C5bF38f90e3482a8b19F12E5a6D2FCa757"), protocol: Erc4626VaultProtocol.MorphoV2 }, // Steakhouse High Yield Instant
+      {
+        address: getAddress("0xbeeff2C5bF38f90e3482a8b19F12E5a6D2FCa757"),
+        protocol: Erc4626VaultProtocol.MorphoV2,
+        // Vault V2 descriptions come from the Blueprint API only when MORPHO_INTERNAL_API_KEY is set.
+        description:
+          "The Steakhouse High Yield Instant vault aims to optimize yields by lending USDC against a wide range of collaterals.",
+      }, // Steakhouse High Yield Instant
     ],
     [base.id]: [
       { address: getAddress("0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A"), protocol: Erc4626VaultProtocol.MorphoV1 }, // Spark USDC
       { address: getAddress("0xa0E430870c4604CcfC7B38Ca7845B1FF653D0ff1"), protocol: Erc4626VaultProtocol.MorphoV1 }, // Moonwell Flagship ETH
       { address: getAddress("0x543257eF2161176D7C8cD90BA65C2d4CaEF5a796"), protocol: Erc4626VaultProtocol.MorphoV1 }, // Moonwell Frontier cbBTC
       { address: getAddress("0x236919F11ff9eA9550A4287696C2FC9e18E6e890"), protocol: Erc4626VaultProtocol.MorphoV1 }, // Gauntler USDC Frontier v1
-      { address: getAddress("0x1deEfABEe758AAbdC29a542B24ca3b75aFD56765"), protocol: Erc4626VaultProtocol.MorphoV2 }, // Gauntlet USDC Frontier v2
+      {
+        address: getAddress("0x1deEfABEe758AAbdC29a542B24ca3b75aFD56765"),
+        protocol: Erc4626VaultProtocol.MorphoV2,
+        description:
+          "The Gauntlet USDC Frontier Vault targets maximum yield by allocating to potentially higher volatility yield sources that may face liquidity risks in exchange for greater returns. The vaults risk strategy follows Gauntlets Frontier framework whereby we curate supply to aggressively target higher yields while managing security to provide an aggressive risk profile at competitive APYs.",
+      }, // Gauntlet USDC Frontier v2
     ],
     [polygon.id]: [
       { address: getAddress("0xF5C81d25ee174d83f1FD202cA94AE6070d073cCF"), protocol: Erc4626VaultProtocol.MorphoV1 }, // Compound WETH

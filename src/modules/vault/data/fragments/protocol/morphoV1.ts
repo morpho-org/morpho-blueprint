@@ -58,28 +58,4 @@ graphql(`
       }
     }
   }
-
-  # The same vault V1 shape, as held through a vault V2 MetaMorpho adapter.
-  fragment UnderlyingMorphoVaultV1Fragment on Vault {
-    address
-    name
-    chain {
-      ...ChainInfoFragment
-    }
-    asset {
-      ...AssetInfoFragment
-    }
-    state {
-      totalAssets
-      totalAssetsUsd
-      avgNetApy(lookback: $lookbackV1)
-      avgNetApyExcludingRewards(lookback: $lookbackV1)
-      allRewards {
-        ...VaultRewardFragment
-      }
-      allocation {
-        ...VaultAllocationFragment
-      }
-    }
-  }
 `);

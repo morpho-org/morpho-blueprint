@@ -17,6 +17,16 @@ export type ApyLookbackPeriod = (typeof APY_LOOKBACK_PERIOD)[ApyWindow];
 /** Lookback for current-state vault APYs (`avgNetApy`, `avgNetApyExcludingRewards`). */
 export const apyLookbackPeriod: ApyLookbackPeriod = APY_LOOKBACK_PERIOD[APP_CONFIG.apyWindow];
 
+/** The same window in Core REST's `apy-averages` vocabulary. */
+const REST_APY_LOOKBACK = {
+  "6h": "six_hours",
+  "1d": "one_day",
+  "7d": "seven_days",
+  "30d": "thirty_days",
+} as const satisfies Record<ApyWindow, string>;
+
+export const restApyLookback = REST_APY_LOOKBACK[APP_CONFIG.apyWindow];
+
 /**
  * Stamps the configured averaging window onto a rate label, so a quoted number is never ambiguous
  * about its timeframe — e.g. `Net APY (7d)`.
@@ -28,57 +38,11 @@ export function rateLabel(base: string): string {
   return `${base} (${APP_CONFIG.apyWindow})`;
 }
 
-const APY_WINDOW_HOURS = {
-  "6h": 6,
-  "1d": 24,
-  "7d": 24 * 7,
-  "30d": 24 * 30,
-} as const satisfies Record<ApyWindow, number>;
-
-/**
- * `VaultV2History.avgApy/avgNetApy` cap each plotted point's smoothing window at 24h, so a vault V2
- * chart configured with a 7d or 30d `apyWindow` is smoothed over 24h instead. Headline (current
- * state) numbers are unaffected: all windows are served natively there. Vault V1 charts have
- * native daily/weekly/monthly series and are unaffected.
- */
-export const VAULT_V2_HISTORY_MAX_LOOKBACK_HOURS = 24;
-
-export const vaultV2HistoryLookbackHours = Math.min(
-  APY_WINDOW_HOURS[APP_CONFIG.apyWindow],
-  VAULT_V2_HISTORY_MAX_LOOKBACK_HOURS,
-);
-
-/**
- * The window a plotted vault V2 series is *actually* smoothed over: the configured one, capped at
- * 24h by the API. Labelling that series with `APP_CONFIG.apyWindow` would claim a 7d/30d smoothing
- * the points do not have, while the headline number next to it genuinely uses the configured
- * window — two differently smoothed figures under one label.
- *
- * 24h is exactly the `1d` window, so the cap is expressible in the same vocabulary. Vault V1 has the
- * opposite gap at the short end — see `vaultV1HistoryApyWindow`.
- */
-export const vaultV2HistoryApyWindow: ApyWindow =
-  APY_WINDOW_HOURS[APP_CONFIG.apyWindow] > VAULT_V2_HISTORY_MAX_LOOKBACK_HOURS ? "1d" : APP_CONFIG.apyWindow;
-
-/**
- * The window a plotted vault V1 series is *actually* smoothed over. `VaultHistory` serves averaged
- * net APY series at daily/weekly/monthly and coarser — its bare `netApy` is the instantaneous
- * series, not a six-hour average, so there is no sub-daily averaged series to plot. A `6h`
- * deployment therefore plots the daily one; naming it `6h` would claim a smoothing the points do
- * not have, and plotting the instantaneous series under that name would be worse still.
- *
- * Vault V2 has the opposite gap (`vaultV2HistoryApyWindow`): there the configured window is too
- * long for the series, here it is too short.
- */
-export const vaultV1HistoryApyWindow: Exclude<ApyWindow, "6h"> =
-  APP_CONFIG.apyWindow === "6h" ? "1d" : APP_CONFIG.apyWindow;
-
 /**
  * The window a plotted market borrow-APY series is *actually* smoothed over. Market history serves
  * `daily`/`weekly`/`monthly` net borrow APY series only — there is no sub-daily one — so a `6h`
  * deployment plots the daily series, and naming it `6h` would claim a smoothing the points do not
- * have. Same honesty rule as `vaultV2HistoryApyWindow`, in the opposite direction: there the
- * configured window is too long for the series, here it is too short.
+ * have.
  */
 export const marketHistoryApyWindow: Exclude<ApyWindow, "6h"> =
   APP_CONFIG.apyWindow === "6h" ? "1d" : APP_CONFIG.apyWindow;

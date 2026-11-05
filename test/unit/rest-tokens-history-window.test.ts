@@ -42,6 +42,23 @@ describe("token decimals", () => {
   });
 });
 
+describe("vault asset decimals", () => {
+  afterEach(() => routes.clear());
+
+  it("takes the vault root's, then the token metadata's, and never guesses", async () => {
+    const { getVaultAssetDecimals } = await import("@/common/data/rest/tokens");
+    routes.set(`/v0/tokens/1:${TOKEN}`, { data: { decimals: 18 } });
+
+    await expect(getVaultAssetDecimals(1, { address: TOKEN, decimals: 6 })).resolves.toBe(6);
+    await expect(getVaultAssetDecimals(1, { address: TOKEN, decimals: null })).resolves.toBe(18);
+    // Metadata the caller already read is used as is, even when it is missing.
+    await expect(getVaultAssetDecimals(1, { address: TOKEN, decimals: null }, null)).resolves.toBeNull();
+
+    routes.clear();
+    await expect(getVaultAssetDecimals(1, { address: TOKEN, decimals: 6.5 })).resolves.toBeNull();
+  });
+});
+
 describe("history lookbacks", () => {
   it("maps chart ranges as the Vaults app does", async () => {
     const { rangeLookback } = await import("@/common/data/rest/historyWindow");

@@ -2,7 +2,7 @@ import "server-only";
 
 import { type Address, getAddress } from "viem";
 import { toAmountWithPrice } from "@/common/data/adapters/amount";
-import { getTokenPriceUsd, parseTokenDecimals } from "@/common/data/rest/tokens";
+import { getTokenPriceUsd, getVaultAssetDecimals } from "@/common/data/rest/tokens";
 import { getWalletTokenBalances } from "@/common/data/rpc/getWalletTokenBalances";
 import { SECONDS_PER_DAY } from "@/common/utils/constants";
 import { chunk, fetchAllMorphoRestPages, fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
@@ -72,16 +72,20 @@ async function getVaultPositionsForChain(chainId: SupportedChainId, accountAddre
           // Only the vault's asset is read, and it never changes.
           { revalidate: SECONDS_PER_DAY },
         );
-        return [vault.address, root?.data.asset] as const;
+        const asset = root?.data.asset;
+        const decimals = asset ? await getVaultAssetDecimals(chainId, asset) : null;
+        return [
+          vault.address,
+          asset && decimals !== null ? { address: getAddress(asset.address), decimals } : null,
+        ] as const;
       }),
     ),
   ]);
 
   const assetByVault = new Map<Address, { address: Address; decimals: number }>();
   for (const [vaultAddress, asset] of assets) {
-    const decimals = parseTokenDecimals(asset?.decimals);
     // Without valid decimals no amount can be formatted: the vault is skipped below, as if unknown.
-    if (asset && decimals !== null) assetByVault.set(vaultAddress, { address: getAddress(asset.address), decimals });
+    if (asset) assetByVault.set(vaultAddress, asset);
   }
 
   const assetsByVault = new Map<Address, string>();
