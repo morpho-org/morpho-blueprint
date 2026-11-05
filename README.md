@@ -6,11 +6,11 @@ Morpho Blueprint is an open-source [Next.js](https://nextjs.org/) white-label fr
 
 ## Quickstart
 
-The app reads all protocol data from the public, keyless Morpho Core REST API, so no data credential is needed:
+The app reads protocol data from the public Morpho Core REST API. Keyless access to the public API ends after Feb 28, 2026, so set `MORPHO_API_KEY`:
 
 ```bash
 pnpm i
-cp .env.example .env   # populate RPC URLs and a Reown project id
+cp .env.example .env   # populate RPC URLs, a Reown project id and MORPHO_API_KEY
 pnpm dev
 ```
 
@@ -35,7 +35,7 @@ All configuration happens via files in the [config folder](src/config/), which s
 Read-only data comes from Morpho's Core REST API through one server-only chokepoint, [fetchMorphoRest](src/common/utils/fetchMorphoRest.ts), plus the Blueprint API routes (vault descriptions, USD price history) and Merkl for reward APRs. The browser only ever talks to the app's own `/api/*` routes. [morphoApiConfig](src/common/utils/morphoApiConfig.ts) picks the host:
 
 -   With `MORPHO_INTERNAL_API_KEY` set, every read, Core REST and Blueprint API routes alike, goes to Morpho's internal deployment at `MORPHO_INTERNAL_API_URL` with that key (sent as an `x-api-key` header). A key without the URL fails every read.
--   Without it, the Blueprint API routes are off (descriptions come from the config, USD history is hidden), and Core REST goes to `MORPHO_REST_API_URL`, else the host of `MORPHO_API_URL` (the former GraphQL endpoint), else the public keyless API, with `MORPHO_API_KEY` when set. The template runs as-is with no data credential.
+-   Without it, the Blueprint API routes are off (descriptions come from the config, USD history is hidden), and Core REST goes to `MORPHO_REST_API_URL`, else the host of `MORPHO_API_URL` (legacy: the former GraphQL endpoint, use `MORPHO_REST_API_URL` instead), else the public API (`https://api.morpho.org`), with `MORPHO_API_KEY` when set. Keyless access to the public API ends after Feb 28, 2026, so set `MORPHO_API_KEY`.
 -   `morphoApi.requireInternal` in [the config](src/config/index.ts) (`false` here) makes the internal deployment mandatory: with it `true` and either internal variable unset, every server read throws instead of using another host. `next build` prerenders the pages, so a build without the variables fails; a running server fails the affected pages and API routes. Set it for deployments that must never read the public or a partner API.
 
 The app does not call Morpho's GraphQL API. [no-graphql.test.ts](test/unit/no-graphql.test.ts) fails if a GraphQL endpoint, client, query, dependency or schema comes back.
@@ -98,7 +98,7 @@ A data-layer change proves it serves the same data as before with the scripts in
 
 ```bash
 git worktree add ../morpho-blueprint-main origin/main
-(cd ../morpho-blueprint-main && pnpm install && pnpm run --if-present codegen)
+(cd ../morpho-blueprint-main && pnpm install)
 
 node scripts/verify/parity-dump.mjs --app ../morpho-blueprint-main --out /tmp/parity/base.json
 node scripts/verify/parity-dump.mjs --app . --out /tmp/parity/head.json
