@@ -58,34 +58,39 @@ export async function getVaultAssetDecimals(
   return parseTokenDecimals(metadata?.decimals);
 }
 
+// Prices move: a minute old is close enough for any page, and spares the API one read per token on
+// every render.
+export const PRICE_REVALIDATE_SECONDS = 60;
+
 export interface TokenPriceOptions {
-  /** Seconds the Next data cache may serve the price. Uncached by default. */
+  /** Seconds the Next data cache may serve the price. A minute by default. */
   revalidate?: number;
   /**
-   * Throw on a 429 instead of degrading to `null`, so a rate-limited render fails and Next keeps
-   * the last good page rather than caching one with no USD values.
+   * Throw on a 429 instead of degrading to `null` (the default), so a rate-limited render fails and
+   * Next keeps the last good page rather than caching one with no USD values. A read with no page
+   * to fall back to (the positions routes) passes `false`.
    */
   throwWhenRateLimited?: boolean;
 }
 
 /**
- * A token's current USD price, or `null` when it has none. A failed price read also degrades to
- * `null` (logged as a warning by the client), as a missing GraphQL price did: the row still renders.
+ * A token's current USD price, or `null` when it has none. Any failed read but a 429 also degrades
+ * to `null` (logged as a warning by the client), as a missing GraphQL price did: the row still renders.
  */
 export async function getTokenPriceUsd(
   chainId: number,
   address: Address,
-  options: TokenPriceOptions = {},
+  { revalidate = PRICE_REVALIDATE_SECONDS, throwWhenRateLimited = true }: TokenPriceOptions = {},
 ): Promise<number | null> {
   try {
     const response = await fetchMorphoRestResource<{ data: { price: number | null } }>(
       `/v0/tokens/${restSelector(chainId, address)}/price`,
       undefined,
-      { quiet: true, revalidate: options.revalidate },
+      { quiet: true, revalidate },
     );
     return response?.data.price ?? null;
   } catch (error) {
-    if (options.throwWhenRateLimited && error instanceof MorphoRestError && error.status === 429) throw error;
+    if (throwWhenRateLimited && error instanceof MorphoRestError && error.status === 429) throw error;
     return null;
   }
 }

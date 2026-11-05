@@ -3,7 +3,7 @@ import "server-only";
 import { cache } from "react";
 import type { Address } from "viem";
 import { HISTORY_RANGE_KEYS, type HistoryRange } from "@/common/data/adapters/timeseries";
-import { resolutionLookback } from "@/common/data/rest/historyWindow";
+import { isPlausibleApy, resolutionLookback } from "@/common/data/rest/historyWindow";
 import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
 import { APP_CONFIG } from "@/config";
 import type { SupportedChainId } from "@/config/types";
@@ -131,7 +131,12 @@ async function fetchVaultV1History(chainId: SupportedChainId, vaultAddress: Addr
   return {
     totalAssets: state.data.map((point) => ({ x: point.timestamp, y: point.total_assets })),
     totalAssetsUsd: [],
-    netApy: { [APP_CONFIG.apyWindow]: apy.data.map((point) => ({ x: point.timestamp, y: point.apy })) },
+    netApy: {
+      [APP_CONFIG.apyWindow]: apy.data.map((point) => ({
+        x: point.timestamp,
+        y: isPlausibleApy(point.apy) ? point.apy : null,
+      })),
+    },
   };
 }
 

@@ -122,7 +122,8 @@ async function getMarketPositionsForChain(chainId: SupportedChainId, marketIds: 
       tokenAddresses.map(async (address) => {
         const [decimals, priceUsd] = await Promise.all([
           getTokenDecimals(chainId, address),
-          getTokenPriceUsd(chainId, address),
+          // No page to fall back to here: a rate-limited price shows no USD value.
+          getTokenPriceUsd(chainId, address, { throwWhenRateLimited: false }),
         ]);
         return [address, decimals == null ? null : { decimals, priceUsd }] as const;
       }),

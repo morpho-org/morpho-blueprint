@@ -11,6 +11,7 @@ import type { SupportedChainId } from "@/config/types";
 import type { Market, MarketNonIdle } from "@/modules/market/market.types";
 import { getMerklRewardIndex } from "@/modules/reward/data/getMerklRewardIndex";
 import { marketBorrowRewardApys } from "@/modules/reward/data/merklRewardApys";
+import { withRewardTokenMetadata } from "@/modules/reward/data/rewardTokenMetadata";
 import {
   ADAPTIVE_CURVE_IRM_TARGET_UTILIZATION,
   computeIrmCurve,
@@ -22,11 +23,7 @@ import {
   toRestMarketSummary,
 } from "./adapters";
 import { getMarketHistory } from "./getMarketHistory";
-import { PRICE_REVALIDATE_SECONDS } from "./getMarketSummaries";
 import { getMarketSupplyingVaults } from "./getMarketSupplyingVaults";
-
-// As the borrow table reads prices: a minute of cache, and a 429 fails the render.
-const PRICE_OPTIONS = { revalidate: PRICE_REVALIDATE_SECONDS, throwWhenRateLimited: true };
 
 interface RestMarketRoot {
   data: {
@@ -94,8 +91,8 @@ export const getMarket = cache(async (chainId: SupportedChainId, marketId: Hex):
         : fetchMorphoRestResource<RestOracleState>(`/v0/oracles/${restSelector(chainId, oracleAddress)}/state`),
       getTokenInfo(chainId, loanAddress),
       isIdle ? null : getTokenInfo(chainId, collateralAddress),
-      getTokenPriceUsd(chainId, loanAddress, PRICE_OPTIONS),
-      isIdle ? null : getTokenPriceUsd(chainId, collateralAddress, PRICE_OPTIONS),
+      getTokenPriceUsd(chainId, loanAddress),
+      isIdle ? null : getTokenPriceUsd(chainId, collateralAddress),
       getMerklRewardIndex(chainId),
     ]);
   if (!state) throw new Error(`Market not found: ${chainId}:${marketId}`);
@@ -108,7 +105,7 @@ export const getMarket = cache(async (chainId: SupportedChainId, marketId: Hex):
   const loanDecimals = loanAsset.decimals;
   const { total_supply_assets: totalSupplyAssets, total_borrow_assets: totalBorrowAssets } = state.data;
 
-  const [suppliers, historical] = await Promise.all([
+  const [suppliers, historical, borrowRewards] = await Promise.all([
     getMarketSupplyingVaults(chainId, marketId),
     getMarketHistory(
       chainId,
@@ -116,6 +113,8 @@ export const getMarket = cache(async (chainId: SupportedChainId, marketId: Hex):
       { address: loanAddress, decimals: loanDecimals },
       collateralAsset ? { address: collateralAddress, decimals: collateralAsset.decimals } : null,
     ),
+    // As the borrow table labels them: Core's token metadata, Merkl's where Core has none.
+    withRewardTokenMetadata(rewardIndex, marketBorrowRewardApys(rewardIndex, marketId, loanAddress)),
   ]);
 
   const summary = toRestMarketSummary({
@@ -127,7 +126,7 @@ export const getMarket = cache(async (chainId: SupportedChainId, marketId: Hex):
     totalBorrowAssets,
     loanPriceUsd,
     borrowApyAverages: apy?.data.borrow_apy_averages ?? {},
-    borrowRewards: marketBorrowRewardApys(rewardIndex, marketId, loanAddress),
+    borrowRewards,
   });
 
   // Without a liquidity read, what the market itself holds is still supply minus borrow.

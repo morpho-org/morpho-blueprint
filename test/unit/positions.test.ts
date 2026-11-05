@@ -32,7 +32,8 @@ const respond = (path: string) => {
   if (body instanceof Error) throw body;
   return body ?? null;
 };
-vi.mock("@/common/utils/fetchMorphoRest", () => ({
+vi.mock("@/common/utils/fetchMorphoRest", async (importOriginal) => ({
+  MorphoRestError: (await importOriginal<typeof import("@/common/utils/fetchMorphoRest")>()).MorphoRestError,
   fetchMorphoRestResource: async (path: string) => respond(path),
   fetchAllMorphoRestPages: async (path: string, query: Record<string, unknown>) => {
     listCalls.push({ path, query });
@@ -150,6 +151,15 @@ describe("getVaultPositions", () => {
     });
   });
 
+  it("degrades a rate-limited price read to no USD value rather than failing the positions", async () => {
+    const { MorphoRestError } = await import("@/common/utils/fetchMorphoRest");
+    routes.set(`/v0/tokens/1:${USDC}/price`, new MorphoRestError(429, "/price", "Too Many Requests"));
+
+    const positions = await load();
+
+    expect(positions[1]).toMatchObject({ [vault(1)]: { assets: { raw: "2500000", usd: null } } });
+  });
+
   it("fails when the position list fails", async () => {
     lists.set(`/v0/vaults-v2/users/${ACCOUNT}/positions`, new Error("Morpho REST 500") as never);
 
@@ -233,6 +243,17 @@ describe("getMarketPositions", () => {
     const positions = await load();
 
     expect(Object.keys(positions[1])).toEqual([marketId(2)]);
+  });
+
+  it("degrades a rate-limited price read to no USD value rather than failing the positions", async () => {
+    const { MorphoRestError } = await import("@/common/utils/fetchMorphoRest");
+    routes.set(`/v0/tokens/1:${WETH}/price`, new MorphoRestError(429, "/price", "Too Many Requests"));
+
+    const positions = await load();
+
+    expect(positions[1]).toMatchObject({
+      [marketId(1)]: { collateralAmount: { raw: "1000000000000000000", usd: null }, borrowAmount: { usd: 2 } },
+    });
   });
 
   it("fails when the market list fails", async () => {

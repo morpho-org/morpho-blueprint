@@ -95,7 +95,13 @@ async function getVaultPositionsForChain(chainId: SupportedChainId, accountAddre
 
   const assetAddresses = Array.from(new Set(Array.from(assetByVault.values(), (asset) => asset.address)));
   const [prices, walletBalances] = await Promise.all([
-    Promise.all(assetAddresses.map(async (address) => [address, await getTokenPriceUsd(chainId, address)] as const)),
+    // No page to fall back to here: a rate-limited price shows no USD value.
+    Promise.all(
+      assetAddresses.map(
+        async (address) =>
+          [address, await getTokenPriceUsd(chainId, address, { throwWhenRateLimited: false })] as const,
+      ),
+    ),
     getWalletTokenBalances(chainId, accountAddress, assetAddresses),
   ]);
   const priceByAsset = new Map(prices);

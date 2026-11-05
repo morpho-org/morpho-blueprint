@@ -1,11 +1,19 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+// Served by path: a missing entry is a 404 (`null`), an `Error` is thrown. The real
+// `MorphoRestError` and `restSelector` are kept.
 const routes = new Map<string, unknown>();
-vi.mock("@/common/utils/fetchMorphoRest", () => ({
-  fetchMorphoRestResource: async (path: string) => routes.get(path) ?? null,
-  restSelector: (chainId: number, id: string) => `${chainId}:${id}`,
+const calls: { path: string; revalidate?: number }[] = [];
+vi.mock("@/common/utils/fetchMorphoRest", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/common/utils/fetchMorphoRest")>()),
+  fetchMorphoRestResource: async (path: string, _query: unknown, options?: { revalidate?: number }) => {
+    calls.push({ path, revalidate: options?.revalidate });
+    const body = routes.get(path);
+    if (body instanceof Error) throw body;
+    return body ?? null;
+  },
 }));
 
 const TOKEN = "0x0000000000000000000000000000000000000001";
@@ -39,6 +47,40 @@ describe("token decimals", () => {
 
     routes.set(`/v0/tokens/1:${TOKEN}`, { data: { decimals: 6 } });
     await expect(getTokenDecimals(1, TOKEN)).resolves.toBe(6);
+  });
+});
+
+describe("token USD price", () => {
+  beforeEach(() => {
+    routes.clear();
+    calls.length = 0;
+  });
+
+  it("caches a price for a minute by default", async () => {
+    const { getTokenPriceUsd } = await import("@/common/data/rest/tokens");
+    routes.set(`/v0/tokens/1:${TOKEN}/price`, { data: { price: 2 } });
+
+    await expect(getTokenPriceUsd(1, TOKEN)).resolves.toBe(2);
+    expect(calls).toEqual([{ path: `/v0/tokens/1:${TOKEN}/price`, revalidate: 60 }]);
+  });
+
+  it("throws on a 429 by default, so Next keeps the last good page", async () => {
+    const { getTokenPriceUsd } = await import("@/common/data/rest/tokens");
+    const { MorphoRestError } = await import("@/common/utils/fetchMorphoRest");
+    routes.set(`/v0/tokens/1:${TOKEN}/price`, new MorphoRestError(429, "/price", "Too Many Requests"));
+
+    await expect(getTokenPriceUsd(1, TOKEN)).rejects.toThrow("Morpho REST 429");
+    await expect(getTokenPriceUsd(1, TOKEN, { throwWhenRateLimited: false })).resolves.toBeNull();
+  });
+
+  it("degrades any other failure, and a missing price, to null", async () => {
+    const { getTokenPriceUsd } = await import("@/common/data/rest/tokens");
+    const { MorphoRestError } = await import("@/common/utils/fetchMorphoRest");
+    routes.set(`/v0/tokens/1:${TOKEN}/price`, new MorphoRestError(500, "/price", "Internal Server Error"));
+    await expect(getTokenPriceUsd(1, TOKEN)).resolves.toBeNull();
+
+    routes.set(`/v0/tokens/1:${TOKEN}/price`, { data: { price: null } });
+    await expect(getTokenPriceUsd(1, TOKEN)).resolves.toBeNull();
   });
 });
 

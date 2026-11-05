@@ -15,6 +15,8 @@ const COLLATERAL = getAddress("0x00000000000000000000000000000000000000c2");
 const ORACLE = getAddress("0x00000000000000000000000000000000000000a1");
 const IRM = getAddress("0x00000000000000000000000000000000000000a2");
 const CURATOR = getAddress("0x00000000000000000000000000000000000000a3");
+const OWNER = getAddress("0x00000000000000000000000000000000000000a4");
+const ZERO = "0x0000000000000000000000000000000000000000";
 // Configured mainnet vaults in the demo config.
 const VAULT_V1 = getAddress("0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB");
 const VAULT_V2 = getAddress("0xbeeff2C5bF38f90e3482a8b19F12E5a6D2FCa757");
@@ -43,6 +45,7 @@ vi.mock("@/modules/reward/data/getMerklRewardIndex", async () => {
           vaultV2Only: false,
         })),
       );
+      for (const { address } of merkl.borrowRewards) index.rewardTokenChains.set(address.toLowerCase(), 1);
       return index;
     },
   };
@@ -218,6 +221,18 @@ describe("getMarket (Core REST)", () => {
     expect(market.borrowApy30d.afterFees).toBe(0.053);
   });
 
+  it("labels the borrow reward chips with Core's token metadata, Merkl's where Core has none", async () => {
+    const CORE_KNOWN = getAddress("0x00000000000000000000000000000000000000d1");
+    const CORE_UNKNOWN = getAddress("0x00000000000000000000000000000000000000d2");
+    merkl.borrowRewards = [
+      { address: CORE_KNOWN, apr: 0.01 },
+      { address: CORE_UNKNOWN, apr: 0.02 },
+    ];
+    routes.set(`/v0/tokens/1:${CORE_KNOWN}`, token(CORE_KNOWN, "MORPHO", 18));
+    const market = await loadMarket();
+    expect(market.borrowApy7d.rewards.map((reward) => reward.asset.symbol)).toEqual(["MORPHO", "RWD"]);
+  });
+
   it("computes the IRM curve with blue-sdk from the rate at target", async () => {
     const market = await loadMarket();
     const { curve } = market.irm;
@@ -267,6 +282,20 @@ describe("getMarket (Core REST)", () => {
     expect(calls.filter((path) => path.startsWith("/v0/vaults-v1/") && !path.endsWith("/allocations"))).toEqual([
       `/v0/vaults-v1/1:${VAULT_V1}`,
     ]);
+  });
+
+  it("treats a cleared curator as none, a V1 vault falling back to its owner", async () => {
+    routes.set(`/v0/vaults-v1/1:${VAULT_V1}`, { data: { name: "Steakhouse USDC", curator: ZERO, owner: OWNER } });
+    routes.set(`/v0/vaults-v2/1:${VAULT_V2}`, { data: { name: "Steakhouse High Yield", curator: ZERO, owner: OWNER } });
+    routes.set(`/v0/curators/1:${OWNER}/details`, {
+      data: { curators: [{ name: "Owner Labs", logo_uri: null, socials: [] }] },
+    });
+    const market = await loadMarket();
+    const byProtocol = new Map(market.vaultAllocations.map((row) => [row.protocol, row]));
+    expect(byProtocol.get(Erc4626VaultProtocol.MorphoV1)?.vault).toMatchObject({ curatorAddress: OWNER });
+    expect(byProtocol.get(Erc4626VaultProtocol.MorphoV1)?.vault.metadata?.curator?.name).toBe("Owner Labs");
+    expect(byProtocol.get(Erc4626VaultProtocol.MorphoV2)?.vault.curatorAddress).toBeNull();
+    expect(calls).not.toContain(`/v0/curators/1:${ZERO}/details`);
   });
 
   it("builds the chart rows from state and APY history, USD hidden without the Blueprint key", async () => {
