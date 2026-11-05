@@ -28,6 +28,11 @@ export type RetryOptions = Partial<Options> | "disabled";
 export interface FetchJsonResponseOptions {
   requestOptions?: RequestInit;
   retryOptionOverrides?: RetryOptions;
+  /**
+   * Suppress the `data-fetch-error` event on failure and log a warning instead. For callers that
+   * own a fallback, so a failure they recover from is not reported as an error.
+   */
+  suppressFailureEvent?: boolean;
 }
 
 export async function fetchJsonResponse<T>(url: string | URL, options?: FetchJsonResponseOptions): Promise<T> {
@@ -53,11 +58,15 @@ export async function fetchJsonResponse<T>(url: string | URL, options?: FetchJso
       ? await fetchJsonResponse() // Bypass retries
       : await promiseWithRetry(fetchJsonResponse, options?.retryOptionOverrides);
   } catch (e) {
-    console.error(`Fetch failed for ${url} - ${e}`);
-    trackEvent("data-fetch-error", {
-      url: url.toString(),
-      error: `${e}`,
-    });
+    // A caller owning a fallback reports once itself, so its per-attempt failure is only a warning.
+    const log = options?.suppressFailureEvent ? console.warn : console.error;
+    log(`Fetch failed for ${url} - ${e}`);
+    if (!options?.suppressFailureEvent) {
+      trackEvent("data-fetch-error", {
+        url: url.toString(),
+        error: `${e}`,
+      });
+    }
     throw new Error("Fetch failed");
   }
 }

@@ -2,50 +2,22 @@ import "server-only";
 
 import { cache } from "react";
 import type { Address } from "viem";
-import { HISTORY_RANGE_KEYS, type HistoryRange, historyOptions } from "@/common/data/adapters/timeseries";
+import { HISTORY_RANGE_KEYS, type HistoryRange } from "@/common/data/adapters/timeseries";
 import { resolutionLookback } from "@/common/data/rest/historyWindow";
 import { executeMorphoQuery } from "@/common/utils/executeMorphoQuery";
 import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
-import { apyLookbackPeriod, vaultV2HistoryLookbackHours } from "@/common/utils/timeframe";
+import { apyLookbackPeriod } from "@/common/utils/timeframe";
 import { APP_CONFIG } from "@/config";
 import type { SupportedChainId } from "@/config/types";
 import { Erc4626VaultProtocol } from "@/config/vault-protocol";
 import { graphql } from "@/generated/gql/morpho";
+import { getMerklRewardIndex } from "@/modules/reward/data/getMerklRewardIndex";
 import { normalizeVault } from "@/modules/vault/utils/normalizeVault";
 import type { Vault, VaultHistoricalData } from "@/modules/vault/vault.types";
 import { toMorphoVaultV1Details, toMorphoVaultV2Details, toVaultHistoricalEntries } from "./adapters";
-import { ADAPTERS_PAGE_SIZE, CAPS_PAGE_SIZE, POSITIONS_PAGE_SIZE } from "./pagination";
-
-const vaultV2Query = graphql(`
-  query VaultV2(
-    $chainId: Int!
-    $address: String!
-    $lookbackV1: VaultV1LookbackPeriod!
-    $lookbackV2: VaultV2LookbackPeriod!
-    $capsFirst: Int!
-    $adaptersFirst: Int!
-    $positionsFirst: Int!
-  ) {
-    vaultV2s(first: 1, where: { chainId_in: [$chainId], address_in: [$address] }) {
-      items {
-        ...MorphoVaultV2SummaryFragment
-        ...MorphoVaultV2DetailsFragment
-      }
-    }
-  }
-`);
-
-const vaultV2HistoryQuery = graphql(`
-  query VaultV2History($chainId: Int!, $address: String!, $lookbackHours: Int!, $options: TimeseriesOptions!) {
-    vaultV2s(first: 1, where: { chainId_in: [$chainId], address_in: [$address] }) {
-      items {
-        historicalState {
-          ...MorphoVaultV2HistoryFragment
-        }
-      }
-    }
-  }
-`);
+import { getVaultV2Summary } from "./getVaultSummaries";
+import { getVaultV2Details } from "./getVaultV2Details";
+import { fetchVaultV2History } from "./getVaultV2History";
 
 const vaultV1Query = graphql(`
   query VaultV1($chainId: Int!, $address: String!, $lookbackV1: VaultV1LookbackPeriod!) {
@@ -61,7 +33,7 @@ const vaultV1Query = graphql(`
 export type { Vault };
 
 /**
- * Fetches the three chart resolutions in parallel; each is its own request (see `historyOptions`).
+ * Fetches the three chart resolutions in parallel, one REST lookback each (see `resolutionLookback`).
  * Keyed by range rather than positional, so `HISTORY_RANGE_KEYS`' order is not load-bearing.
  */
 async function fetchHistoryRanges<T>(
@@ -90,45 +62,46 @@ export const getVault = cache(
       return normalizeVault({ ...toMorphoVaultV1Details(vault), historical });
     }
 
-    const [data, history] = await Promise.all([
-      executeMorphoQuery(vaultV2Query, {
-        chainId,
-        address: vaultAddress,
-        lookbackV1: apyLookbackPeriod,
-        lookbackV2: apyLookbackPeriod,
-        capsFirst: CAPS_PAGE_SIZE,
-        adaptersFirst: ADAPTERS_PAGE_SIZE,
-        positionsFirst: POSITIONS_PAGE_SIZE,
-      }),
-      fetchHistoryRanges(async (range) => {
-        const response = await executeMorphoQuery(vaultV2HistoryQuery, {
-          chainId,
-          address: vaultAddress,
-          lookbackHours: vaultV2HistoryLookbackHours,
-          options: historyOptions(range),
-        });
-        return response.vaultV2s.items?.[0]?.historicalState ?? null;
-      }),
+    // One Merkl read for the page, shared by the header APY and the breakdown rows.
+    const rewardIndex = getMerklRewardIndex(chainId);
+    const summaryRead = getVaultV2Summary(chainId, vaultAddress, rewardIndex);
+    // The details reuse the summary's root, state, asset decimals and price instead of reading them
+    // again; their other reads start right away. A failed summary resolves to no context here: its
+    // error surfaces through `summaryRead`.
+    const detailsContext = summaryRead.then(
+      (read) =>
+        read && {
+          chain: read.summary.chain,
+          asset: {
+            address: read.summary.asset.address,
+            decimals: read.summary.asset.decimals,
+            priceUsd: read.summary.asset.priceUsd,
+          },
+          root: read.root,
+          state: read.state,
+        },
+      () => null,
+    );
+    // The USD history prices the summary's asset; a failed summary surfaces through `summaryRead`.
+    const historyAsset = summaryRead.then(
+      (read) => (read ? { address: read.summary.asset.address, decimals: read.summary.asset.decimals } : null),
+      () => null,
+    );
+    const [read, details, history] = await Promise.all([
+      summaryRead,
+      getVaultV2Details(chainId, vaultAddress, detailsContext, rewardIndex),
+      fetchHistoryRanges((range) => fetchVaultV2History(chainId, vaultAddress, range, historyAsset)),
     ]);
 
-    const vault = data.vaultV2s.items?.[0];
-    if (!vault) throw new Error(`Vault not found: ${chainId}:${vaultAddress}`);
+    if (!read || !details) throw new Error(`Vault not found: ${chainId}:${vaultAddress}`);
+    const vault = read.summary;
 
-    const decimals = Math.round(vault.asset.decimals);
-    // Only the configured window is fetched, so it is filed under exactly that key — note the
-    // series is smoothed over at most 24h whatever the window (see `vaultV2HistoryLookbackHours`).
+    const decimals = vault.asset.decimals;
     const historical: VaultHistoricalData = buildHistoricalData(history, (series) =>
-      toVaultHistoricalEntries(
-        {
-          totalAssets: series.totalAssets,
-          totalAssetsUsd: series.totalAssetsUsd,
-          netApy: { [APP_CONFIG.apyWindow]: series.avgNetApy },
-        },
-        decimals,
-      ),
+      toVaultHistoricalEntries(series, decimals),
     );
 
-    return normalizeVault({ ...toMorphoVaultV2Details(vault), historical });
+    return normalizeVault({ ...toMorphoVaultV2Details(vault, details), historical });
   },
 );
 
