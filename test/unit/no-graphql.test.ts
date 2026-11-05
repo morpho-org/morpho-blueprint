@@ -7,7 +7,7 @@
  *   or regex literal containing "graphql", or an identifier named `gql`, `executeMorphoQuery` or containing
  *   "graphql" (covers `/graphql` URLs on any host, `gql`/`graphql(` tagged queries and GraphQL imports);
  * - a read of `MORPHO_API_URL`, the former GraphQL endpoint, outside the config module;
- * - a GraphQL dependency in package.json, or a script mentioning GraphQL (the no-op `codegen` echo passes);
+ * - a GraphQL dependency in package.json, or a script mentioning GraphQL;
  * - a GraphQL schema snapshot, generated client or codegen config.
  *
  * Comments are not scanned: they may explain the migration. ALLOWED lists the deliberate exceptions, each
