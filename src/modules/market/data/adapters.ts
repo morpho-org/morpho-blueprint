@@ -1,9 +1,10 @@
-import { formatUnits, getAddress } from "viem";
-import { descale, toAmount, toBigInt, toRatio } from "@/common/data/adapters/amount";
+import { formatUnits, getAddress, type Hex } from "viem";
+import { descale, toAmount, toAmountWithPrice, toBigInt, toRatio } from "@/common/data/adapters/amount";
 import { assembleApy, toRewardApys } from "@/common/data/adapters/apy";
 import { toChainInfo, toCuratorInfo, toTokenInfo } from "@/common/data/adapters/entity";
 import { warnIfTruncated } from "@/common/data/adapters/pagination";
 import { type DataPoint, descaleSeries, zipTimeseries } from "@/common/data/adapters/timeseries";
+import type { Apy, ChainInfo, RewardApy, TokenInfo } from "@/common/data/types";
 import { numberToString } from "@/common/utils/format";
 import { Erc4626VaultProtocol } from "@/config/vault-protocol";
 import type {
@@ -110,11 +111,6 @@ export function toMarketSummary(market: MarketSummaryFragmentFragment): MarketSu
     collateralAsset,
     loanAsset,
     lltv: toRatio(market.lltv),
-    borrowApy: assembleApy({
-      apyExcludingRewards: state?.borrowApy,
-      netApy: state?.netBorrowApy,
-      rewards,
-    }),
     borrowApy6h: assembleApy({
       apyExcludingRewards: state?.avgBorrowApy,
       netApy: state?.avgNetBorrowApy,
@@ -135,6 +131,46 @@ export function toMarketSummary(market: MarketSummaryFragmentFragment): MarketSu
       netApy: state?.monthlyNetBorrowApy,
       rewards,
     }),
+  };
+}
+
+/** Core REST's `apy-averages` window keys, as the market list reads them. */
+export type RestApyAverageKey = "6h" | "24h" | "7d" | "30d";
+
+/**
+ * A borrow APY from a REST native average and the current Merkl borrow reward APRs. Rewards lower
+ * what a borrower pays, so `total` is the native rate minus their sum (GraphQL's `netBorrowApy`).
+ */
+function toRestBorrowApy(nativeApy: number | null | undefined, rewards: RewardApy[]): Apy {
+  const afterFees = nativeApy ?? 0;
+  return { afterFees, total: rewards.reduce((sum, reward) => sum - reward.apr, afterFees), rewards };
+}
+
+/** One borrow-table row from Core REST reads. `loanPriceUsd` null leaves the USD value unknown. */
+export function toRestMarketSummary(source: {
+  marketId: Hex;
+  chain: ChainInfo;
+  lltvWad: string;
+  collateralAsset: TokenInfo | null;
+  loanAsset: TokenInfo;
+  totalBorrowAssets: string;
+  loanPriceUsd: number | null;
+  borrowApyAverages: Partial<Record<RestApyAverageKey, number | null>>;
+  borrowRewards: RewardApy[];
+}): MarketSummary {
+  const { borrowApyAverages: averages, borrowRewards: rewards } = source;
+  return {
+    chain: source.chain,
+    name: composeMarketName(source.collateralAsset?.symbol, source.loanAsset.symbol),
+    marketId: source.marketId,
+    totalBorrowed: toAmountWithPrice(source.totalBorrowAssets, source.loanAsset.decimals, source.loanPriceUsd),
+    collateralAsset: source.collateralAsset,
+    loanAsset: source.loanAsset,
+    lltv: toRatio(source.lltvWad),
+    borrowApy6h: toRestBorrowApy(averages["6h"], rewards),
+    borrowApy1d: toRestBorrowApy(averages["24h"], rewards),
+    borrowApy7d: toRestBorrowApy(averages["7d"], rewards),
+    borrowApy30d: toRestBorrowApy(averages["30d"], rewards),
   };
 }
 

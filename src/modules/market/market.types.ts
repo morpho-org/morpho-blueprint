@@ -48,8 +48,6 @@ export interface MarketSummary extends MarketBorrowApyWindows {
   collateralAsset: TokenInfo | null;
   loanAsset: TokenInfo;
   lltv: Ratio;
-  /** Instantaneous borrow APY, kept alongside the windowed variants. */
-  borrowApy: Apy;
 }
 
 export interface MarketVaultAllocation {

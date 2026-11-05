@@ -4,7 +4,7 @@
 //   node scripts/verify/parity-dump.mjs --app <checkout> --out <file.json>
 //     [--providers summaries,vaults] [--vaults 1:0xabc,1:0xdef] [--account 0x...] [--max-requests 50]
 //
-// Providers: summaries, vaults (default), vault-positions, market-positions (need --account).
+// Providers: summaries, vaults (default), market-summaries, vault-positions, market-positions (need --account).
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
