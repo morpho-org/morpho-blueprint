@@ -17,6 +17,7 @@ import { Erc4626VaultProtocol } from "@/config/vault-protocol";
 import { graphql } from "@/generated/gql/morpho";
 import { getMerklRewardIndex } from "@/modules/reward/data/getMerklRewardIndex";
 import { emptyMerklRewardIndex, type MerklRewardIndex, vaultRewardApys } from "@/modules/reward/data/merklRewardApys";
+import { withRewardTokenMetadata } from "@/modules/reward/data/rewardTokenMetadata";
 import { normalizeVault } from "@/modules/vault/utils/normalizeVault";
 import type { MorphoVaultV2Summary, VaultSummary } from "@/modules/vault/vault.types";
 import { type Adapted, toMorphoVaultV1Summary, toRestVaultV2Summary } from "./adapters";
@@ -148,17 +149,21 @@ async function getVaultV2Summaries(
       priceOf(chainId, asset),
       root.data.curator ? curatorOf(chainId, getAddress(root.data.curator)) : Promise.resolve<CuratorInfo | null>(null),
     ]);
+    const decimals = await getVaultAssetDecimals(chainId, root.data.asset, token);
+    // A vault with unknown decimals is dropped below: no reward metadata read for it.
+    const rewardApys = decimals === null ? [] : vaultRewardApys(rewardIndex, getAddress(root.data.address), "v2");
+    const rewards = await withRewardTokenMetadata(rewardIndex, rewardApys);
     return {
       chainId,
       root: root.data,
       state: state.data,
       totalAssets: state.data.total_assets,
       apy: apy?.data.apy ?? null,
-      rewards: vaultRewardApys(rewardIndex, getAddress(root.data.address), "v2"),
+      rewards,
       token,
       priceUsd,
       curator,
-      decimals: await getVaultAssetDecimals(chainId, root.data.asset, token),
+      decimals,
     };
   };
 

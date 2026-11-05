@@ -5,6 +5,7 @@ import { z } from "zod";
 import { fetchJsonResponse } from "@/common/utils/fetch";
 import { trackEvent } from "@/common/utils/trackEvent";
 import { tryCatch } from "@/common/utils/tryCatch";
+import { withDeadline } from "./deadline";
 import {
   emptyMerklRewardIndex,
   indexMerklRewards,
@@ -50,23 +51,11 @@ async function fetchOpportunities(chainId: number): Promise<unknown[]> {
 }
 
 /**
- * Rejects after `ms` whatever the request does: Next drops a fetch's `signal` when it revalidates a
- * stale cache entry, so the abort signal alone cannot bound an ISR regeneration.
- */
-async function withDeadline<T>(promise: Promise<T>, ms: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const deadline = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`Merkl did not answer within ${ms} ms`)), ms);
-  });
-  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
-}
-
-/**
  * The live Merkl reward campaigns of one chain, read once per render. Merkl being down is not a page
  * error: the index is empty, so pages show native APYs with no reward chips.
  */
 export const getMerklRewardIndex = cache(async (chainId: number): Promise<MerklRewardIndex> => {
-  const { data, error } = await tryCatch(withDeadline(fetchOpportunities(chainId), TIMEOUT_MS));
+  const { data, error } = await tryCatch(withDeadline(fetchOpportunities(chainId), TIMEOUT_MS, "Merkl"));
   if (error) {
     console.error(`Merkl reward APRs request failed on chain ${chainId}, rendering native APYs - ${error}`);
     trackEvent("data-fetch-error", { url: MERKL_OPPORTUNITIES_URL, chainId, error: `${error}` }).catch(() => {});

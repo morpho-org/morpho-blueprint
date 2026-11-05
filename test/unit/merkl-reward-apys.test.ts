@@ -10,7 +10,15 @@ import {
 vi.mock("server-only", () => ({}));
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react")>()),
-  cache: <T>(fn: T) => fn,
+  // React's per-render memo, keyed by the arguments; vi.resetModules gives each test a fresh one.
+  cache: <A extends unknown[], R>(fn: (...args: A) => R) => {
+    const memo = new Map<string, R>();
+    return (...args: A) => {
+      const key = JSON.stringify(args);
+      if (!memo.has(key)) memo.set(key, fn(...args));
+      return memo.get(key);
+    };
+  },
 }));
 
 interface FetchOptions {
@@ -37,6 +45,27 @@ vi.mock("@/common/utils/fetch", () => ({
     if (fetchState.hang) await new Promise(() => {});
     return fetchState.pages[Number(url.searchParams.get("page"))] ?? [];
   },
+}));
+interface RestCall {
+  path: string;
+  options: { revalidate?: number; quiet?: boolean } | undefined;
+}
+const restState = vi.hoisted(
+  (): { tokens: Map<string, unknown>; failing: Set<string>; hanging: Set<string>; calls: RestCall[] } => ({
+    tokens: new Map(),
+    failing: new Set(),
+    hanging: new Set(),
+    calls: [],
+  }),
+);
+vi.mock("@/common/utils/fetchMorphoRest", () => ({
+  fetchMorphoRestResource: async (path: string, _query: unknown, options: RestCall["options"]) => {
+    restState.calls.push({ path, options });
+    if (restState.failing.has(path)) throw new Error("Morpho REST 500");
+    if (restState.hanging.has(path)) await new Promise(() => {});
+    return restState.tokens.get(path) ?? null;
+  },
+  restSelector: (chainId: number, id: string) => `${chainId}:${id}`,
 }));
 const reports = vi.hoisted((): { event: string; context: unknown }[] => []);
 vi.mock("@/common/utils/trackEvent", () => ({
@@ -161,6 +190,63 @@ describe("indexMerklRewards filters", () => {
   });
 });
 
+describe("indexMerklRewards hardening", () => {
+  it("drops a campaign whose reward token address has a bad checksum, as the rewards backend does", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const badChecksum = MORPHO_TOKEN.replace("D97B", "d97b");
+    const index = indexMerklRewards(
+      opportunities(
+        campaign({ apr: 1, rewardToken: { ...campaign().rewardToken, address: badChecksum } }),
+        campaign({ apr: 2, rewardToken: { ...campaign().rewardToken, address: MORPHO_TOKEN.toLowerCase() } }),
+      ),
+      NOW,
+    );
+
+    // A lowercase address carries no checksum and is kept.
+    expect(vaultRewardApys(index, VAULT, "v2")).toEqual([{ asset: MORPHO_ASSET, apr: 0.02 }]);
+  });
+
+  it("drops and warns about a campaign above 1000% APR, and the schema rejects a non-finite one", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const index = indexMerklRewards(
+      opportunities(
+        campaign({ id: "huge", apr: 1000.5 }),
+        campaign({ id: "infinite", apr: Number.POSITIVE_INFINITY }),
+        campaign({ id: "cap", apr: 1000 }),
+      ),
+      NOW,
+    );
+
+    // Exactly 1000% is kept.
+    expect(vaultRewardApys(index, VAULT, "v2")).toEqual([{ asset: MORPHO_ASSET, apr: 10 }]);
+    expect(warn.mock.calls.map(([message]) => String(message).split("\n")[0])).toEqual([
+      "Dropping Merkl campaign huge: APR 1000.5% is above the sanity cap",
+      "Dropping invalid Merkl campaign: ✖ Invalid input: expected number, received number",
+    ]);
+  });
+
+  it("applies the checksum rule and the APR cap to borrow campaigns too", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const badChecksum = MORPHO_TOKEN.replace("D97B", "d97b");
+    const index = indexMerklRewards(
+      opportunities(
+        campaign({ id: "huge-borrow", type: "MORPHOBORROW", apr: 1000.5 }, { market: MARKET }),
+        campaign(
+          { type: "MORPHOBORROW", apr: 1, rewardToken: { ...campaign().rewardToken, address: badChecksum } },
+          { market: MARKET },
+        ),
+        campaign({ type: "MORPHOBORROW", apr: 3 }, { market: MARKET }),
+      ),
+      NOW,
+    );
+
+    expect(marketBorrowRewardApys(index, MARKET, USDC)).toEqual([{ asset: MORPHO_ASSET, apr: 0.03 }]);
+    expect(warn.mock.calls.map(([message]) => String(message).split("\n")[0])).toContain(
+      "Dropping Merkl campaign huge-borrow: APR 1000.5% is above the sanity cap",
+    );
+  });
+});
+
 describe("pass-through and market rewards", () => {
   it("credits a vault with the child campaign Merkl forwards it from a market campaign", () => {
     const parent = campaign({ type: "MORPHOSUPPLY", apr: 5.6 }, { market: MARKET, targetToken: USDC });
@@ -241,6 +327,10 @@ describe("getMerklRewardIndex", () => {
     fetchState.urls.length = 0;
     fetchState.options.length = 0;
     reports.length = 0;
+    restState.tokens.clear();
+    restState.failing.clear();
+    restState.hanging.clear();
+    restState.calls.length = 0;
     vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
   });
 
@@ -296,6 +386,17 @@ describe("getMerklRewardIndex", () => {
     expect(reports).toEqual([{ event: "data-fetch-error", context: { chainId: 1 } }]);
   });
 
+  it("reads no Core REST token metadata itself", async () => {
+    fetchState.pages = [
+      opportunities(campaign(), campaign({ rewardToken: { ...campaign().rewardToken, address: FXN_TOKEN } })),
+    ];
+    const { getMerklRewardIndex } = await import("@/modules/reward/data/getMerklRewardIndex");
+
+    await getMerklRewardIndex(1);
+
+    expect(restState.calls).toEqual([]);
+  });
+
   it("returns no rewards and reports one failure on an unexpected response shape", async () => {
     fetchState.pages = [{ error: "rate limited" }];
     const { getMerklRewardIndex } = await import("@/modules/reward/data/getMerklRewardIndex");
@@ -304,5 +405,119 @@ describe("getMerklRewardIndex", () => {
 
     expect(index.vaults.size).toBe(0);
     expect(reports).toHaveLength(1);
+  });
+});
+
+describe("withRewardTokenMetadata", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    restState.tokens.clear();
+    restState.failing.clear();
+    restState.hanging.clear();
+    restState.calls.length = 0;
+  });
+
+  const fxn = { ...campaign().rewardToken, address: FXN_TOKEN, symbol: "FXN", name: "FXN Token", icon: null };
+  const FXN_ASSET = { ...MORPHO_ASSET, address: FXN_TOKEN, symbol: "FXN", name: "FXN Token", icon: null };
+
+  it("shows Core's symbol, name and decimals, one quiet day-cached read per distinct shown token", async () => {
+    restState.tokens.set(`/v0/tokens/1:${MORPHO_TOKEN}`, {
+      data: { address: MORPHO_TOKEN, symbol: "MORPHO.core", name: "Morpho (Core)", decimals: 6 },
+    });
+    const index = indexMerklRewards(
+      opportunities(
+        campaign({ apr: 1 }),
+        campaign({ apr: 2 }, { targetToken: OTHER_VAULT }),
+        campaign({ type: "MORPHOSUPPLY", apr: 3 }, { market: MARKET }),
+      ),
+      NOW,
+    );
+    const { withRewardTokenMetadata } = await import("@/modules/reward/data/rewardTokenMetadata");
+
+    const [vault, otherVault, market] = await Promise.all([
+      withRewardTokenMetadata(index, vaultRewardApys(index, VAULT, "v2")),
+      withRewardTokenMetadata(index, vaultRewardApys(index, OTHER_VAULT, "v2")),
+      withRewardTokenMetadata(index, marketSupplyRewardApys(index, MARKET, USDC)),
+    ]);
+
+    const coreAsset = { ...MORPHO_ASSET, symbol: "MORPHO.core", name: "Morpho (Core)", decimals: 6 };
+    expect(vault).toEqual([{ asset: coreAsset, apr: 0.01 }]);
+    expect(otherVault).toEqual([{ asset: coreAsset, apr: 0.02 }]);
+    expect(market).toEqual([{ asset: coreAsset, apr: 0.03 }]);
+    expect(restState.calls).toEqual([
+      { path: `/v0/tokens/1:${MORPHO_TOKEN}`, options: { revalidate: 86_400, quiet: true } },
+    ]);
+  });
+
+  it("reads only the tokens of the rewards shown, not every token of the chain index", async () => {
+    const index = indexMerklRewards(
+      opportunities(campaign(), campaign({ rewardToken: fxn }, { targetToken: OTHER_VAULT })),
+      NOW,
+    );
+    const { withRewardTokenMetadata } = await import("@/modules/reward/data/rewardTokenMetadata");
+
+    await withRewardTokenMetadata(index, vaultRewardApys(index, VAULT, "v2"));
+
+    expect(restState.calls.map(({ path }) => path)).toEqual([`/v0/tokens/1:${MORPHO_TOKEN}`]);
+  });
+
+  it("reads the reward token on its own chain and keeps Merkl's fields for what Core does not know", async () => {
+    restState.tokens.set(`/v0/tokens/239:${MORPHO_TOKEN}`, {
+      data: { address: MORPHO_TOKEN, symbol: null, name: "Morpho on TAC", decimals: "18" },
+    });
+    const index = indexMerklRewards(
+      opportunities(campaign({ rewardToken: { ...campaign().rewardToken, chainId: 239 } })),
+      NOW,
+    );
+    const { withRewardTokenMetadata } = await import("@/modules/reward/data/rewardTokenMetadata");
+
+    const rewards = await withRewardTokenMetadata(index, vaultRewardApys(index, VAULT, "v2"));
+
+    expect(rewards).toEqual([{ asset: { ...MORPHO_ASSET, name: "Morpho on TAC" }, apr: 0.02 }]);
+    expect(restState.calls.map(({ path }) => path)).toEqual([`/v0/tokens/239:${MORPHO_TOKEN}`]);
+  });
+
+  it("keeps Merkl's metadata, with no read, when campaigns pay the same address on two chains", async () => {
+    const index = indexMerklRewards(
+      opportunities(
+        campaign(),
+        campaign({ rewardToken: { ...campaign().rewardToken, chainId: 8453 } }, { targetToken: OTHER_VAULT }),
+      ),
+      NOW,
+    );
+    const { withRewardTokenMetadata } = await import("@/modules/reward/data/rewardTokenMetadata");
+
+    const rewards = await withRewardTokenMetadata(index, vaultRewardApys(index, VAULT, "v2"));
+
+    expect(rewards).toEqual([{ asset: MORPHO_ASSET, apr: 0.02 }]);
+    expect(restState.calls).toEqual([]);
+  });
+
+  it("keeps Merkl's metadata when Core does not know the token or fails", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    restState.failing.add(`/v0/tokens/1:${FXN_TOKEN}`);
+    const index = indexMerklRewards(opportunities(campaign({ apr: 1 }), campaign({ rewardToken: fxn })), NOW);
+    const { withRewardTokenMetadata } = await import("@/modules/reward/data/rewardTokenMetadata");
+
+    const rewards = await withRewardTokenMetadata(index, vaultRewardApys(index, VAULT, "v2"));
+
+    expect(rewards).toEqual([
+      { asset: MORPHO_ASSET, apr: 0.01 },
+      { asset: FXN_ASSET, apr: 0.02 },
+    ]);
+  });
+
+  it("keeps Merkl's metadata after 1 s when Core never answers", async () => {
+    restState.hanging.add(`/v0/tokens/1:${MORPHO_TOKEN}`);
+    const index = indexMerklRewards(opportunities(campaign()), NOW);
+    const { withRewardTokenMetadata } = await import("@/modules/reward/data/rewardTokenMetadata");
+
+    const started = performance.now();
+    const rewards = await withRewardTokenMetadata(index, vaultRewardApys(index, VAULT, "v2"));
+    const elapsed = performance.now() - started;
+
+    expect(rewards).toEqual([{ asset: MORPHO_ASSET, apr: 0.02 }]);
+    expect(elapsed).toBeGreaterThanOrEqual(950);
+    expect(elapsed).toBeLessThan(2_000);
   });
 });
