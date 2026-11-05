@@ -17,6 +17,7 @@ import type { SupportedChainId } from "@/config/types";
 import type { MarketNonIdle } from "@/modules/market/data/getMarket";
 import type { MarketPosition } from "@/modules/market/data/getMarketPositions";
 import { useMarketPosition } from "@/modules/market/hooks/useMarketPositions";
+import { capAvailableToBorrowByLiquidity } from "@/modules/market/utils/capAvailableToBorrowByLiquidity";
 import { computeMarketPositonChange } from "@/modules/market/utils/computeMarketPositionChange";
 import { computeRequiredCollateral } from "@/modules/market/utils/computeRequiredCollateral";
 import {
@@ -103,7 +104,14 @@ export function useMarketRepayAndWithdrawCollateralForm({
       if (error) {
         setSubmitErrorMsg(error instanceof UserFacingError ? error.message : "An unknown error occurred");
       } else {
-        onSuccessfulActionSimulation(action);
+        // The review dialog's "Available to borrow" uses the same liquidity cap as the form summary.
+        onSuccessfulActionSimulation({
+          ...action,
+          positionChange: capAvailableToBorrowByLiquidity({
+            positionChange: action.positionChange,
+            marketAvailableToBorrow: BigInt(market.availableToBorrow.raw),
+          }),
+        });
       }
     },
     [address, setConnectKitOpen, publicClient, market, onSuccessfulActionSimulation, position],
@@ -190,11 +198,15 @@ function useDerivedFormValues({
   }, [position, market, repayAmount]);
 
   const positionChange = useMemo(() => {
-    return computeMarketPositonChange({
-      market,
-      currentPosition: position,
-      collateralAmountChange: -withdrawCollateralAmount,
-      loanAmountChange: -repayAmount,
+    // "Available to borrow" is also bounded by what the market can lend; a repay adds the repaid amount back to it.
+    return capAvailableToBorrowByLiquidity({
+      positionChange: computeMarketPositonChange({
+        market,
+        currentPosition: position,
+        collateralAmountChange: -withdrawCollateralAmount,
+        loanAmountChange: -repayAmount,
+      }),
+      marketAvailableToBorrow: BigInt(market.availableToBorrow.raw),
     });
   }, [market, position, withdrawCollateralAmount, repayAmount]);
 
