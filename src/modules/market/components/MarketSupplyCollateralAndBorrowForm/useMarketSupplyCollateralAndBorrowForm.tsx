@@ -15,6 +15,7 @@ import { Erc4626VaultProtocol } from "@/config/vault-protocol";
 import type { MarketNonIdle } from "@/modules/market/data/getMarket";
 import type { MarketPosition } from "@/modules/market/data/getMarketPositions";
 import { useMarketPosition } from "@/modules/market/hooks/useMarketPositions";
+import { capAvailableToBorrowByLiquidity } from "@/modules/market/utils/capAvailableToBorrowByLiquidity";
 import { computeMarketPositonChange } from "@/modules/market/utils/computeMarketPositionChange";
 import { computeMaxBorrow } from "@/modules/market/utils/computeMaxBorrow";
 import {
@@ -194,11 +195,16 @@ function useDerivedFormValues({
   }, [position, market, supplyCollateralAmount]);
 
   const positionChange = useMemo(() => {
-    return computeMarketPositonChange({
-      market,
-      currentPosition: position,
-      collateralAmountChange: supplyCollateralAmount,
-      loanAmountChange: borrowAmount,
+    // The summary's "Available to borrow" matches the borrow input's cap: bounded by what the market can still lend.
+    return capAvailableToBorrowByLiquidity({
+      positionChange: computeMarketPositonChange({
+        market,
+        currentPosition: position,
+        collateralAmountChange: supplyCollateralAmount,
+        loanAmountChange: borrowAmount,
+      }),
+      marketAvailableToBorrow: BigInt(market.availableToBorrow.raw),
+      borrowAmount,
     });
   }, [market, position, supplyCollateralAmount, borrowAmount]);
 
