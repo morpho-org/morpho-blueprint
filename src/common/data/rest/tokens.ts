@@ -4,7 +4,7 @@ import { type Address, getAddress } from "viem";
 import { toTokenInfo } from "@/common/data/adapters/entity";
 import type { TokenInfo } from "@/common/data/types";
 import { SECONDS_PER_DAY } from "@/common/utils/constants";
-import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
+import { fetchMorphoRestResource, MorphoRestError, restSelector } from "@/common/utils/fetchMorphoRest";
 
 /** ERC-20 decimals are a uint8. Anything else (null, a float, a string) is unknown, never a default. */
 export function parseTokenDecimals(value: unknown): number | null {
@@ -51,19 +51,34 @@ export async function getVaultAssetDecimals(
   return parseTokenDecimals(metadata?.decimals);
 }
 
+export interface TokenPriceOptions {
+  /** Seconds the Next data cache may serve the price. Uncached by default. */
+  revalidate?: number;
+  /**
+   * Throw on a 429 instead of degrading to `null`, so a rate-limited render fails and Next keeps
+   * the last good page rather than caching one with no USD values.
+   */
+  throwWhenRateLimited?: boolean;
+}
+
 /**
  * A token's current USD price, or `null` when it has none. A failed price read also degrades to
  * `null` (logged as a warning by the client), as a missing GraphQL price did: the row still renders.
  */
-export async function getTokenPriceUsd(chainId: number, address: Address): Promise<number | null> {
+export async function getTokenPriceUsd(
+  chainId: number,
+  address: Address,
+  options: TokenPriceOptions = {},
+): Promise<number | null> {
   try {
     const response = await fetchMorphoRestResource<{ data: { price: number | null } }>(
       `/v0/tokens/${restSelector(chainId, address)}/price`,
       undefined,
-      { quiet: true },
+      { quiet: true, revalidate: options.revalidate },
     );
     return response?.data.price ?? null;
-  } catch {
+  } catch (error) {
+    if (options.throwWhenRateLimited && error instanceof MorphoRestError && error.status === 429) throw error;
     return null;
   }
 }
