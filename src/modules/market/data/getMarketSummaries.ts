@@ -9,6 +9,7 @@ import { chunk, fetchAllMorphoRestPages, fetchMorphoRestResource, restSelector }
 import type { MarketSummary } from "@/modules/market/market.types";
 import { getMerklRewardIndex } from "@/modules/reward/data/getMerklRewardIndex";
 import { marketBorrowRewardApys } from "@/modules/reward/data/merklRewardApys";
+import { withRewardTokenMetadata } from "@/modules/reward/data/rewardTokenMetadata";
 import { type RestApyAverageKey, toRestMarketSummary } from "./adapters";
 import { getSupportedMarketIds } from "./getSupportedMarketIds";
 
@@ -92,6 +93,11 @@ async function getChainMarketSummaries(chainId: number, marketIds: readonly Hex[
         console.warn(`Market not fully known to the API, skipping it: ${selector}`);
         return null;
       }
+      // Reward token metadata is read for the shown markets only.
+      const borrowRewards = await withRewardTokenMetadata(
+        merkl,
+        marketBorrowRewardApys(merkl, root.market_id, loanToken),
+      );
       return toRestMarketSummary({
         marketId: root.market_id,
         chain,
@@ -101,7 +107,7 @@ async function getChainMarketSummaries(chainId: number, marketIds: readonly Hex[
         totalBorrowAssets: state.data.total_borrow_assets,
         loanPriceUsd,
         borrowApyAverages: apy?.data.borrow_apy_averages ?? {},
-        borrowRewards: marketBorrowRewardApys(merkl, root.market_id, loanToken),
+        borrowRewards,
       });
     }),
   );

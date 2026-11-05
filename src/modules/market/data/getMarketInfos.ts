@@ -9,6 +9,7 @@ import { SECONDS_PER_DAY } from "@/common/utils/constants";
 import { chunk, fetchAllMorphoRestPages, fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
 import type { MarketInfo } from "@/modules/market/market.types";
 import { type MerklRewardIndex, marketSupplyRewardApys } from "@/modules/reward/data/merklRewardApys";
+import { withRewardTokenMetadata } from "@/modules/reward/data/rewardTokenMetadata";
 import { composeMarketName } from "./adapters";
 
 interface RestMarketRoot {
@@ -92,7 +93,7 @@ export async function getMarketInfos(
   const priceByAddress = new Map<Address, number | null>(loanPrices);
   const dataById = new Map(marketData);
 
-  for (const root of roots) {
+  const shown = roots.flatMap((root) => {
     const loanAsset = tokenByAddress.get(getAddress(root.loan_token));
     const collateralAddress = getAddress(root.collateral_token);
     // An idle market has no collateral token.
@@ -100,14 +101,26 @@ export async function getMarketInfos(
     // A collateral token REST cannot describe is `null` here too: skip rather than show it as idle.
     if (!loanAsset || (collateralAddress !== zeroAddress && !collateralAsset)) {
       console.warn(`Market tokens not returned by the API, skipping the market: ${chainId}:${root.market_id}`);
-      continue;
+      return [];
     }
+    return [{ root, loanAsset, collateralAddress, collateralAsset }];
+  });
+  // REST serves native APYs only: the current Merkl reward APRs are added to every window. Reward
+  // token metadata is read for the shown markets only.
+  const shownSupplyRewards = await Promise.all(
+    shown.map(({ root }) =>
+      withRewardTokenMetadata(
+        merklIndex,
+        marketSupplyRewardApys(merklIndex, root.market_id, getAddress(root.loan_token)),
+      ),
+    ),
+  );
 
+  for (const [i, { root, loanAsset, collateralAddress, collateralAsset }] of shown.entries()) {
     const { state, apy } = dataById.get(root.market_id.toLowerCase()) ?? { state: null, apy: null };
     const loanPriceUsd = priceByAddress.get(getAddress(root.loan_token)) ?? null;
     const averages = apy?.data.supply_apy_averages ?? {};
-    // REST serves native APYs only: the current Merkl reward APRs are added to every window.
-    const supplyRewards = marketSupplyRewardApys(merklIndex, root.market_id, getAddress(root.loan_token));
+    const supplyRewards = shownSupplyRewards[i] ?? [];
     const supplyApy = (key: ApyAverageKey) => assembleApyWithRewards(averages[key], supplyRewards);
 
     result.set(root.market_id.toLowerCase(), {

@@ -5,12 +5,13 @@ import { type Address, formatUnits, getAddress, type Hex, zeroAddress } from "vi
 import { toAmountWithPrice, toBigInt, toRatio } from "@/common/data/adapters/amount";
 import { assembleApyWithRewards } from "@/common/data/adapters/apy";
 import { getTokenInfo } from "@/common/data/rest/tokens";
-import type { ApyAverages, ChainInfo, TokenInfo } from "@/common/data/types";
+import type { ApyAverages, ChainInfo, RewardApy, TokenInfo } from "@/common/data/types";
 import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
 import { restApyLookback } from "@/common/utils/timeframe";
 import { getMarketInfos } from "@/modules/market/data/getMarketInfos";
 import type { MarketInfo } from "@/modules/market/market.types";
 import { type MerklRewardIndex, vaultRewardApys } from "@/modules/reward/data/merklRewardApys";
+import { withRewardTokenMetadata } from "@/modules/reward/data/rewardTokenMetadata";
 import type {
   MorphoVaultV2,
   UnderlyingMorphoVaultV1,
@@ -181,13 +182,20 @@ export async function getVaultV2Details(
     rewardIndexPromise,
   ]);
   const tokenByAddress = new Map(vaultV1Assets);
-  const vaultV1ByAdapter = new Map<string, UnderlyingMorphoVaultV1>();
-  for (const read of vaultV1Reads) {
+  const shownVaultV1s = vaultV1Reads.flatMap((read) => {
     const asset = read && tokenByAddress.get(getAddress(read.vault.asset.address));
-    if (!read || !asset) continue;
+    return read && asset ? [{ read, asset }] : [];
+  });
+  const vaultV1Rewards = await Promise.all(
+    shownVaultV1s.map(({ read }) =>
+      withRewardTokenMetadata(rewardIndex, vaultRewardApys(rewardIndex, read.vaultAddress, "v1")),
+    ),
+  );
+  const vaultV1ByAdapter = new Map<string, UnderlyingMorphoVaultV1>();
+  for (const [i, { read, asset }] of shownVaultV1s.entries()) {
     vaultV1ByAdapter.set(
       read.adapterAddress.toLowerCase(),
-      toUnderlyingVaultV1(read, asset, context.chain, markets, price, rewardIndex),
+      toUnderlyingVaultV1(read, asset, context.chain, markets, price, vaultV1Rewards[i] ?? []),
     );
   }
 
@@ -331,7 +339,7 @@ function toUnderlyingVaultV1(
   chain: ChainInfo,
   markets: ReadonlyMap<string, MarketInfo>,
   price: number | null,
-  rewardIndex: MerklRewardIndex,
+  rewards: RewardApy[],
 ): UnderlyingMorphoVaultV1 {
   const decimals = asset.decimals;
   const totalRaw = read.allocations.reduce((sum, row) => sum + toBigInt(row.supply_assets), 0n);
@@ -343,7 +351,7 @@ function toUnderlyingVaultV1(
     name: read.vault.name ?? read.vaultAddress,
     chain,
     asset,
-    apy: assembleApyWithRewards(read.apy, vaultRewardApys(rewardIndex, read.vaultAddress, "v1")),
+    apy: assembleApyWithRewards(read.apy, rewards),
     totalAssets: toAmountWithPrice(totalRaw, decimals, price),
     marketAllocations: read.allocations.flatMap((row): VaultMarketAllocation[] => {
       const market = markets.get(row.market_id.toLowerCase());

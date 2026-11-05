@@ -378,6 +378,43 @@ describe("getVault (Vault V2 details from REST)", () => {
     });
   });
 
+  it("shows Core's reward token symbol, name and decimals on the vault V1 row and its market rows", async () => {
+    seedVault({ adapterKind: "morpho_vault_v1" });
+    routes.set(`/v0/vaults-v1/1:${VAULT_V1}`, { data: { name: "Inner V1", asset: { address: USDC } } });
+    routes.set(`/v0/vaults-v1/1:${VAULT_V1}/allocations`, {
+      data: {
+        allocations: [{ market_id: MARKET, supply_assets: "3000000", supply_shares: "42", supply_cap: "5000000" }],
+      },
+    });
+    routes.set(`/v0/vaults-v1/1:${VAULT_V1}/apy-averages?six_hours`, { data: { apy: 0.07 } });
+    routes.set(`/v0/tokens/1:${MORPHO_TOKEN}`, {
+      data: {
+        address: MORPHO_TOKEN,
+        symbol: "MORPHO.core",
+        name: "Morpho (Core)",
+        decimals: 6,
+        logo_uri: null,
+        tags: null,
+      },
+    });
+    merkl.opportunities = [
+      {
+        campaigns: [
+          merklCampaign("MORPHOSUPPLY", 2, { market: MARKET }),
+          merklCampaign("ERC20LOGPROCESSOR", 1, { targetToken: VAULT_V1 }),
+        ],
+      },
+    ];
+
+    const vault = await loadVault();
+    if (vault.__typename !== "MorphoVaultV2") throw new Error("expected a vault V2");
+    const [adapter] = vault.allocations;
+    if (adapter?.__typename !== "Erc4626VaultAdapter") throw new Error("expected a vault adapter");
+    const coreReward = { ...MORPHO_REWARD, symbol: "MORPHO.core", name: "Morpho (Core)", decimals: 6 };
+    expect(adapter.vault?.apy.rewards).toEqual([{ asset: coreReward, apr: 0.01 }]);
+    expect(adapter.vault?.marketAllocations[0]?.market.supplyApy6h.rewards).toEqual([{ asset: coreReward, apr: 0.02 }]);
+  });
+
   it("names a vault V1 REST serves without a name by its address", async () => {
     seedVault({ adapterKind: "morpho_vault_v1" });
     routes.set(`/v0/vaults-v1/1:${VAULT_V1}`, { data: { name: null, asset: { address: USDC } } });
