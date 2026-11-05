@@ -98,13 +98,15 @@ export interface Market extends MarketSummary {
   totalSupplied: Amount;
   liquidityInMarket: Amount;
   /**
-   * What the borrow bundle can move in through the Public Allocator V1 from the configured V1 vaults
-   * that supply the market (read on chain). Public Allocator V2 liquidity is left out: the bundle
-   * cannot reallocate from a vault V2.
+   * What the Public Allocator V2 can move into the market from vaults V2 (Core's
+   * `reallocatable_liquidity`). 0 without reallocation candidates. Vaults V1 are not counted: the
+   * morpho-sdk borrow reallocates from vaults V2 only.
    */
-  publicAllocatorV1Liquidity: Amount;
-  /** `liquidityInMarket` + `publicAllocatorV1Liquidity`: the most a borrow can take. */
+  publicAllocatorLiquidity: Amount;
+  /** `liquidityInMarket` + `publicAllocatorLiquidity`: the most a borrow can take. */
   availableToBorrow: Amount;
+  /** The borrow's reallocation candidates: the vaults V2 the Public Allocator V2 can pull from. */
+  publicAllocatorVaultAddresses: Address[];
   collateralAsset: (TokenInfo & { priceUsd: number | null }) | null;
   loanAsset: TokenInfo & { priceUsd: number | null };
   vaultAllocations: MarketVaultAllocation[];

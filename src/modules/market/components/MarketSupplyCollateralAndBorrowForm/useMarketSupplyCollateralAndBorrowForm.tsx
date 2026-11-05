@@ -4,10 +4,9 @@ import { useModal } from "connectkit";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { type UseFormReturn, useForm } from "react-hook-form";
 import { useDebounce } from "use-debounce";
-import { getAddress, type Hex, maxUint256 } from "viem";
+import { type Hex, maxUint256 } from "viem";
 import { useAccount, usePublicClient } from "wagmi";
 import { type MarketAction, marketSupplyCollateralAndBorrowAction, UserFacingError } from "@/actions";
-import { filterMorphoV2VaultAddresses } from "@/actions/utils/filterMorphoV2VaultAddresses";
 import { DEBOUNCE_TIME_MS } from "@/common/utils/constants";
 import { parseOnchainAmount } from "@/common/utils/schemas";
 import { tryCatch } from "@/common/utils/tryCatch";
@@ -88,7 +87,8 @@ export function useMarketSupplyCollateralAndBorrowForm({
           accountAddress: address,
           collateralAmount: supplyCollateralAmount,
           borrowAmount: submittedValues.borrowAmount,
-          allocatingVaultAddresses: filterMorphoV2VaultAddresses(market.vaultAllocations).map(getAddress),
+          // The vaults V2 Core lists for the Public Allocator V2: the same set "Available to Borrow" counts.
+          allocatingVaultAddresses: market.publicAllocatorVaultAddresses,
         }),
       );
 

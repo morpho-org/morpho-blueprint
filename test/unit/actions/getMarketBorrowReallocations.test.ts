@@ -1,10 +1,9 @@
 import type { BlueActions } from "@morpho-org/morpho-sdk";
 import { createMockClient } from "@morpho-org/test/mock";
+import type { Address } from "viem";
 import { mainnet } from "viem/chains";
 import { describe, expect, test, vi } from "vitest";
-import { filterMorphoV2VaultAddresses } from "@/actions/utils/filterMorphoV2VaultAddresses";
 import { getMarketBorrowReallocations } from "@/actions/utils/getMarketBorrowReallocations";
-import { Erc4626VaultProtocol } from "@/config/vault-protocol";
 
 function setup() {
   const handle = createMockClient(mainnet);
@@ -20,15 +19,13 @@ function setup() {
     getVaultV2BlueReallocationData: vi.fn(async () => data),
     getVaultV2BlueReallocations: vi.fn(() => ({ reallocations, data })),
   };
-  const addresses = filterMorphoV2VaultAddresses([
-    { protocol: Erc4626VaultProtocol.MorphoV1, vault: { vaultAddress: "0x0000000000000000000000000000000000000001" } },
-    { protocol: Erc4626VaultProtocol.MorphoV2, vault: { vaultAddress: "0x0000000000000000000000000000000000000002" } },
-  ]);
+  // The market page's candidates: the vaults V2 Core lists for the Public Allocator V2.
+  const addresses: Address[] = ["0x0000000000000000000000000000000000000002"];
   return { handle, market, data, reallocations, addresses };
 }
 
 describe("getMarketBorrowReallocations", () => {
-  test("passes only V2 vaults and the current block into a borrow reallocation plan", async () => {
+  test("passes the candidate vaults and the current block into a borrow reallocation plan", async () => {
     const { handle, market, data, reallocations, addresses } = setup();
     const result = await getMarketBorrowReallocations({
       publicClient: handle.client,

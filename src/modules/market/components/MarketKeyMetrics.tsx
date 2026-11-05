@@ -22,7 +22,7 @@ export function MarketKeyMetrics({ market }: MarketKeyMetricsProps) {
       availableToBorrowTooltip={
         <AvailableLiquidityTooltipContent
           marketLiquidity={market.liquidityInMarket.usd ?? 0}
-          publicAllocatorLiquidity={market.publicAllocatorV1Liquidity.usd ?? 0}
+          publicAllocatorLiquidity={market.publicAllocatorLiquidity.usd ?? 0}
         />
       }
       borrowApyValue={<ApyTooltipTrigger totalApy={borrowApy.total} showSparkle={borrowApy.rewards.length > 0} />}
