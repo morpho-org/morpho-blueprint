@@ -359,6 +359,18 @@
       "path": "data.markets.*.historical.weekly(window)",
       "reason": "All sampling: Core's inception lookback starts at the market's first snapshot with daily or monthly rows, GraphQL at its first weekly bucket",
       "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.hourly[*]",
+      "kind": "extra",
+      "reason": "Request-time rows: each source appends a row at its own request time, seconds apart between the two dumps",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.daily[*]",
+      "kind": "extra",
+      "reason": "Request-time rows: each source appends a row at its own request time, seconds apart between the two dumps",
+      "ticket": "VAU-3622"
     }
   ]
 }
