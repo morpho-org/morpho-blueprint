@@ -7,10 +7,12 @@ vi.mock("react", async (importOriginal) => ({
   cache: <T>(fn: T) => fn,
 }));
 
-// Vault V1 details still come from GraphQL; only the history moved to REST.
-vi.mock("@/common/utils/executeMorphoQuery", () => ({
-  executeMorphoQuery: async () => ({ vaults: { items: [{ asset: { decimals: 6 } }] } }),
+// The summary and details reads are covered in vault-v1-rest.test.ts; here they only supply the decimals.
+vi.mock("@/modules/reward/data/getMerklRewardIndex", () => ({ getMerklRewardIndex: async () => ({}) }));
+vi.mock("@/modules/vault/data/getVaultSummaries", () => ({
+  getVaultV1Summary: async () => ({ summary: { asset: { decimals: 6 } }, root: {}, state: {} }),
 }));
+vi.mock("@/modules/vault/data/getVaultV1Details", () => ({ getVaultV1Details: async () => ({}) }));
 vi.mock("@/modules/vault/data/adapters", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/vault/data/adapters")>()),
   toMorphoVaultV1Details: () => ({}),

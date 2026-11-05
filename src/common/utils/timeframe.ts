@@ -1,23 +1,7 @@
 import { APP_CONFIG } from "@/config";
 import type { ApyWindow } from "@/config/types";
 
-/**
- * App-owned mapping from the configured APY window onto the API's lookback vocabulary.
- * The `VaultV1LookbackPeriod` and `VaultV2LookbackPeriod` enums share these members.
- */
-const APY_LOOKBACK_PERIOD = {
-  "6h": "SIX_HOURS",
-  "1d": "ONE_DAY",
-  "7d": "SEVEN_DAYS",
-  "30d": "THIRTY_DAYS",
-} as const satisfies Record<ApyWindow, string>;
-
-export type ApyLookbackPeriod = (typeof APY_LOOKBACK_PERIOD)[ApyWindow];
-
-/** Lookback for current-state vault APYs (`avgNetApy`, `avgNetApyExcludingRewards`). */
-export const apyLookbackPeriod: ApyLookbackPeriod = APY_LOOKBACK_PERIOD[APP_CONFIG.apyWindow];
-
-/** The same window in Core REST's `apy-averages` vocabulary. */
+/** The configured APY window in Core REST's `apy-averages` vocabulary. */
 const REST_APY_LOOKBACK = {
   "6h": "six_hours",
   "1d": "one_day",

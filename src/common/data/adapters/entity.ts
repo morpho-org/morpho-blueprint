@@ -1,4 +1,4 @@
-import { type Address, getAddress } from "viem";
+import { type Address, getAddress, zeroAddress } from "viem";
 import { toDecimals } from "@/common/data/adapters/amount";
 import type { ChainInfo, CuratorInfo, TokenInfo } from "@/common/data/types";
 import { capitalizeFirstLetter } from "@/common/utils/format";
@@ -112,4 +112,14 @@ export function toCuratorInfo(curator: RawCurator | null | undefined): CuratorIn
     image: curator.image ?? null,
     url: website?.url ?? null,
   };
+}
+
+/**
+ * A role address (curator, owner, guardian, fee recipient) as Core REST serves it: `null` when unset.
+ * REST serves the zero address for a role that was cleared on chain, which is no role either.
+ */
+export function toRoleAddress(value: string | null | undefined): Address | null {
+  if (!value) return null;
+  const address = getAddress(value);
+  return address === zeroAddress ? null : address;
 }
