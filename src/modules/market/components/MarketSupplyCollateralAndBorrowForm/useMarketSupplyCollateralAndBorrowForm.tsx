@@ -95,7 +95,14 @@ export function useMarketSupplyCollateralAndBorrowForm({
       if (error) {
         setSubmitErrorMsg(error instanceof UserFacingError ? error.message : "An unknown error occurred");
       } else {
-        onSuccessfulActionSimulation(action);
+        // The review dialog's "Available to borrow" uses the same liquidity cap as the form summary.
+        onSuccessfulActionSimulation({
+          ...action,
+          positionChange: capAvailableToBorrowByLiquidity({
+            positionChange: action.positionChange,
+            marketAvailableToBorrow: BigInt(market.availableToBorrow.raw),
+          }),
+        });
       }
     },
     [address, setConnectKitOpen, publicClient, market, onSuccessfulActionSimulation],
@@ -200,7 +207,6 @@ function useDerivedFormValues({
         loanAmountChange: borrowAmount,
       }),
       marketAvailableToBorrow: BigInt(market.availableToBorrow.raw),
-      borrowAmount,
     });
   }, [market, position, supplyCollateralAmount, borrowAmount]);
 
