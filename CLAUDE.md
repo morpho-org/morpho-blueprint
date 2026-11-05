@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 120s timeout for tests
 
 **Package Manager:**
-- Uses pnpm (required version 10.11.0)
+- Uses pnpm (pinned in `package.json` `packageManager`, currently 10.34.9)
 - Dependencies include Morpho SDKs, Next.js 15, React 19, Radix UI, Tailwind CSS
 - Uses Biome for linting and formatting
 
