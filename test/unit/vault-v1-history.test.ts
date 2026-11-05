@@ -80,6 +80,27 @@ describe("getVault (Vault V1 history)", () => {
     ]);
   });
 
+  it("plots an implausible APY as a gap, as the V2 and market charts do", async () => {
+    routes.set(`${BASE}/state/history?seven_days`, {
+      data: [100, 200, 300].map((timestamp) => ({ timestamp, total_assets: "1000000" })),
+    });
+    routes.set(`${BASE}/apy/history?seven_days`, {
+      data: [
+        { timestamp: 100, apy: 0.04 },
+        { timestamp: 200, apy: 50 },
+        { timestamp: 300, apy: -1 },
+      ],
+    });
+
+    const historical = await loadHistory();
+
+    expect(historical?.hourly.map((entry) => entry.netApy)).toEqual([
+      { total: 0.04 },
+      { total: null },
+      { total: null },
+    ]);
+  });
+
   it("leaves a resolution empty when the vault is missing from REST", async () => {
     const historical = await loadHistory();
 

@@ -15,10 +15,6 @@ import { getSupportedMarketIds } from "./getSupportedMarketIds";
 
 export type { MarketSummary };
 
-// Prices move: a minute old is close enough for a list, and spares the API one read per loan token
-// on every render.
-export const PRICE_REVALIDATE_SECONDS = 60;
-
 interface RestMarketRoot {
   chain_id: number;
   market_id: Hex;
@@ -70,9 +66,7 @@ async function getChainMarketSummaries(chainId: number, marketIds: readonly Hex[
     .sort((a, b) => (a.market_id.toLowerCase() < b.market_id.toLowerCase() ? 1 : -1));
 
   const tokenOf = once(getTokenInfo);
-  const priceOf = once((id, address) =>
-    getTokenPriceUsd(id, address, { revalidate: PRICE_REVALIDATE_SECONDS, throwWhenRateLimited: true }),
-  );
+  const priceOf = once(getTokenPriceUsd);
   const chain = toChainInfoById(chainId);
 
   // Every read starts at once: the REST client caps the calls in flight. Any failure but a 404

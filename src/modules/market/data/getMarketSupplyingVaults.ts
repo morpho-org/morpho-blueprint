@@ -1,7 +1,8 @@
 import "server-only";
 
-import { type Address, getAddress, type Hex } from "viem";
+import type { Address, Hex } from "viem";
 import { toBigInt } from "@/common/data/adapters/amount";
+import { toRoleAddress } from "@/common/data/adapters/entity";
 import { getCuratorInfo } from "@/common/data/rest/curators";
 import type { CuratorInfo } from "@/common/data/types";
 import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
@@ -29,7 +30,7 @@ interface RestVaultV2Allocations {
 }
 
 interface RestVaultRoot {
-  data: { name: string | null; curator: string | null };
+  data: { name: string | null; curator: string | null; owner: string | null };
 }
 
 const VAULT_ROOT_PATH: Record<Erc4626VaultProtocol, string> = {
@@ -108,7 +109,11 @@ export async function getMarketSupplyingVaults(
         console.warn(`Vault not returned by the API, left out of the market's suppliers: ${selector}`);
         return null;
       }
-      const curatorAddress = root.data.curator ? getAddress(root.data.curator) : null;
+      // A cleared curator comes back as the zero address. A V1 vault falls back to its owner, as the
+      // vault page resolves it; a V2 vault's owner is not its curator.
+      const curatorAddress =
+        toRoleAddress(root.data.curator) ??
+        (protocol === Erc4626VaultProtocol.MorphoV1 ? toRoleAddress(root.data.owner) : null);
       return {
         protocol,
         vaultAddress: address,
