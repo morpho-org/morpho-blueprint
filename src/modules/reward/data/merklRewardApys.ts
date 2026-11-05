@@ -16,6 +16,9 @@ const REWARD_CHAIN_IDS = new Set([
   1, 10, 130, 137, 143, 196, 239, 480, 988, 999, 4217, 4663, 5042, 8453, 42161, 747474,
 ]);
 
+// A per-campaign sanity cap (1000%), so one bad Merkl row cannot show a huge APY.
+const MAX_CAMPAIGN_APR = 10;
+
 const VAULT_CAMPAIGN_TYPES = new Set(["MORPHOVAULT", "ERC20LOGPROCESSOR"]);
 const MULTILEND_LEND_CAMPAIGN_TYPE = 24;
 const MULTILEND_BORROW_CAMPAIGN_TYPE = 45;
@@ -37,7 +40,8 @@ const campaignSchema = z.looseObject({
   isPrivate: z.boolean().nullish(),
   rewardToken: z.looseObject({
     chainId: z.number().nullish(),
-    address: z.string().refine(isAnyCaseAddress),
+    // Strict, as the rewards backend checks reward tokens: a mixed-case address needs a valid checksum.
+    address: z.string().refine((value) => isAddress(value)),
     symbol: z.string(),
     name: z.string().nullish(),
     decimals: z.number().int().nonnegative(),
@@ -85,6 +89,11 @@ export interface MerklRewardIndex {
   marketBorrow: Map<string, IndexedReward[]>;
   /** By lowercased loan token: borrow campaigns on every market lending that token. */
   loanTokenBorrow: Map<string, IndexedReward[]>;
+  /**
+   * By lowercased reward token: the chain it lives on, which its metadata is read from. `null` when
+   * campaigns pay that address on more than one chain (the per-token sum cannot tell them apart).
+   */
+  rewardTokenChains: Map<string, number | null>;
 }
 
 export const emptyMerklRewardIndex = (): MerklRewardIndex => ({
@@ -93,6 +102,7 @@ export const emptyMerklRewardIndex = (): MerklRewardIndex => ({
   loanTokenSupply: new Map(),
   marketBorrow: new Map(),
   loanTokenBorrow: new Map(),
+  rewardTokenChains: new Map(),
 });
 
 /** `{ skip }` for a hook the backend does not handle, else whether the campaign is vault-V2-only. */
@@ -157,9 +167,14 @@ export function indexMerklRewards(opportunities: readonly unknown[], nowSeconds:
       const rewardChainId = rewardToken.chainId ?? campaign.computeChainId;
       if (rewardChainId == null || !REWARD_CHAIN_IDS.has(rewardChainId)) continue;
       const apr = campaign.apr / 100;
-      if (!(apr > 0)) continue;
       const hooks = analyzeHooks(campaign.params.hooks);
       if (hooks.skip) continue;
+      // The schema already rejects non-finite APRs.
+      if (apr > MAX_CAMPAIGN_APR) {
+        console.warn(`Dropping Merkl campaign ${campaign.id}: APR ${campaign.apr}% is above the sanity cap`);
+        continue;
+      }
+      if (!(apr > 0)) continue;
 
       const reward: IndexedReward = {
         asset: {
@@ -174,6 +189,12 @@ export function indexMerklRewards(opportunities: readonly unknown[], nowSeconds:
         vaultV2Only: hooks.vaultV2Only,
       };
       const { params } = campaign;
+      const tokenKey = rewardToken.address.toLowerCase();
+      const knownChain = index.rewardTokenChains.get(tokenKey);
+      index.rewardTokenChains.set(
+        tokenKey,
+        knownChain === undefined || knownChain === rewardChainId ? rewardChainId : null,
+      );
 
       if (isVaultCampaign(campaign)) {
         if (params.targetToken && isAnyCaseAddress(params.targetToken)) push(index.vaults, params.targetToken, reward);
@@ -200,6 +221,11 @@ export function indexMerklRewards(opportunities: readonly unknown[], nowSeconds:
   }
 
   return index;
+}
+
+/** The one chain a reward token of the index lives on, or `null` when unknown or ambiguous. */
+export function rewardTokenChainId(index: MerklRewardIndex, token: Address): number | null {
+  return index.rewardTokenChains.get(token.toLowerCase()) ?? null;
 }
 
 /** One entry per reward token, APRs summed. */

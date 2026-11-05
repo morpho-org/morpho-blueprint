@@ -21,12 +21,19 @@ export interface RestToken {
   tags: string[] | null;
 }
 
-/** A token's metadata, or `null` when Core REST does not know it. Logos and tags rarely change: a day cache. */
-export async function getTokenMetadata(chainId: number, address: Address): Promise<RestToken | null> {
+/**
+ * A token's metadata, or `null` when Core REST does not know it. Logos and tags rarely change: a day
+ * cache. `quiet` is for callers with a fallback (see `RestRequestOptions`).
+ */
+export async function getTokenMetadata(
+  chainId: number,
+  address: Address,
+  { quiet }: { quiet?: boolean } = {},
+): Promise<RestToken | null> {
   const response = await fetchMorphoRestResource<{ data: RestToken }>(
     `/v0/tokens/${restSelector(chainId, address)}`,
     undefined,
-    { revalidate: SECONDS_PER_DAY },
+    { revalidate: SECONDS_PER_DAY, quiet },
   );
   return response?.data ?? null;
 }

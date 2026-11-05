@@ -362,6 +362,134 @@
       "relative": 0.01,
       "reason": "Loan token price from Core REST /price (60 s cache) vs GraphQL priceUsd, refreshed on different schedules: WHYPE was identical in two GraphQL dumps minutes apart while REST moved; max 0.75% relative (WPOL)",
       "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.markets.*.borrowApy",
+      "kind": "missing",
+      "reason": "The instantaneous borrow APY had no reader; dropped from MarketSummary with the REST port (as in VAU-3621)",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.borrowApy*.*",
+      "kind": "value",
+      "relative": 0.05,
+      "reason": "Borrow APY windows come from Core REST apy-averages (borrow_apy_averages) instead of GraphQL's fields: seen up to 1.1% relative on the 6h window",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.publicAllocatorSharedLiquidity.*",
+      "kind": "value",
+      "reason": "Core REST reallocatable_liquidity covers only the Public Allocator V2 (the tooltip says so); GraphQL summed the vault V1 public allocator's shared liquidity",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.vaultAllocations[*]",
+      "kind": "missing",
+      "reason": "Suppliers are read from the configured vaults only, the rows the table showed (it filtered to configured and enabled); the displayed rows match (evidence comment)",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.vaultAllocations[*].**",
+      "kind": "value",
+      "reason": "Same as the missing rows: the list is the configured vaults only, so rows shift position; the displayed rows match (evidence comment)",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.irm.curve[*].*",
+      "kind": "value",
+      "relative": 0.05,
+      "reason": "The IRM curve is computed with blue-sdk's AdaptiveCurveIrmLib (exponential rate curve, real fee); GraphQL interpolated APY linearly between the kinks: seen up to 4.4% relative between the kinks, equal at 0%, 90% and 100%",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.*[*].total*.usd",
+      "kind": "value",
+      "reason": "Core REST serves no USD history: USD rows come from the Blueprint price history only when its key is set (unset in this dump, so null and the USD toggle hides)",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.*[*].borrowApy7d.*",
+      "kind": "value",
+      "reason": "Core serves one borrow APY series per lookback; it is filed under the chart's window key (1d) only. The 7d and 30d keys had no reader",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.*[*].borrowApy30d.*",
+      "kind": "value",
+      "reason": "Core serves one borrow APY series per lookback; it is filed under the chart's window key (1d) only. The 7d and 30d keys had no reader",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.hourly[*].borrowApy1d.*",
+      "kind": "value",
+      "relative": 0.01,
+      "reason": "The request-time row and last hourly row: Core's 1d-smoothed sample vs GraphQL's, seen 0.75% relative",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.daily[*].borrowApy1d.*",
+      "kind": "value",
+      "reason": "APY smoothing: Core's ninety_days lookback averages each point over 30 days (GraphQL's dailyBorrowApy over 1 day), as accepted for vault history",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.weekly[*].borrowApy1d.*",
+      "kind": "value",
+      "reason": "APY smoothing: Core's inception lookback averages each point over 30 days, as accepted for vault history",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.weekly[*]",
+      "kind": "extra",
+      "reason": "All sampling: Core's inception lookback serves daily (young markets) or monthly rows, GraphQL weekly buckets",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.weekly[*]",
+      "kind": "missing",
+      "reason": "All sampling: Core's inception lookback serves daily (young markets) or monthly rows, GraphQL weekly buckets",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.hourly(window)",
+      "kind": "missing",
+      "reason": "Point counts: Core's seven_days lookback (168 hourly rows) vs the GraphQL fetch's 2-day margin",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.daily(window)",
+      "kind": "missing",
+      "reason": "Point counts: Core's ninety_days lookback vs the GraphQL fetch's 10-day margin",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.hourly[*]",
+      "kind": "missing",
+      "reason": "Request-time rows: each source appends a row at its own request time, seconds apart between the two dumps",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.daily[*]",
+      "kind": "missing",
+      "reason": "Request-time rows: each source appends a row at its own request time, seconds apart between the two dumps",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.weekly(window)",
+      "reason": "All sampling: Core's inception lookback starts at the market's first snapshot with daily or monthly rows, GraphQL at its first weekly bucket",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.hourly[*]",
+      "kind": "extra",
+      "reason": "Request-time rows: each source appends a row at its own request time, seconds apart between the two dumps",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.daily[*]",
+      "kind": "extra",
+      "reason": "Request-time rows: each source appends a row at its own request time, seconds apart between the two dumps",
+      "ticket": "VAU-3622"
     }
   ]
 }

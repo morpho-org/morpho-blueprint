@@ -325,6 +325,45 @@ describe("getVaultSummaries (vault V2 from Core REST)", () => {
     expect(second?.apy).toEqual({ afterFees: 0, total: 0, rewards: [] });
   });
 
+  it("shows a live reward with Core's token symbol, name and decimals", async () => {
+    merkl.opportunities = [{ campaigns: [merklCampaign("ERC20LOGPROCESSOR", 1.5, { targetToken: vault(1) })] }];
+    routes.set(`/v0/tokens/1:${MORPHO_TOKEN}`, {
+      data: {
+        address: MORPHO_TOKEN,
+        symbol: "MORPHO.core",
+        name: "Morpho (Core)",
+        decimals: 6,
+        logo_uri: null,
+        tags: null,
+      },
+    });
+
+    const [first] = await load();
+
+    expect(first?.apy.rewards).toEqual([
+      { asset: { ...MORPHO_REWARD, symbol: "MORPHO.core", name: "Morpho (Core)", decimals: 6 }, apr: 0.015 },
+    ]);
+  });
+
+  it("reads no reward token metadata for a vault dropped for unknown asset decimals", async () => {
+    const unknownAsset = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+    routes.set(`/v0/vaults-v2/1:${vault(1)}`, {
+      data: {
+        chain_id: 1,
+        address: vault(1),
+        name: "Vault 1",
+        asset: { address: unknownAsset, decimals: null, name: "Dai", symbol: "DAI" },
+        curator: CURATOR,
+      },
+    });
+    merkl.opportunities = [{ campaigns: [merklCampaign("ERC20LOGPROCESSOR", 1.5, { targetToken: vault(1) })] }];
+
+    const summaries = await load();
+
+    expect(summaries.map((summary) => summary.vaultAddress.toLowerCase())).toEqual([vault(2)]);
+    expect(calls.map(({ path }) => path)).not.toContain(`/v0/tokens/1:${MORPHO_TOKEN}`);
+  });
+
   it("reads Merkl once for three vaults on one chain, and reports one failure when it is down", async () => {
     CONFIG.supportedVaults = {
       1: [1, 2, 3].map((n) => ({ address: vault(n), protocol: Erc4626VaultProtocol.MorphoV2 })),

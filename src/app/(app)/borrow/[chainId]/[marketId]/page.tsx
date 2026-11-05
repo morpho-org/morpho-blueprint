@@ -247,10 +247,12 @@ async function MarketHistoricalApyChartWrapper({ chainId, marketId }: MarketIden
   // description discloses the series window when it differs.
   const key = `borrowApy${marketHistoryApyWindow}` as const;
   const totalApy = extractMarketBorrowApy(market).total;
+  // The API serves no reward history: the plotted line is the native rate, the headline is net.
+  const rewardsNote = "The headline is net of rewards; the plotted history excludes them.";
   const description =
     marketHistoryApyWindow === APP_CONFIG.apyWindow
-      ? "Net borrow APY, including rewards."
-      : `Net borrow APY, including rewards. The headline is averaged over ${APP_CONFIG.apyWindow}; the plotted line is smoothed over ${marketHistoryApyWindow}, the shortest averaged window the API serves for a market history point.`;
+      ? `Borrow APY. ${rewardsNote}`
+      : `Borrow APY. ${rewardsNote} The headline is averaged over ${APP_CONFIG.apyWindow}; the plotted line is smoothed over ${marketHistoryApyWindow}, the shortest averaged window the API serves for a market history point.`;
 
   // The API serves no realized borrow-APY averages (those are a vault concept), so no reference
   // line is drawn for any range.

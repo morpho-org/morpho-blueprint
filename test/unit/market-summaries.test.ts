@@ -142,6 +142,34 @@ describe("getMarketSummaries", () => {
     expect(b?.borrowApy7d.total).toBe(0.03);
   });
 
+  it("shows borrow rewards with Core's token metadata, read for the shown markets only", async () => {
+    const FXN_TOKEN = "0x365AccFCa291e7D3914637ABf1F7635dB165Bb09";
+    routes.set(`/v0/tokens/1:${MORPHO_TOKEN}`, token(MORPHO_TOKEN, "MORPHO.core", 6));
+    // Market B is skipped (REST cannot describe its collateral): its reward token is never read.
+    routes.delete(`/v0/tokens/1:${WBTC}`);
+    merkl.opportunities = [
+      {
+        campaigns: [
+          borrowCampaign({ apr: 1 }, { market: MARKET_A }),
+          borrowCampaign(
+            { apr: 2, rewardToken: { address: FXN_TOKEN, symbol: "FXN", decimals: 18, type: "TOKEN" } },
+            { market: MARKET_B },
+          ),
+        ],
+      },
+    ];
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const [a] = await (await load())();
+
+    expect(a?.borrowApy6h.rewards).toEqual([
+      { asset: expect.objectContaining({ symbol: "MORPHO.core", name: "MORPHO.core", decimals: 6 }), apr: 0.01 },
+    ]);
+    expect(calls).toContainEqual({ path: `/v0/tokens/1:${MORPHO_TOKEN}`, revalidate: 86_400 });
+    expect(calls.map(({ path }) => path)).not.toContain(`/v0/tokens/1:${FXN_TOKEN}`);
+    warn.mockRestore();
+  });
+
   it("reads the idle market's nothing, each token and price once, with day caches and a minute for prices", async () => {
     await (await load())();
 

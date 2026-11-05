@@ -1,10 +1,9 @@
 import "server-only";
 
 import type { Address } from "viem";
-import type { DataPoint } from "@/common/data/adapters/timeseries";
-import { type HistoryLookback, resolutionLookback } from "@/common/data/rest/historyWindow";
+import { isPlausibleApy, resolutionLookback } from "@/common/data/rest/historyWindow";
+import { fetchUsdSeries } from "@/common/data/rest/priceHistory";
 import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
-import { isBlueprintApiEnabled } from "@/common/utils/morphoApiConfig";
 import { APP_CONFIG } from "@/config";
 import type { SupportedChainId } from "@/config/types";
 import type { toVaultHistoricalEntries } from "./adapters";
@@ -15,26 +14,10 @@ interface RestHistory<T> {
   data: ({ timestamp: number } & T)[];
 }
 
-interface RestPriceHistory {
-  data: { points: { timestamp: number; price_usd: number | null }[] };
-}
-
 export interface VaultHistoryAsset {
   address: Address;
   decimals: number;
 }
-
-// Core spaces `seven_days` rows hourly and the longer lookbacks daily; prices are sampled to match.
-const PRICE_INTERVAL: Record<HistoryLookback, { interval: "hour" | "day"; seconds: number }> = {
-  seven_days: { interval: "hour", seconds: 3600 },
-  thirty_days: { interval: "day", seconds: 86_400 },
-  ninety_days: { interval: "day", seconds: 86_400 },
-  inception: { interval: "day", seconds: 86_400 },
-};
-
-// Core serves absurd APY on some vaults' first rows (1e75, -100%). The Vaults app plots its series
-// unfiltered, so this bound is ours: outside (-100%, 1000%] a row becomes a gap.
-const isPlausibleApy = (apy: number | null) => apy !== null && apy > -1 && apy <= 10;
 
 /**
  * Vault V2 chart series for one resolution, from Core REST: total assets from `state/history` and
@@ -67,43 +50,7 @@ export async function fetchVaultV2History(
   ];
   return {
     totalAssets,
-    totalAssetsUsd: await fetchTotalAssetsUsd(chainId, lookback, totalAssets, await asset),
+    totalAssetsUsd: await fetchUsdSeries(chainId, lookback, totalAssets, await asset),
     netApy: { [APP_CONFIG.apyWindow]: netApy },
   };
-}
-
-/**
- * USD total assets from the Blueprint API's token price history. Empty when that API is off or the
- * read fails, which hides the chart's USD toggle; Core REST serves no USD history.
- */
-async function fetchTotalAssetsUsd(
-  chainId: SupportedChainId,
-  lookback: HistoryLookback,
-  totalAssets: { x: number; y: string }[],
-  asset: VaultHistoryAsset | null,
-): Promise<DataPoint[]> {
-  const first = totalAssets[0];
-  if (!asset || !first || !isBlueprintApiEnabled()) return [];
-
-  const { interval, seconds } = PRICE_INTERVAL[lookback];
-  const prices = await fetchMorphoRestResource<RestPriceHistory>(
-    `/v0/blueprint-app-api/token-prices/${restSelector(chainId, asset.address)}/history`,
-    // No end: the route then defaults to its own now and adds a request-time price, which prices
-    // Core's request-time state row. An app-clock end can fall a second short and drop it.
-    { start_timestamp: first.x, interval },
-    { api: "blueprint", quiet: true },
-  ).catch(() => null);
-  if (!prices) return [];
-
-  const points = prices.data.points;
-  const scale = 10 ** asset.decimals;
-  let cursor = 0;
-  return totalAssets.map(({ x, y }) => {
-    // Both series are oldest-first: advance to the price sample nearest this state row.
-    const distance = (index: number) => Math.abs((points[index]?.timestamp ?? Number.POSITIVE_INFINITY) - x);
-    while (cursor + 1 < points.length && distance(cursor + 1) <= distance(cursor)) cursor += 1;
-    const sample = points[cursor];
-    const price = sample && distance(cursor) <= seconds ? sample.price_usd : null;
-    return { x, y: price === null ? null : (Number(y) / scale) * price };
-  });
 }
