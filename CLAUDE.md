@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 120s timeout for tests
 
 **Package Manager:**
-- Uses pnpm (pinned in `package.json` `packageManager`, currently 10.34.9)
+- Uses pnpm (the version pinned in `packageManager` in package.json)
 - Dependencies include Morpho SDKs, Next.js 15, React 19, Radix UI, Tailwind CSS
 - Uses Biome for linting and formatting
 
@@ -31,13 +31,17 @@ The app is designed as a whitelabel frontend where all customization happens in 
 - `src/config/types.ts` - TypeScript definitions for configuration
 
 **Data Layer:**
-- Powered by the Morpho Core REST API (`api.morpho.org/v0`) for read-only data, behind the server-only
-  `fetchMorphoRest` chokepoint; Blueprint API routes (descriptions, price history) only when their key is set.
-  The public endpoint is keyless; `MORPHO_REST_API_URL`/`MORPHO_API_KEY` are optional overrides for a dedicated
-  instance.
+- Read-only data comes from the Morpho Core REST API (`/v0`, `/v1`) behind the server-only `fetchMorphoRest`
+  chokepoint; `src/common/utils/morphoApiConfig.ts` picks the host:
+  - With `MORPHO_INTERNAL_API_KEY` set, Core REST and the Blueprint API routes (descriptions, price history) both go
+    to `MORPHO_INTERNAL_API_URL` with that key.
+  - Without it, Core REST goes to `MORPHO_REST_API_URL`, else the host of the legacy `MORPHO_API_URL` (the former
+    GraphQL endpoint), else the public `https://api.morpho.org`, with `MORPHO_API_KEY` when set (keyless public
+    access ends after Feb 28). The Blueprint API routes are off and their callers use fallbacks.
+  - `morphoApi.requireInternal` (false here) makes the internal deployment mandatory: reads throw without it.
 - Reward APRs come from Merkl (`src/modules/reward/data/`)
 - App-owned data types in `src/common/data/types.ts`; adapters mapping API responses onto them in
-  `src/common/data/adapters/` and each module's `data/adapters.ts`. Components never see a generated type.
+  `src/common/data/adapters/` and each module's `data/adapters.ts`. Components never see a raw API response type.
 - Data fetching functions organized by domain in module-specific `data/` directories
 - Wallet ERC-20 balances are joined in via a server-side multicall (`src/common/data/rpc/`), not the Morpho API
 - Chain icons are not served by the Morpho API; they come from the Morpho CDN via the per-chain `iconSlug` config,

@@ -221,7 +221,7 @@ describe("indexMerklRewards hardening", () => {
     expect(vaultRewardApys(index, VAULT, "v2")).toEqual([{ asset: MORPHO_ASSET, apr: 10 }]);
     expect(warn.mock.calls.map(([message]) => String(message).split("\n")[0])).toEqual([
       "Dropping Merkl campaign huge: APR 1000.5% is above the sanity cap",
-      "Dropping invalid Merkl campaign: ✖ Invalid input: expected number, received number",
+      "Dropping invalid Merkl campaign: ✖ Invalid input: expected number, received Infinity",
     ]);
   });
 

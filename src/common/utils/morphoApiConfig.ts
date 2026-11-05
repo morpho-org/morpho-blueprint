@@ -2,7 +2,7 @@ import "server-only";
 
 import { APP_CONFIG } from "@/config";
 
-// Public, keyless host. Deployments pointing at a partner instance override it via env.
+// Public host. Deployments pointing at a partner instance override it via env.
 const DEFAULT_MORPHO_API_URL = "https://api.morpho.org";
 
 /**

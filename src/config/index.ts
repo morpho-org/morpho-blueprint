@@ -304,7 +304,7 @@ export const APP_CONFIG: AppConfig = {
 
   apyWindow: "1d",
 
-  // Runs keyless on the public API; set MORPHO_INTERNAL_API_URL/KEY to read the internal deployment.
+  // Reads the public API (set MORPHO_API_KEY) unless MORPHO_INTERNAL_API_URL/KEY are set.
   morphoApi: { requireInternal: false },
 
   featureFlags: {
