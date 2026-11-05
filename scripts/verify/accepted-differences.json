@@ -1,0 +1,566 @@
+{
+  "$comment": "Differences parity-compare.mjs accepts between a base dump and a head dump. Each entry: path (glob over the difference path; * stays within a segment, ** crosses them), optional kind (value | missing | extra), optional relative or absolute bound (then only numeric value differences inside it match), reason, ticket. A child PR adds the entries its decision accepts, nothing broader.",
+  "accepted": [
+    {
+      "path": "data.vaults.**.market.supplyApy*.*",
+      "kind": "value",
+      "relative": 0.01,
+      "reason": "Market supply APYs are live: the API re-indexes a market between two dumps taken minutes apart (seen main vs main, 1.6e-4 relative)",
+      "ticket": "VAU-3612"
+    },
+    {
+      "path": "data.vaultSummaries*.apy.*",
+      "kind": "value",
+      "absolute": 1e-9,
+      "reason": "Vault APYs are live: a vault accrues between two dumps taken seconds apart (seen 4e-13 on World Chain Re7 USDC, read through unchanged GraphQL code)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.apy*.*",
+      "kind": "value",
+      "absolute": 1e-9,
+      "reason": "Vault APYs are live: a vault accrues between two dumps taken seconds apart (seen 4e-13 on World Chain Re7 USDC, read through unchanged GraphQL code)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.*[*].totalSupplied.usd",
+      "kind": "value",
+      "reason": "Core REST serves no USD vault history: V1 and V2 deposits rows are priced from the Blueprint price history only when its key is set (null without it, so the USD toggle hides; with it, nearest price sample vs GraphQL's own USD series)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.hourly(window)",
+      "kind": "missing",
+      "reason": "Point counts: the 1W series is Core's seven_days lookback (168 hourly rows); the GraphQL fetch added a 2-day margin (217 rows)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.daily(window)",
+      "kind": "missing",
+      "reason": "Point counts: the 1M/3M series is Core's ninety_days lookback (94 daily rows); the GraphQL fetch added a 10-day margin (101 rows)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.weekly*",
+      "kind": "extra",
+      "reason": "All sampling: Core's inception lookback serves daily rows for the younger V1 vaults (about 7x the points of GraphQL's weekly buckets) and monthly rows for the four oldest V1 vaults (Steakhouse USDC 1:0xBEEF0173, Steakhouse USDT 1:0xbEef047a, Steakhouse RUSD 1:0xBeEf11eC, Moonwell Flagship ETH 8453:0xa0E43087), about 4x coarser",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.weekly*",
+      "kind": "missing",
+      "reason": "All sampling: GraphQL's weekly bucket timestamps are not on Core's inception rows (daily for the younger V1 vaults, monthly for the four oldest V1 vaults (Steakhouse USDC 1:0xBEEF0173, Steakhouse USDT 1:0xbEef047a, Steakhouse RUSD 1:0xBeEf11eC, Moonwell Flagship ETH 8453:0xa0E43087)), and Core's series starts at the first state row",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.*[*]",
+      "kind": "missing",
+      "reason": "Each dump ends on its own request-time row (a non-aligned timestamp); the head dump, taken seconds later, has a later one. GraphQL also served a trailing hourly bucket with no total assets",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.hourly[*].netApy.total",
+      "kind": "value",
+      "absolute": 0.1,
+      "reason": "Smoothing: GraphQL served the daily-averaged V1 series, Core's apy/history serves its own series for the lookback (as the Vaults app plots it); up to 4.9 percentage points seen. Bounded so a null still fails",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.daily[*].netApy.total",
+      "kind": "value",
+      "absolute": 0.2,
+      "reason": "Smoothing: GraphQL daily-averaged points vs Core's daily apy/history series; up to 11.7 percentage points seen on small Katana and Polygon vaults. Bounded so a null still fails",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.weekly[*].netApy.total",
+      "kind": "value",
+      "absolute": 1.1,
+      "reason": "Smoothing and All sampling: within 0.61 except the rows listed below. Bounded so a null still fails",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.8453:0x543257eF2161176D7C8cD90BA65C2d4CaEF5a796.historical.weekly[17*].netApy.total",
+      "kind": "value",
+      "reason": "Moonwell Frontier cbBTC held dust (6.1e-7 cbBTC) in its first month (Dec 2024): both sides serve absurd APYs there (GraphQL 1.1e27, Core up to 1,366)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.42161:0x2281961480216653529A03D6CE03Ee6B8cdF564E.historical.weekly[1765411200].netApy.total",
+      "kind": "value",
+      "reason": "One early Arbitrum row: GraphQL's weekly bucket average (294%) vs Core's daily point (39%)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.marketPositions.1.0x27b9a0a5bfee98a31eb51e3850250d103a9f8e41673c782defc66aa943af0e65",
+      "kind": "missing",
+      "reason": "Steakhouse High Yield Instant (vault V2) zeroed its cap on this market (absolute cap 0, nothing allocated): the REST walk drops a zeroed cap, GraphQL listed it. The account only held the loan token in its wallet there",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaultSummaries*.curatorAum",
+      "kind": "missing",
+      "reason": "Curator AUM is hidden: its REST route (VAU-3630) is not in production yet. The template never displayed it",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.*.curatorAum",
+      "kind": "missing",
+      "reason": "Curator AUM is hidden on the vault page: its REST route (VAU-3630) is not in production yet. The template never displayed it",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaultSummaries*.allocations*",
+      "kind": "missing",
+      "reason": "REST vault V2 summaries read no adapters. The exposure tooltip only expands MetaMorpho adapters, and both configured vault V2s use a market adapter, so the column renders nothing either way",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaultSummaries*.totalAssets.*",
+      "kind": "value",
+      "relative": 0.001,
+      "reason": "Vault V2 totals: REST serves the total accrued as of its last indexed block, GraphQL lagged it (1,000 USDC on 5.14M, 1.9e-4, on Gauntlet USDC Frontier v2)",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.*.totalAssets.*",
+      "kind": "value",
+      "relative": 0.001,
+      "reason": "Vault V2 totals: REST serves the total accrued as of its last indexed block, GraphQL lagged it (1,000 USDC on 5.14M, 1.9e-4, on Gauntlet USDC Frontier v2)",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.*.allocations*.adapterCap.allocation.*",
+      "kind": "value",
+      "relative": 0.001,
+      "reason": "Same accrual lag as totalAssets, on the adapter allocation",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.*.allocations*.marketCaps*.allocation.*",
+      "kind": "value",
+      "relative": 0.001,
+      "reason": "Same accrual lag as totalAssets, on a market allocation",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.*.apyAverages.inception",
+      "kind": "value",
+      "absolute": 1,
+      "reason": "Inception APY: GraphQL served inflated values (63% for Steakhouse High Yield Instant), REST serves the realized average from share-price growth (5.6%); REST is correct, as on Anchorage (VAU-3614). Bounded to 100 percentage points",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.**.marketCaps[*].market.supplyApy*.*",
+      "kind": "value",
+      "relative": 0.08,
+      "reason": "Market 6h/1d/7d supply APYs: GraphQL and REST supply_apy_averages are computed differently; up to 5.9% relative seen (Base market 0x7662 1d), as on Anchorage (VAU-3614)",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.**.marketCaps[*].market.supplyApy*.*",
+      "kind": "value",
+      "absolute": 0.0001,
+      "reason": "Market supply APYs within 0.01 percentage points: near-zero-APY markets differ by more relative between GraphQL and REST while the displayed value is the same",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaults.*.historical.*[*]",
+      "kind": "extra",
+      "reason": "Vault V2 history on Core REST ends on a request-time row (a non-aligned timestamp) that GraphQL's bucketed series did not have. One row per vault and series",
+      "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaultSummaries*.marketAllocations**",
+      "kind": "value",
+      "reason": "Vault V1 exposure tooltip rows carry no market id, so they compare by position: GraphQL served them in index order, REST in withdraw-queue order. Summed per collateral symbol the shares and USD match (checked on every configured V1 vault); the tooltip sorts by share",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaultSummaries*.apy.*",
+      "kind": "value",
+      "relative": 0.06,
+      "reason": "Vault V1 header APY: REST apy-averages over the 6h window vs GraphQL avgNetApyExcludingRewards (plus windowed rewards in total); up to 5.8% relative seen (Gauntlet USDC on Unichain)",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.apy.*",
+      "kind": "value",
+      "relative": 0.06,
+      "reason": "Vault V1 header APY: REST apy-averages over the 6h window vs GraphQL avgNetApyExcludingRewards (plus windowed rewards in total); up to 5.8% relative seen (Gauntlet USDC on Unichain)",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaultSummaries*.apy.rewards*.apr",
+      "kind": "value",
+      "relative": 0.02,
+      "reason": "Vault V1 reward APRs now come from Merkl directly (VAU-3624 module), GraphQL served its own cached copy; within 1.1% seen",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.apy.rewards*.apr",
+      "kind": "value",
+      "relative": 0.02,
+      "reason": "Vault V1 reward APRs now come from Merkl directly (VAU-3624 module), GraphQL served its own cached copy; within 1.1% seen",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaultSummaries*.apy.rewards*.asset.icon",
+      "kind": "value",
+      "reason": "Vault V1 reward token icons come from Merkl (storage.googleapis.com/merkl-static-assets), GraphQL served the Morpho CDN logo, as on vault V2 rewards",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.apy.rewards*.asset.icon",
+      "kind": "value",
+      "reason": "Vault V1 reward token icons come from Merkl (storage.googleapis.com/merkl-static-assets), GraphQL served the Morpho CDN logo, as on vault V2 rewards",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaultSummaries*.metadata.curator",
+      "kind": "value",
+      "reason": "The three Re7 vaults on World Chain have no curator role: GraphQL's vault-scoped curators returned none, the REST path looks the curator up from the owner, as the ticket asks, and finds RE7 Labs",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.metadata.curator",
+      "kind": "value",
+      "reason": "The three Re7 vaults on World Chain have no curator role: GraphQL's vault-scoped curators returned none, the REST path looks the curator up from the owner, as the ticket asks, and finds RE7 Labs",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.apyAverages.*",
+      "kind": "value",
+      "relative": 0.03,
+      "reason": "Vault V1 realized APY averages (7d, 30d, 90d): REST apy-averages vs GraphQL avgNetApy, computed on different timestamp grids; up to 2.2% relative seen. Vaults with Merkl rewards differ more and are listed below",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.marketAllocations[*].market.supplyApy*.*",
+      "kind": "value",
+      "relative": 0.1,
+      "reason": "Market 6h/1d/7d supply APYs on vault V1 allocations: GraphQL and REST supply_apy_averages are computed differently; up to 8.4% relative seen (Polygon Compound WETH market 1d), as on the vault V2 breakdown (VAU-3619)",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.marketAllocations[*].market.supplyApy*.*",
+      "kind": "value",
+      "absolute": 0.0001,
+      "reason": "Market supply APYs within 0.01 percentage points: near-zero-APY markets differ by more relative between GraphQL and REST while the displayed value is the same",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.apyAverages.*",
+      "kind": "value",
+      "absolute": 0.0005,
+      "reason": "Near-zero vault V1 APY averages (0.12% vs 0.15% on Katana Gauntlet WETH 90d): within 0.05 percentage points",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.480:0x0Db7E405278c2674F462aC9D9eb8b8346D1c1571.apyAverages.*",
+      "kind": "value",
+      "reason": "Re7 WETH on World Chain earns WLD through Merkl: GraphQL's averages included windowed rewards (2.57%), REST's are native only (0.02%), the same series the chart plots since VAU-3618. The header APY still adds the current reward APR",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.999:0x4346C98E690c17eFbB999aE8e1dA96B089bE320b.totalLiquidity.usd",
+      "kind": "value",
+      "reason": "rUSDC has no USD price on either API: GraphQL served 0 USD of liquidity, REST derives none (null), so the liquidity metric shows a dash instead of $0, like the deposits figure",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.totalLiquidity.usd",
+      "kind": "value",
+      "relative": 0.01,
+      "reason": "Vault V1 available liquidity: GraphQL served a cached figure (the same 47,297,444 USD on Steakhouse USDC in two dumps 20 s apart), REST withdrawable_assets is as of its last indexed block (47,650,715 USD, 0.75% more)",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaultSummaries*.apy.*",
+      "kind": "value",
+      "absolute": 0.0001,
+      "reason": "Near-zero vault V1 APYs within 0.01 percentage points (Compound WETH on Polygon: 0.0134% vs 0.0123%), where the relative bound above is too tight",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.apy.*",
+      "kind": "value",
+      "absolute": 0.0001,
+      "reason": "Near-zero vault V1 APYs within 0.01 percentage points (Compound WETH on Polygon: 0.0134% vs 0.0123%), where the relative bound above is too tight",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.marketSummaries.idleMarkets.*",
+      "kind": "missing",
+      "reason": "The borrow table never showed idle markets (no collateral); the REST list no longer reads them",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy",
+      "kind": "missing",
+      "reason": "Instantaneous borrow APY dropped from MarketSummary: no component read it and Core REST does not serve it",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy6h.*",
+      "kind": "value",
+      "relative": 0.1,
+      "reason": "Market borrow APY 6h: Core REST apy-averages vs GraphQL avgBorrowApy, median 0.13%, max 6.9% relative (seen 2026-11-05)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy1d.*",
+      "kind": "value",
+      "relative": 0.1,
+      "reason": "Market borrow APY 1d: Core REST apy-averages vs GraphQL dailyBorrowApy, median 0.12%, max 7.2% relative (seen 2026-11-05)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy7d.*",
+      "kind": "value",
+      "relative": 0.05,
+      "reason": "Market borrow APY 7d: Core REST apy-averages vs GraphQL weeklyBorrowApy, max 1.9% relative (seen 2026-11-05)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy30d.*",
+      "kind": "value",
+      "relative": 0.02,
+      "reason": "Market borrow APY 30d: Core REST apy-averages vs GraphQL monthlyBorrowApy, max 0.3% relative (seen 2026-11-05)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy*.rewards[*].apr",
+      "kind": "value",
+      "relative": 0.02,
+      "reason": "Borrow reward APRs read live from Merkl instead of the rewards backend snapshot (0.65% relative on the World Chain WLD campaigns)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy*.rewards[*].asset.icon",
+      "kind": "value",
+      "reason": "Reward token icon comes from Merkl, not the Morpho CDN (same as the vault reward chips, VAU-3619)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.totalBorrowed.*",
+      "kind": "value",
+      "relative": 0.001,
+      "reason": "Borrowed assets accrue: Core REST state is as of the market's last accrual, GraphQL as of its own indexing (max 1.5e-4 relative)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy*.total",
+      "kind": "value",
+      "absolute": 0.001,
+      "reason": "Net borrow rate near zero (native minus Merkl rewards, World Chain WLD markets): the native and reward drifts add up to at most 0.1 percentage point",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.totalBorrowed.usd",
+      "kind": "value",
+      "relative": 0.01,
+      "reason": "Loan token price from Core REST /price (60 s cache) vs GraphQL priceUsd, refreshed on different schedules: WHYPE was identical in two GraphQL dumps minutes apart while REST moved; max 0.75% relative (WPOL)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.markets.*.borrowApy",
+      "kind": "missing",
+      "reason": "The instantaneous borrow APY had no reader; dropped from MarketSummary with the REST port (as in VAU-3621)",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.borrowApy*.*",
+      "kind": "value",
+      "relative": 0.05,
+      "reason": "Borrow APY windows come from Core REST apy-averages (borrow_apy_averages) instead of GraphQL's fields: seen up to 1.1% relative on the 6h window",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.publicAllocatorSharedLiquidity.*",
+      "kind": "value",
+      "reason": "Core REST reallocatable_liquidity covers only the Public Allocator V2 (the tooltip says so); GraphQL summed the vault V1 public allocator's shared liquidity",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.vaultAllocations[*]",
+      "kind": "missing",
+      "reason": "Suppliers are read from the configured vaults only, the rows the table showed (it filtered to configured and enabled); the displayed rows match (evidence comment)",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.vaultAllocations[*].**",
+      "kind": "value",
+      "reason": "Same as the missing rows: the list is the configured vaults only, so rows shift position; the displayed rows match (evidence comment)",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.irm.curve[*].*",
+      "kind": "value",
+      "relative": 0.05,
+      "reason": "The IRM curve is computed with blue-sdk's AdaptiveCurveIrmLib (exponential rate curve, real fee); GraphQL interpolated APY linearly between the kinks: seen up to 4.4% relative between the kinks, equal at 0%, 90% and 100%",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.*[*].total*.usd",
+      "kind": "value",
+      "reason": "Core REST serves no USD history: USD rows come from the Blueprint price history only when its key is set (unset in this dump, so null and the USD toggle hides)",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.*[*].borrowApy7d.*",
+      "kind": "value",
+      "reason": "Core serves one borrow APY series per lookback; it is filed under the chart's window key (1d) only. The 7d and 30d keys had no reader",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.*[*].borrowApy30d.*",
+      "kind": "value",
+      "reason": "Core serves one borrow APY series per lookback; it is filed under the chart's window key (1d) only. The 7d and 30d keys had no reader",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.hourly[*].borrowApy1d.*",
+      "kind": "value",
+      "relative": 0.01,
+      "reason": "The request-time row and last hourly row: Core's 1d-smoothed sample vs GraphQL's, seen 0.75% relative",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.daily[*].borrowApy1d.*",
+      "kind": "value",
+      "reason": "APY smoothing: Core's ninety_days lookback averages each point over 30 days (GraphQL's dailyBorrowApy over 1 day), as accepted for vault history",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.weekly[*].borrowApy1d.*",
+      "kind": "value",
+      "reason": "APY smoothing: Core's inception lookback averages each point over 30 days, as accepted for vault history",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.weekly[*]",
+      "kind": "extra",
+      "reason": "All sampling: Core's inception lookback serves daily (young markets) or monthly rows, GraphQL weekly buckets",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.weekly[*]",
+      "kind": "missing",
+      "reason": "All sampling: Core's inception lookback serves daily (young markets) or monthly rows, GraphQL weekly buckets",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.hourly(window)",
+      "kind": "missing",
+      "reason": "Point counts: Core's seven_days lookback (168 hourly rows) vs the GraphQL fetch's 2-day margin",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.daily(window)",
+      "kind": "missing",
+      "reason": "Point counts: Core's ninety_days lookback vs the GraphQL fetch's 10-day margin",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.hourly[*]",
+      "kind": "missing",
+      "reason": "Request-time rows: each source appends a row at its own request time, seconds apart between the two dumps",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.daily[*]",
+      "kind": "missing",
+      "reason": "Request-time rows: each source appends a row at its own request time, seconds apart between the two dumps",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.weekly(window)",
+      "reason": "All sampling: Core's inception lookback starts at the market's first snapshot with daily or monthly rows, GraphQL at its first weekly bucket",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.hourly[*]",
+      "kind": "extra",
+      "reason": "Request-time rows: each source appends a row at its own request time, seconds apart between the two dumps",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.markets.*.historical.daily[*]",
+      "kind": "extra",
+      "reason": "Request-time rows: each source appends a row at its own request time, seconds apart between the two dumps",
+      "ticket": "VAU-3622"
+    },
+    {
+      "path": "data.vaults.480:0x348831b46876d3dF2Db98BdEc5E3B4083329Ab9f.apyAverages.*",
+      "kind": "value",
+      "reason": "Re7 WLD on World Chain earns WLD through Merkl (1.6%): GraphQL's averages included windowed rewards (1.60%), REST's are native only (0.00%), as accepted for Re7 WETH (VAU-3620). The header APY still adds the current reward APR",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.vaults.480:0xb1E80387EbE53Ff75a89736097D34dC8D9E9045B.apyAverages.*",
+      "kind": "value",
+      "reason": "Re7 USDC on World Chain earns WLD through Merkl (4.2%): GraphQL's averages included windowed rewards (7.2% 7d), REST's are native only (3.0%), as accepted for Re7 WETH (VAU-3620)",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.vaults.8453:0xa0E430870c4604CcfC7B38Ca7845B1FF653D0ff1.apyAverages.*",
+      "kind": "value",
+      "reason": "Moonwell Flagship ETH earns WELL through Merkl (0.12%): GraphQL's averages included windowed rewards, REST's are native only (1.24% vs 1.12% 7d), as accepted for Re7 WETH (VAU-3620)",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.vaults.8453:0x543257eF2161176D7C8cD90BA65C2d4CaEF5a796.apyAverages.*",
+      "kind": "value",
+      "reason": "Moonwell Frontier cbBTC earns WELL through Merkl (0.12%): GraphQL's averages included windowed rewards, REST's are native only (0.14% vs 0.02% 7d), as accepted for Re7 WETH (VAU-3620)",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.vaults.747474:0x5BD1D75d45EdB622d0ea50946F2f741CE8dC5b75.totalLiquidity.usd",
+      "kind": "value",
+      "reason": "BTCK has no USD price on either API: GraphQL served 0 USD of liquidity, REST derives none (null), as accepted for rUSDC (VAU-3620)",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.vaults.480:0x348831b46876d3dF2Db98BdEc5E3B4083329Ab9f.**.usd",
+      "kind": "value",
+      "relative": 0.006,
+      "reason": "Re7 WLD USD values: GraphQL priced its USD fields at its own cached WLD price (0.3742), REST at Core's current price (0.3760, the asset price both dumps report); 0.47% seen",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.vaults.137:0xfD06859A671C21497a2EB8C5E3fEA48De924D6c8.marketAllocations[0x267f344f5af0d85e95f253a2f250985a9fb9fca34a3342299e20c83b6906fc80].market.supplyApy6h.*",
+      "kind": "value",
+      "relative": 0.3,
+      "reason": "Polygon WPOL / USDT0 market 6h supply APY (Compound USDT allocation): GraphQL 3.75% vs REST 4.72% over the volatile 6h window, while the 1d APY matches within 0.3%; same computation gap as the other supply_apy_averages entries",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.marketSummaries.markets.1:0x27b9a0a5bfee98a31eb51e3850250d103a9f8e41673c782defc66aa943af0e65",
+      "kind": "missing",
+      "reason": "Steakhouse High Yield Instant (vault V2) zeroed its cap on this PT-srUSDe market (absolute cap 0, nothing allocated): the REST supported-market walk drops a zeroed cap, GraphQL listed it, as accepted for positions (VAU-3618)",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.marketSummaries.markets.137:0x267f344f5af0d85e95f253a2f250985a9fb9fca34a3342299e20c83b6906fc80.borrowApy6h.*",
+      "kind": "value",
+      "relative": 0.3,
+      "reason": "Polygon WPOL / USDT0 6h borrow APY: GraphQL 4.07% vs REST 5.02% over the volatile 6h window (the same market's 6h supply APY gap); the 1d, 7d and 30d windows match within the global entries",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.markets.137:0x267f344f5af0d85e95f253a2f250985a9fb9fca34a3342299e20c83b6906fc80.borrowApy6h.*",
+      "kind": "value",
+      "relative": 0.3,
+      "reason": "Polygon WPOL / USDT0 6h borrow APY on the market page: the same 6h gap as its borrow-table row (GraphQL 4.07% vs REST 5.02%)",
+      "ticket": "VAU-3623"
+    },
+    {
+      "path": "data.markets.137:0x267f344f5af0d85e95f253a2f250985a9fb9fca34a3342299e20c83b6906fc80.historical.hourly[*].borrowApy1d.*",
+      "kind": "value",
+      "relative": 0.03,
+      "reason": "Polygon WPOL / USDT0 last hourly row (04:00 UTC): Core's 1d-smoothed sample vs GraphQL's, 1.6% relative while its 6h rate moved (the VAU-3622 entry bounds the other markets at 1%)",
+      "ticket": "VAU-3623"
+    }
+  ]
+}

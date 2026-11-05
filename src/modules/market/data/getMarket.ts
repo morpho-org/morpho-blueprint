@@ -1,71 +1,64 @@
 import "server-only";
 
+import type { MarketId } from "@morpho-org/blue-sdk";
 import { cache } from "react";
-import { getAddress, type Hex } from "viem";
-import { toAmount } from "@/common/data/adapters/amount";
-import { HISTORY_RANGE_KEYS, historyOptions } from "@/common/data/adapters/timeseries";
-import { executeMorphoQuery } from "@/common/utils/executeMorphoQuery";
+import { type Address, getAddress, type Hex, zeroAddress } from "viem";
+import { toAmountWithPrice, toBigInt } from "@/common/data/adapters/amount";
+import { toChainInfoById } from "@/common/data/adapters/entity";
+import { getTokenInfo, getTokenPriceUsd } from "@/common/data/rest/tokens";
+import { SECONDS_PER_DAY } from "@/common/utils/constants";
+import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
 import type { SupportedChainId } from "@/config/types";
-import { graphql } from "@/generated/gql/morpho";
+import { Erc4626VaultProtocol } from "@/config/vault-protocol";
 import type { Market, MarketNonIdle } from "@/modules/market/market.types";
-// The supplying vault V2s' caps and adapters are vault V2 collections, sized by that module's page policy.
-import { CAPS_PAGE_SIZE, POSITIONS_PAGE_SIZE, SUPPLIER_ADAPTERS_PAGE_SIZE } from "@/modules/vault/data/pagination";
+import { getMerklRewardIndex } from "@/modules/reward/data/getMerklRewardIndex";
+import { marketBorrowRewardApys } from "@/modules/reward/data/merklRewardApys";
+import { withRewardTokenMetadata } from "@/modules/reward/data/rewardTokenMetadata";
 import {
   ADAPTIVE_CURVE_IRM_TARGET_UTILIZATION,
+  computeIrmCurve,
   computeLiquidationPenalty,
-  sumPublicAllocatorSharedLiquidity,
+  computeUtilization,
+  type RestApyAverageKey,
   toCollateralPriceInLoanAsset,
-  toMarketHistoricalEntries,
-  toMarketSummary,
-  toMarketVaultAllocations,
+  toMarketVaultAllocation,
+  toRestMarketSummary,
 } from "./adapters";
+import { getMarketHistory } from "./getMarketHistory";
+import { getMarketSupplyingVaults } from "./getMarketSupplyingVaults";
+import { getPublicAllocatorV1Liquidity } from "./getPublicAllocatorV1Liquidity";
 
-const query = graphql(`
-  query Market($chainId: Int!, $marketId: String!, $capsFirst: Int!, $adaptersFirst: Int!, $positionsFirst: Int!) {
-    markets(first: 1, where: { chainId_in: [$chainId], uniqueKey_in: [$marketId] }) {
-      items {
-        ...MarketSummaryFragment
+interface RestMarketRoot {
+  data: {
+    loan_token: Address;
+    collateral_token: Address;
+    oracle_address: Address;
+    irm_address: Address;
+    lltv_wad: string;
+  };
+}
 
-        irmAddress
-        oracle {
-          address
-        }
-        currentIrmCurve(numberOfPoints: 100) {
-          utilization
-          supplyApy
-          borrowApy
-        }
-        publicAllocatorSharedLiquidity {
-          assets
-        }
-        collateralAsset {
-          price {
-            usd
-          }
-        }
-        loanAsset {
-          price {
-            usd
-          }
-        }
-        state {
-          supplyAssets
-          supplyAssetsUsd
-          liquidityAssets
-          liquidityAssetsUsd
-          utilization
-          price
-        }
-        supplyingVaults {
-          ...MarketSupplyingVaultV1Fragment
-        }
-        supplyingVaultV2s {
-          ...MarketSupplyingVaultV2Fragment
-        }
-      }
-    }
-  }
-`);
+interface RestMarketState {
+  data: {
+    total_supply_assets: string;
+    total_borrow_assets: string;
+    fee_wad: string;
+    rate_at_target_per_second_wad: string | null;
+  };
+}
+
+interface RestMarketLiquidity {
+  // `reallocatable_liquidity` (Public Allocator V2) is not read: the borrow cannot reach it.
+  data: { market_liquidity: string };
+}
+
+interface RestMarketApyAverages {
+  data: { borrow_apy_averages: Partial<Record<RestApyAverageKey, number | null>> };
+}
+
+interface RestOracleState {
+  data: { price: string | null };
+}
 
 export type { Market, MarketNonIdle };
 
@@ -73,104 +66,116 @@ export function isNonIdleMarket(market: Market | null): market is MarketNonIdle 
   return !!market && market.isIdle === false && !!market.collateralAsset;
 }
 
-const marketHistoryQuery = graphql(`
-  query MarketHistory($chainId: Int!, $marketId: String!, $options: TimeseriesOptions!) {
-    markets(first: 1, where: { chainId_in: [$chainId], uniqueKey_in: [$marketId] }) {
-      items {
-        historicalState {
-          ...MarketHistoryFragment
-        }
-      }
-    }
-  }
-`);
-
+/**
+ * The market page, from Core REST: params, state, liquidity, borrow APY averages and the oracle
+ * price, token metadata and prices, the chain's Merkl borrow rewards, the vaults that supply the
+ * market (the configured ones, plus every vault V2 the Blueprint API lists when it is on), and the
+ * chart history. The Public Allocator V1 liquidity of the configured vaults V1 is read on chain.
+ * Throws when Core does not know the market.
+ */
 export const getMarket = cache(async (chainId: SupportedChainId, marketId: Hex): Promise<Market> => {
-  const [data, history] = await Promise.all([
-    executeMorphoQuery(query, {
+  const selector = restSelector(chainId, marketId);
+  // Market params never change.
+  const root = await fetchMorphoRestResource<RestMarketRoot>(`/v0/blue/markets/${selector}`, undefined, {
+    revalidate: SECONDS_PER_DAY,
+  });
+  if (!root) throw new Error(`Market not found: ${chainId}:${marketId}`);
+
+  const loanAddress = getAddress(root.data.loan_token);
+  const collateralAddress = getAddress(root.data.collateral_token);
+  const oracleAddress = getAddress(root.data.oracle_address);
+  // An idle market has no collateral token, and no oracle to read.
+  const isIdle = collateralAddress === zeroAddress;
+
+  const [state, liquidity, apy, oracle, loanAsset, collateralAsset, loanPriceUsd, collateralPriceUsd, rewardIndex] =
+    await Promise.all([
+      fetchMorphoRestResource<RestMarketState>(`/v0/blue/markets/${selector}/state`),
+      fetchMorphoRestResource<RestMarketLiquidity>(`/v0/blue/markets/${selector}/liquidity`),
+      fetchMorphoRestResource<RestMarketApyAverages>(`/v0/blue/markets/${selector}/apy-averages`),
+      oracleAddress === zeroAddress
+        ? null
+        : fetchMorphoRestResource<RestOracleState>(`/v0/oracles/${restSelector(chainId, oracleAddress)}/state`),
+      getTokenInfo(chainId, loanAddress),
+      isIdle ? null : getTokenInfo(chainId, collateralAddress),
+      getTokenPriceUsd(chainId, loanAddress),
+      isIdle ? null : getTokenPriceUsd(chainId, collateralAddress),
+      getMerklRewardIndex(chainId),
+    ]);
+  if (!state) throw new Error(`Market not found: ${chainId}:${marketId}`);
+  // Formatting with a guessed scale would misstate every amount by orders of magnitude.
+  if (!loanAsset || (!isIdle && !collateralAsset)) {
+    throw new Error(`Market tokens not returned by the API: ${chainId}:${marketId}`);
+  }
+
+  const chain = toChainInfoById(chainId);
+  const loanDecimals = loanAsset.decimals;
+  const { total_supply_assets: totalSupplyAssets, total_borrow_assets: totalBorrowAssets } = state.data;
+
+  const [{ suppliers, publicAllocatorV1Liquidity }, historical, borrowRewards] = await Promise.all([
+    getMarketSupplyingVaults(chainId, marketId, loanAddress).then(async (suppliers) => ({
+      suppliers,
+      // The borrow action's reallocation candidates: the bundler only reallocates from vaults V1.
+      publicAllocatorV1Liquidity: await getPublicAllocatorV1Liquidity(
+        chainId,
+        marketId as MarketId,
+        // An idle market has no borrow to fund.
+        suppliers
+          .filter((supplier) => !isIdle && supplier.protocol === Erc4626VaultProtocol.MorphoV1)
+          .map((supplier) => getAddress(supplier.vaultAddress)),
+      ),
+    })),
+    getMarketHistory(
       chainId,
       marketId,
-      capsFirst: CAPS_PAGE_SIZE,
-      adaptersFirst: SUPPLIER_ADAPTERS_PAGE_SIZE,
-      positionsFirst: POSITIONS_PAGE_SIZE,
-    }),
-    // One request per chart resolution, see `historyOptions`.
-    Promise.all(
-      HISTORY_RANGE_KEYS.map(async (range) => {
-        const response = await executeMorphoQuery(marketHistoryQuery, {
-          chainId,
-          marketId,
-          options: historyOptions(range),
-        });
-        return response.markets.items?.[0]?.historicalState ?? null;
-      }),
+      { address: loanAddress, decimals: loanDecimals },
+      collateralAsset ? { address: collateralAddress, decimals: collateralAsset.decimals } : null,
     ),
+    // As the borrow table labels them: Core's token metadata, Merkl's where Core has none.
+    withRewardTokenMetadata(rewardIndex, marketBorrowRewardApys(rewardIndex, marketId, loanAddress)),
   ]);
 
-  const market = data.markets.items?.[0];
-  if (!market) {
-    throw new Error(`Market not found: ${chainId}:${marketId}`);
-  }
+  const summary = toRestMarketSummary({
+    marketId,
+    chain,
+    lltvWad: root.data.lltv_wad,
+    collateralAsset,
+    loanAsset,
+    totalBorrowAssets,
+    loanPriceUsd,
+    borrowApyAverages: apy?.data.borrow_apy_averages ?? {},
+    borrowRewards,
+  });
 
-  const summary = toMarketSummary(market);
-  const state = market.state;
-  const loanDecimals = summary.loanAsset.decimals;
-  const collateralDecimals = summary.collateralAsset?.decimals ?? 0;
-  const loanPriceUsd = market.loanAsset.price?.usd ?? null;
-  const collateralPriceUsd = market.collateralAsset?.price?.usd ?? null;
-
-  const [hourly, daily, weekly] = history.map((series) =>
-    series
-      ? toMarketHistoricalEntries(
-          {
-            supplyAssets: series.supplyAssets,
-            supplyAssetsUsd: series.supplyAssetsUsd,
-            borrowAssets: series.borrowAssets,
-            borrowAssetsUsd: series.borrowAssetsUsd,
-            collateralAssets: series.collateralAssets,
-            collateralAssetsUsd: series.collateralAssetsUsd,
-            borrowApy1d: series.dailyBorrowApy,
-            netBorrowApy1d: series.dailyNetBorrowApy,
-            borrowApy7d: series.weeklyBorrowApy,
-            netBorrowApy7d: series.weeklyNetBorrowApy,
-            borrowApy30d: series.monthlyBorrowApy,
-            netBorrowApy30d: series.monthlyNetBorrowApy,
-          },
-          loanDecimals,
-          collateralDecimals,
-        )
-      : [],
+  // Without a liquidity read, what the market itself holds is still supply minus borrow.
+  const marketLiquidity = toBigInt(
+    liquidity?.data.market_liquidity ?? toBigInt(totalSupplyAssets) - toBigInt(totalBorrowAssets),
   );
 
   return {
     ...summary,
-    isIdle: summary.collateralAsset === null,
-    totalSupplied: toAmount(state?.supplyAssets, loanDecimals, state?.supplyAssetsUsd),
-    liquidityInMarket: toAmount(state?.liquidityAssets, loanDecimals, state?.liquidityAssetsUsd),
-    publicAllocatorSharedLiquidity: sumPublicAllocatorSharedLiquidity(
-      market.publicAllocatorSharedLiquidity,
-      loanDecimals,
-      loanPriceUsd,
+    isIdle,
+    totalSupplied: toAmountWithPrice(totalSupplyAssets, loanDecimals, loanPriceUsd),
+    liquidityInMarket: toAmountWithPrice(marketLiquidity, loanDecimals, loanPriceUsd),
+    publicAllocatorV1Liquidity: toAmountWithPrice(publicAllocatorV1Liquidity, loanDecimals, loanPriceUsd),
+    availableToBorrow: toAmountWithPrice(marketLiquidity + publicAllocatorV1Liquidity, loanDecimals, loanPriceUsd),
+    collateralAsset: collateralAsset ? { ...collateralAsset, priceUsd: collateralPriceUsd } : null,
+    loanAsset: { ...loanAsset, priceUsd: loanPriceUsd },
+    vaultAllocations: suppliers.map((supplier) =>
+      toMarketVaultAllocation(supplier, { chain, loanAsset, loanPriceUsd, totalSupplyAssets }),
     ),
-    collateralAsset: summary.collateralAsset ? { ...summary.collateralAsset, priceUsd: collateralPriceUsd } : null,
-    loanAsset: { ...summary.loanAsset, priceUsd: loanPriceUsd },
-    vaultAllocations: toMarketVaultAllocations(
-      market.marketId,
-      state?.supplyAssets,
-      loanDecimals,
-      loanPriceUsd,
-      market.supplyingVaults,
-      market.supplyingVaultV2s,
-    ),
-    utilization: state?.utilization ?? 0,
+    utilization: computeUtilization(totalSupplyAssets, totalBorrowAssets),
     irm: {
-      address: getAddress(market.irmAddress),
+      address: getAddress(root.data.irm_address),
       targetUtilization: ADAPTIVE_CURVE_IRM_TARGET_UTILIZATION,
-      curve: market.currentIrmCurve ?? [],
+      curve: computeIrmCurve(state.data.rate_at_target_per_second_wad, state.data.fee_wad),
     },
-    liquidationPenalty: computeLiquidationPenalty(market.lltv),
-    oracleAddress: market.oracle?.address ? getAddress(market.oracle.address) : null,
-    collateralPriceInLoanAsset: toCollateralPriceInLoanAsset(state?.price, loanDecimals, collateralDecimals),
-    historical: { hourly: hourly ?? [], daily: daily ?? [], weekly: weekly ?? [] },
+    liquidationPenalty: computeLiquidationPenalty(root.data.lltv_wad),
+    oracleAddress: oracleAddress === zeroAddress ? null : oracleAddress,
+    collateralPriceInLoanAsset: toCollateralPriceInLoanAsset(
+      oracle?.data.price,
+      loanDecimals,
+      collateralAsset?.decimals ?? 0,
+    ),
+    historical,
   };
 });

@@ -73,26 +73,18 @@ const columns: Column[] = [
 ];
 
 export function VaultAllocationTable({ market }: VaultAllocationTableProps) {
-  const data = useMemo(() => {
-    const supportedVaultIdentifiers = Object.entries(APP_CONFIG.supportedVaults).map(([chainId, vaults]) =>
-      vaults.map((vault) => `${chainId}:${getAddress(vault.address)}`),
-    );
-    return market.vaultAllocations.filter((allocation) => {
-      const identifier = `${allocation.vault.chain.id}:${allocation.vault.vaultAddress}`;
-      const isSupported = supportedVaultIdentifiers.some((identifiers) => identifiers.includes(identifier));
-      return allocation.enabled && isSupported;
-    });
-  }, [market]);
+  // The configured vaults, plus every other vault V2 supplying the market when the Blueprint API is on.
+  const data = useMemo(() => market.vaultAllocations.filter((allocation) => allocation.enabled), [market]);
 
   return (
     <Table
       columns={columns}
       data={data}
       initialSort={[{ id: "totalSupply", desc: true }]}
-      rowAction={(row) => ({
-        type: "link",
-        href: `/earn/${market.chain.id}/${getAddress(row.vault.vaultAddress)}`,
-      })}
+      // Only a configured vault has a page in the app.
+      rowAction={(row) =>
+        row.configured ? { type: "link", href: `/earn/${market.chain.id}/${getAddress(row.vault.vaultAddress)}` } : null
+      }
     />
   );
 }

@@ -48,8 +48,6 @@ export interface MarketSummary extends MarketBorrowApyWindows {
   collateralAsset: TokenInfo | null;
   loanAsset: TokenInfo;
   lltv: Ratio;
-  /** Instantaneous borrow APY, kept alongside the windowed variants. */
-  borrowApy: Apy;
 }
 
 export interface MarketVaultAllocation {
@@ -68,6 +66,11 @@ export interface MarketVaultAllocation {
     metadata: { curator: CuratorInfo | null } | null;
   };
   enabled: boolean;
+  /**
+   * The vault is in the app's config, so it has a vault page. With the Blueprint API on, the table
+   * also lists the other vaults V2 supplying the market; they are not borrow-flow candidates.
+   */
+  configured: boolean;
   position: { supplyAmount: Amount; supplyShares: string };
   supplyCap: Amount;
   marketSupplyShare: number;
@@ -94,8 +97,14 @@ export interface Market extends MarketSummary {
   isIdle: boolean;
   totalSupplied: Amount;
   liquidityInMarket: Amount;
-  /** Summed from `Market.publicAllocatorSharedLiquidity[].assets`. */
-  publicAllocatorSharedLiquidity: Amount;
+  /**
+   * What the borrow bundle can move in through the Public Allocator V1 from the configured V1 vaults
+   * that supply the market (read on chain). Public Allocator V2 liquidity is left out: the bundle
+   * cannot reallocate from a vault V2.
+   */
+  publicAllocatorV1Liquidity: Amount;
+  /** `liquidityInMarket` + `publicAllocatorV1Liquidity`: the most a borrow can take. */
+  availableToBorrow: Amount;
   collateralAsset: (TokenInfo & { priceUsd: number | null }) | null;
   loanAsset: TokenInfo & { priceUsd: number | null };
   vaultAllocations: MarketVaultAllocation[];

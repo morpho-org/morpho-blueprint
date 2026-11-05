@@ -4,6 +4,7 @@ import { ApyTooltipContent, ApyTooltipTrigger } from "@/common/components/ApyToo
 import { MetricWithTooltip } from "@/common/components/Metric";
 import NumberFlow from "@/common/components/ui/number-flow";
 import { Skeleton } from "@/common/components/ui/skeleton";
+import { cn } from "@/common/utils/shadcn";
 import { rateLabel } from "@/common/utils/timeframe";
 import type { Vault } from "@/modules/vault/data/getVault";
 import { extractVaultLiquidity } from "@/modules/vault/utils/extractVaultLiquidity";
@@ -29,6 +30,11 @@ export async function VaultKeyMetrics({ vaultPromise }: VaultKeyMetricsProps) {
           rewards={vault.apy.rewards}
         />
       }
+      curatorAumValue={
+        vault.curatorAum === undefined ? undefined : (
+          <NumberFlow value={vault.curatorAum} format={{ currency: "USD" }} />
+        )
+      }
     />
   );
 }
@@ -50,6 +56,8 @@ interface VaultKeyMetricsLayoutProps {
   availableLiquidityValue: ReactNode;
   supplyApyValue: ReactNode;
   supplyApyTooltip: ReactNode;
+  /** Omitted when the curator has no AUM (Blueprint API off, failed read or unknown curator). */
+  curatorAumValue?: ReactNode;
 }
 
 function VaultKeyMetricsLayout({
@@ -57,9 +65,10 @@ function VaultKeyMetricsLayout({
   availableLiquidityValue,
   supplyApyValue,
   supplyApyTooltip,
+  curatorAumValue,
 }: VaultKeyMetricsLayoutProps) {
   return (
-    <div className="grid grid-cols-2 gap-6 md:grid-cols-3">
+    <div className={cn("grid grid-cols-2 gap-6", curatorAumValue === undefined ? "md:grid-cols-3" : "md:grid-cols-4")}>
       <MetricWithTooltip
         label="Total deposits"
         className="heading-4"
@@ -77,6 +86,15 @@ function VaultKeyMetricsLayout({
       <MetricWithTooltip label={rateLabel("Net APY")} className="heading-4" tooltip={supplyApyTooltip}>
         {supplyApyValue}
       </MetricWithTooltip>
+      {curatorAumValue !== undefined && (
+        <MetricWithTooltip
+          label="Curator AUC"
+          className="heading-4"
+          tooltip="The total amount of assets under curation by the vault curator."
+        >
+          {curatorAumValue}
+        </MetricWithTooltip>
+      )}
     </div>
   );
 }
