@@ -16,7 +16,7 @@ const vaultFilter = list(process.env.PARITY_VAULTS).map((key) => key.toLowerCase
 const providers = new Set(list(process.env.PARITY_PROVIDERS || "summaries,vaults"));
 const marketKeys = list(process.env.PARITY_MARKETS);
 
-const KNOWN_PROVIDERS = ["summaries", "vaults", "vault-positions", "market-positions", "markets"];
+const KNOWN_PROVIDERS = ["summaries", "vaults", "vault-positions", "market-positions", "market-summaries", "markets"];
 
 type Provider = (...args: unknown[]) => Promise<unknown>;
 interface ConfiguredVault {
@@ -29,6 +29,9 @@ interface ConfiguredVault {
 // is refused, not sent; some providers degrade on a failed read (wallet balances), so a refusal
 // still fails the run rather than leave a partial dump.
 const requestsByHost = new Map<string, number>();
+// By the Next data-cache lifetime the call asks for ("none" = read on every render): a warm render
+// only repeats the calls whose lifetime has run out.
+const requestsByRevalidate = new Map<string, number>();
 let requestCount = 0;
 let refused = 0;
 const realFetch = globalThis.fetch;
@@ -40,6 +43,8 @@ globalThis.fetch = async (input, init) => {
   }
   requestCount += 1;
   requestsByHost.set(url.host, (requestsByHost.get(url.host) ?? 0) + 1);
+  const revalidate = String(init?.next?.revalidate ?? "none");
+  requestsByRevalidate.set(revalidate, (requestsByRevalidate.get(revalidate) ?? 0) + 1);
   return realFetch(input, init);
 };
 
@@ -99,6 +104,20 @@ test("parity dump", async () => {
       );
       data.marketPositions = await getMarketPositions(account);
     }
+    if (providers.has("market-summaries")) {
+      // Keyed by chain and id: one market id can exist on two chains. Idle markets (no collateral)
+      // apart, since the borrow table never shows them.
+      type Row = { chain: { id: number }; marketId: string; collateralAsset: unknown };
+      const { getMarketSummaries } = await load<{ getMarketSummaries: () => Promise<Row[]> }>(
+        "@/modules/market/data/getMarketSummaries",
+      );
+      const markets: Record<string, Row> = {};
+      const idleMarkets: Record<string, Row> = {};
+      for (const row of await getMarketSummaries()) {
+        (row.collateralAsset ? markets : idleMarkets)[`${row.chain.id}:${row.marketId}`] = row;
+      }
+      data.marketSummaries = { markets, idleMarkets };
+    }
     if (providers.has("markets")) {
       const { getMarket } = await load<{ getMarket: Provider }>("@/modules/market/data/getMarket");
       const markets: Record<string, unknown> = {};
@@ -111,7 +130,8 @@ test("parity dump", async () => {
     }
   } finally {
     const hosts = [...requestsByHost].map(([host, n]) => `${host}=${n}`).join(", ");
-    console.log(`requests: ${requestCount} sent, ${refused} refused (${hosts})`);
+    const lifetimes = [...requestsByRevalidate].map(([seconds, n]) => `${seconds}=${n}`).join(", ");
+    console.log(`requests: ${requestCount} sent, ${refused} refused (${hosts}; revalidate ${lifetimes})`);
   }
   if (refused > 0) {
     throw new Error(`Request cap of ${maxRequests} reached; narrow the run with --vaults or --providers`);
@@ -124,7 +144,11 @@ test("parity dump", async () => {
     providers: [...providers],
     account: account ?? null,
     vaults: vaults.map((vault) => vault.key),
-    requests: { total: requestCount, byHost: Object.fromEntries(requestsByHost) },
+    requests: {
+      total: requestCount,
+      byHost: Object.fromEntries(requestsByHost),
+      byRevalidate: Object.fromEntries(requestsByRevalidate),
+    },
   };
   writeFileSync(outFile, `${toJson({ meta, data })}\n`);
   console.log(`wrote ${outFile}`);

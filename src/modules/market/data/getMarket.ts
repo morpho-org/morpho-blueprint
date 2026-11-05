@@ -22,7 +22,11 @@ import {
   toRestMarketSummary,
 } from "./adapters";
 import { getMarketHistory } from "./getMarketHistory";
+import { PRICE_REVALIDATE_SECONDS } from "./getMarketSummaries";
 import { getMarketSupplyingVaults } from "./getMarketSupplyingVaults";
+
+// As the borrow table reads prices: a minute of cache, and a 429 fails the render.
+const PRICE_OPTIONS = { revalidate: PRICE_REVALIDATE_SECONDS, throwWhenRateLimited: true };
 
 interface RestMarketRoot {
   data: {
@@ -90,8 +94,8 @@ export const getMarket = cache(async (chainId: SupportedChainId, marketId: Hex):
         : fetchMorphoRestResource<RestOracleState>(`/v0/oracles/${restSelector(chainId, oracleAddress)}/state`),
       getTokenInfo(chainId, loanAddress),
       isIdle ? null : getTokenInfo(chainId, collateralAddress),
-      getTokenPriceUsd(chainId, loanAddress),
-      isIdle ? null : getTokenPriceUsd(chainId, collateralAddress),
+      getTokenPriceUsd(chainId, loanAddress, PRICE_OPTIONS),
+      isIdle ? null : getTokenPriceUsd(chainId, collateralAddress, PRICE_OPTIONS),
       getMerklRewardIndex(chainId),
     ]);
   if (!state) throw new Error(`Market not found: ${chainId}:${marketId}`);

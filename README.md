@@ -103,7 +103,7 @@ node scripts/verify/parity-dump.mjs --app ../morpho-blueprint-main --out /tmp/pa
 node scripts/verify/parity-dump.mjs --app . --out /tmp/parity/head.json
 ```
 
--   `--providers`: `summaries` (`getVaultSummaries`) and `vaults` (`getVault` for every configured vault) by default; `vault-positions` and `market-positions` need `--account 0x...`.
+-   `--providers`: `summaries` (`getVaultSummaries`) and `vaults` (`getVault` for every configured vault) by default; `market-summaries` (`getMarketSummaries`, the borrow table); `vault-positions` and `market-positions` need `--account 0x...`. The request count is also split by the Next data-cache lifetime each call asks for (`none` is read on every render).
 -   `--vaults 1:0xabc,1:0xdef`: only these configured vaults.
 -   `--markets 1:0xid,8453:0xid`: the market pages (`getMarket`) the `markets` provider dumps.
 -   `--max-requests` (default 50): every `fetch` counts, retries included. A request past the cap is refused and the run fails without writing a dump. The public API locks a client out for 10 minutes above 750 requests a minute. Raise the cap for a large provider such as `market-positions`, and run it on its own.

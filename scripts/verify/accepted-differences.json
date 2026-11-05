@@ -171,6 +171,80 @@
       "ticket": "VAU-3619"
     },
     {
+      "path": "data.marketSummaries.idleMarkets.*",
+      "kind": "missing",
+      "reason": "The borrow table never showed idle markets (no collateral); the REST list no longer reads them",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy",
+      "kind": "missing",
+      "reason": "Instantaneous borrow APY dropped from MarketSummary: no component read it and Core REST does not serve it",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy6h.*",
+      "kind": "value",
+      "relative": 0.1,
+      "reason": "Market borrow APY 6h: Core REST apy-averages vs GraphQL avgBorrowApy, median 0.13%, max 6.9% relative (seen 2026-11-05)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy1d.*",
+      "kind": "value",
+      "relative": 0.1,
+      "reason": "Market borrow APY 1d: Core REST apy-averages vs GraphQL dailyBorrowApy, median 0.12%, max 7.2% relative (seen 2026-11-05)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy7d.*",
+      "kind": "value",
+      "relative": 0.05,
+      "reason": "Market borrow APY 7d: Core REST apy-averages vs GraphQL weeklyBorrowApy, max 1.9% relative (seen 2026-11-05)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy30d.*",
+      "kind": "value",
+      "relative": 0.02,
+      "reason": "Market borrow APY 30d: Core REST apy-averages vs GraphQL monthlyBorrowApy, max 0.3% relative (seen 2026-11-05)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy*.rewards[*].apr",
+      "kind": "value",
+      "relative": 0.02,
+      "reason": "Borrow reward APRs read live from Merkl instead of the rewards backend snapshot (0.65% relative on the World Chain WLD campaigns)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy*.rewards[*].asset.icon",
+      "kind": "value",
+      "reason": "Reward token icon comes from Merkl, not the Morpho CDN (same as the vault reward chips, VAU-3619)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.totalBorrowed.*",
+      "kind": "value",
+      "relative": 0.001,
+      "reason": "Borrowed assets accrue: Core REST state is as of the market's last accrual, GraphQL as of its own indexing (max 1.5e-4 relative)",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.borrowApy*.total",
+      "kind": "value",
+      "absolute": 0.001,
+      "reason": "Net borrow rate near zero (native minus Merkl rewards, World Chain WLD markets): the native and reward drifts add up to at most 0.1 percentage point",
+      "ticket": "VAU-3621"
+    },
+    {
+      "path": "data.marketSummaries.markets.*.totalBorrowed.usd",
+      "kind": "value",
+      "relative": 0.01,
+      "reason": "Loan token price from Core REST /price (60 s cache) vs GraphQL priceUsd, refreshed on different schedules: WHYPE was identical in two GraphQL dumps minutes apart while REST moved; max 0.75% relative (WPOL)",
+      "ticket": "VAU-3621"
+    },
+    {
       "path": "data.markets.*.borrowApy",
       "kind": "missing",
       "reason": "The instantaneous borrow APY had no reader; dropped from MarketSummary with the REST port (as in VAU-3621)",

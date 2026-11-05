@@ -1,59 +1,124 @@
 import "server-only";
 
 import { cache } from "react";
-import { pageSize, warnIfTruncated } from "@/common/data/adapters/pagination";
-import { executeMorphoQuery } from "@/common/utils/executeMorphoQuery";
-import type { SupportedChainId } from "@/config/types";
-import { graphql } from "@/generated/gql/morpho";
+import { type Address, getAddress, type Hex, zeroAddress } from "viem";
+import { toChainInfoById } from "@/common/data/adapters/entity";
+import { getTokenInfo, getTokenPriceUsd } from "@/common/data/rest/tokens";
+import { SECONDS_PER_DAY } from "@/common/utils/constants";
+import { chunk, fetchAllMorphoRestPages, fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
 import type { MarketSummary } from "@/modules/market/market.types";
-import { toMarketSummary } from "./adapters";
+import { getMerklRewardIndex } from "@/modules/reward/data/getMerklRewardIndex";
+import { marketBorrowRewardApys } from "@/modules/reward/data/merklRewardApys";
+import { type RestApyAverageKey, toRestMarketSummary } from "./adapters";
 import { getSupportedMarketIds } from "./getSupportedMarketIds";
-
-const query = graphql(`
-  query MarketSummaries($first: Int!, $chainIds: [Int!]!, $marketIds: [String!]!) {
-    markets(first: $first, where: { chainId_in: $chainIds, uniqueKey_in: $marketIds }) {
-      pageInfo {
-        count
-        countTotal
-      }
-      items {
-        ...MarketSummaryFragment
-      }
-    }
-  }
-`);
 
 export type { MarketSummary };
 
+// Prices move: a minute old is close enough for a list, and spares the API one read per loan token
+// on every render.
+export const PRICE_REVALIDATE_SECONDS = 60;
+
+interface RestMarketRoot {
+  chain_id: number;
+  market_id: Hex;
+  loan_token: Address;
+  collateral_token: Address;
+  lltv_wad: string;
+}
+
+interface RestMarketState {
+  data: { total_borrow_assets: string };
+}
+
+interface RestMarketApyAverages {
+  data: { borrow_apy_averages: Partial<Record<RestApyAverageKey, number | null>> | null };
+}
+
+/** Memoizes a per-token read within one call, so tokens shared by several markets are read once. */
+function once<R>(load: (chainId: number, address: Address) => Promise<R>) {
+  const reads = new Map<string, Promise<R>>();
+  return (chainId: number, address: Address) => {
+    const key = `${chainId}:${address}`;
+    let read = reads.get(key);
+    if (!read) {
+      read = load(chainId, address);
+      reads.set(key, read);
+    }
+    return read;
+  };
+}
+
+async function getChainMarketSummaries(chainId: number, marketIds: readonly Hex[]): Promise<MarketSummary[]> {
+  const rewardIndex = getMerklRewardIndex(chainId);
+  const roots = (
+    await Promise.all(
+      chunk([...new Set(marketIds)]).map((ids) =>
+        // Market params never change.
+        fetchAllMorphoRestPages<RestMarketRoot>(
+          "/v0/blue/markets",
+          { chain_id: [chainId], market_id: ids },
+          { revalidate: SECONDS_PER_DAY },
+        ),
+      ),
+    )
+  )
+    .flat()
+    // The borrow table shows no idle market (no collateral), so its state is never read.
+    .filter((root) => root.chain_id === chainId && getAddress(root.collateral_token) !== zeroAddress)
+    // The table's default order, as GraphQL served it: market id descending within a chain.
+    .sort((a, b) => (a.market_id.toLowerCase() < b.market_id.toLowerCase() ? 1 : -1));
+
+  const tokenOf = once(getTokenInfo);
+  const priceOf = once((id, address) =>
+    getTokenPriceUsd(id, address, { revalidate: PRICE_REVALIDATE_SECONDS, throwWhenRateLimited: true }),
+  );
+  const chain = toChainInfoById(chainId);
+
+  // Every read starts at once: the REST client caps the calls in flight. Any failure but a 404
+  // rejects the list, so a rate-limited render fails and Next keeps serving the last good page.
+  const rows = await Promise.all(
+    roots.map(async (root) => {
+      const selector = restSelector(chainId, root.market_id);
+      const loanToken = getAddress(root.loan_token);
+      const [state, apy, loanAsset, collateralAsset, loanPriceUsd, merkl] = await Promise.all([
+        fetchMorphoRestResource<RestMarketState>(`/v0/blue/markets/${selector}/state`),
+        fetchMorphoRestResource<RestMarketApyAverages>(`/v0/blue/markets/${selector}/apy-averages`),
+        tokenOf(chainId, loanToken),
+        tokenOf(chainId, getAddress(root.collateral_token)),
+        priceOf(chainId, loanToken),
+        rewardIndex,
+      ]);
+      if (!state || !loanAsset || !collateralAsset) {
+        console.warn(`Market not fully known to the API, skipping it: ${selector}`);
+        return null;
+      }
+      return toRestMarketSummary({
+        marketId: root.market_id,
+        chain,
+        lltvWad: root.lltv_wad,
+        collateralAsset,
+        loanAsset,
+        totalBorrowAssets: state.data.total_borrow_assets,
+        loanPriceUsd,
+        borrowApyAverages: apy?.data.borrow_apy_averages ?? {},
+        borrowRewards: marketBorrowRewardApys(merkl, root.market_id, loanToken),
+      });
+    }),
+  );
+  return rows.filter((row) => row !== null);
+}
+
+/**
+ * The borrow table, read from Core REST: per chain the batched market params, then per market its
+ * state and APY averages, per token its metadata and per loan token its price, plus the chain's
+ * Merkl borrow rewards. Idle markets are left out.
+ */
 export const getMarketSummaries = cache(async (): Promise<MarketSummary[]> => {
   const supportedMarketIds = await getSupportedMarketIds();
-
-  // One request per chain. `chainId_in` and `uniqueKey_in` are independent filters, so flattening
-  // every chain's ids into one request matches their Cartesian product; with `first` sized to the
-  // intended pair count, a market id that also exists on another configured chain would fill the
-  // page and push a configured market off it. The post-filter below cannot recover a market that
-  // never made it into the response.
   const byChain = Object.entries(supportedMarketIds)
-    .map(([chainId, ids]) => [Number.parseInt(chainId) as SupportedChainId, Array.from(ids)] as const)
+    .map(([chainId, ids]) => [Number.parseInt(chainId), Array.from(ids)] as const)
     .filter(([, ids]) => ids.length > 0);
 
-  if (byChain.length === 0) return [];
-
-  const responses = await Promise.all(
-    byChain.map(([chainId, ids]) =>
-      // Paginated-field cost scales with `first`, so request exactly the derived market set.
-      executeMorphoQuery(query, {
-        first: pageSize(ids.length, "markets"),
-        chainIds: [chainId],
-        marketIds: ids,
-      }),
-    ),
-  );
-
-  return responses.flatMap((response) => {
-    warnIfTruncated("markets", response.markets.pageInfo);
-    return (response.markets.items ?? [])
-      .filter((market) => supportedMarketIds[market.chain.id as SupportedChainId]?.includes(market.marketId))
-      .map(toMarketSummary);
-  });
+  const perChain = await Promise.all(byChain.map(([chainId, ids]) => getChainMarketSummaries(chainId, ids)));
+  return perChain.flat();
 });
