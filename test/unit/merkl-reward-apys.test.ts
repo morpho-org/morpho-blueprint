@@ -1,6 +1,11 @@
 import { getAddress } from "viem";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { indexMerklRewards, marketSupplyRewardApys, vaultRewardApys } from "@/modules/reward/data/merklRewardApys";
+import {
+  indexMerklRewards,
+  marketBorrowRewardApys,
+  marketSupplyRewardApys,
+  vaultRewardApys,
+} from "@/modules/reward/data/merklRewardApys";
 
 vi.mock("server-only", () => ({}));
 vi.mock("react", async (importOriginal) => ({
@@ -194,6 +199,36 @@ describe("pass-through and market rewards", () => {
     expect(marketSupplyRewardApys(index, MARKET, USDC)).toEqual([{ asset: MORPHO_ASSET, apr: expect.closeTo(0.1) }]);
     // Only the single-token campaign reaches a market sharing the 20-byte prefix and the loan token.
     expect(marketSupplyRewardApys(index, OTHER_MARKET, USDC)).toEqual([{ asset: MORPHO_ASSET, apr: 0.04 }]);
+  });
+
+  it("indexes the borrow side apart: direct, MORPHO subtype 2, multilend borrow and single-token", () => {
+    const index = indexMerklRewards(
+      opportunities(
+        campaign({ type: "MORPHOBORROW", apr: 1 }, { market: MARKET }),
+        campaign({ type: "MORPHO", subType: 2, apr: 2 }, { marketId: MARKET }),
+        campaign(
+          { type: "MULTILENDBORROW", apr: 3 },
+          {
+            markets: [
+              { campaignType: 24, campaignParameters: { market: OTHER_MARKET } },
+              { campaignType: 45, campaignParameters: { market: MARKET } },
+            ],
+          },
+        ),
+        campaign({ type: "MORPHOBORROW_SINGLETOKEN", apr: 4 }, { targetToken: USDC }),
+        campaign({ type: "MORPHOSUPPLY", apr: 50 }, { market: MARKET }),
+        campaign(
+          { type: "MORPHOBORROW", apr: 7 },
+          { market: MARKET, hooks: [{ hookType: 23, protocols: ["MorphoVaultV2"] }] },
+        ),
+      ),
+      NOW,
+    );
+
+    expect(marketBorrowRewardApys(index, MARKET, USDC)).toEqual([{ asset: MORPHO_ASSET, apr: expect.closeTo(0.1) }]);
+    expect(marketBorrowRewardApys(index, OTHER_MARKET, USDC)).toEqual([{ asset: MORPHO_ASSET, apr: 0.04 }]);
+    // Borrow campaigns never count as supply rewards.
+    expect(marketSupplyRewardApys(index, MARKET, USDC)).toEqual([{ asset: MORPHO_ASSET, apr: 0.5 }]);
   });
 });
 
