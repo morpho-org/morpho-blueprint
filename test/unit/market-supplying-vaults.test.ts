@@ -32,6 +32,9 @@ const fetchMock = vi.fn(async (input: URL) => {
   const key = `${url.origin}${url.pathname}${cursor ? `?cursor=${cursor}` : ""}`;
   calls.push(key);
   if (routes.has(key)) return json(200, routes.get(key));
+  // With the internal key set, Core reads also go to the internal host (morphoApiConfig): serve the same Core seed there.
+  const publicKey = key.replace(INTERNAL_HOST, "https://api.morpho.org");
+  if (key.startsWith(INTERNAL_HOST) && routes.has(publicKey)) return json(200, routes.get(publicKey));
   return json(404, { statusCode: 404, message: "not found", error: "Not Found" });
 });
 
@@ -166,18 +169,19 @@ describe("getMarketSupplyingVaults", () => {
     // No name in Core: the address stands in.
     expect(rows.get(NEXT_PAGE_V2)).toMatchObject({ configured: false, name: NEXT_PAGE_V2, curator: null });
 
-    expect(calls.filter((key) => key.startsWith(INTERNAL_HOST))).toEqual([
+    // With the key set every read goes to the internal host; the Blueprint route is read once per page.
+    expect(calls.filter((key) => key.includes("/v0/blueprint-app-api/"))).toEqual([
       `${INTERNAL_HOST}${ROUTE}`,
       `${INTERNAL_HOST}${ROUTE}?cursor=page-2`,
     ]);
     // The configured vault V2 the route also lists is read once.
-    expect(calls.filter((key) => key === core(`/v0/vaults-v2/1:${VAULT_V2}/allocations`))).toHaveLength(1);
+    expect(calls.filter((key) => key === `${INTERNAL_HOST}/v0/vaults-v2/1:${VAULT_V2}/allocations`)).toHaveLength(1);
     // A vault Morpho does not list is left out, unread.
     expect(rows.has(NOT_LISTED_V2)).toBe(false);
-    expect(calls).not.toContain(core(`/v0/vaults-v2/1:${NOT_LISTED_V2}/allocations`));
+    expect(calls).not.toContain(`${INTERNAL_HOST}/v0/vaults-v2/1:${NOT_LISTED_V2}/allocations`);
     // The other vaults' names and curators come from the two lists, not a read per vault.
-    expect(calls).not.toContain(core(`/v0/vaults-v2/1:${OTHER_V2}`));
-    expect(calls).not.toContain(core(`/v0/curators/1:${OTHER_CURATOR}/details`));
+    expect(calls).not.toContain(`${INTERNAL_HOST}/v0/vaults-v2/1:${OTHER_V2}`);
+    expect(calls).not.toContain(`${INTERNAL_HOST}/v0/curators/1:${OTHER_CURATOR}/details`);
     const list = fetchMock.mock.calls.map(([input]) => new URL(input)).find((url) => url.pathname === "/v0/vaults-v2");
     expect(list?.searchParams.get("chain_ids")).toBe("1");
     expect(list?.searchParams.get("asset_addresses")).toBe(LOAN);
