@@ -43,13 +43,13 @@
     {
       "path": "data.vaults.*.historical.weekly*",
       "kind": "extra",
-      "reason": "All sampling: Core's inception lookback serves daily rows where GraphQL served weekly buckets",
+      "reason": "All sampling: Core's inception lookback serves daily rows for the younger V1 vaults (about 7x the points of GraphQL's weekly buckets) and monthly rows for the four oldest V1 vaults (Steakhouse USDC 1:0xBEEF0173, Steakhouse USDT 1:0xbEef047a, Steakhouse RUSD 1:0xBeEf11eC, Moonwell Flagship ETH 8453:0xa0E43087), about 4x coarser",
       "ticket": "VAU-3618"
     },
     {
       "path": "data.vaults.*.historical.weekly*",
       "kind": "missing",
-      "reason": "All sampling: GraphQL's weekly bucket timestamps are not on Core's daily rows, and Core's inception series starts at the first state row",
+      "reason": "All sampling: GraphQL's weekly bucket timestamps are not on Core's inception rows (daily for the younger V1 vaults, monthly for the four oldest V1 vaults (Steakhouse USDC 1:0xBEEF0173, Steakhouse USDT 1:0xbEef047a, Steakhouse RUSD 1:0xBeEf11eC, Moonwell Flagship ETH 8453:0xa0E43087)), and Core's series starts at the first state row",
       "ticket": "VAU-3618"
     },
     {
