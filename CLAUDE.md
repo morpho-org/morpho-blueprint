@@ -37,7 +37,7 @@ The app is designed as a whitelabel frontend where all customization happens in 
     to `MORPHO_INTERNAL_API_URL` with that key.
   - Without it, Core REST goes to `MORPHO_REST_API_URL`, else the host of the legacy `MORPHO_API_URL` (the former
     GraphQL endpoint), else the public `https://api.morpho.org`, with `MORPHO_API_KEY` when set (keyless public
-    access ends after Feb 28, 2026). The Blueprint API routes are off and their callers use fallbacks.
+    access ends after Feb 28). The Blueprint API routes are off and their callers use fallbacks.
   - `morphoApi.requireInternal` (false here) makes the internal deployment mandatory: reads throw without it.
 - Reward APRs come from Merkl (`src/modules/reward/data/`)
 - App-owned data types in `src/common/data/types.ts`; adapters mapping API responses onto them in
