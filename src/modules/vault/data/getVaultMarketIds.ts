@@ -6,6 +6,7 @@ import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorph
 import { APP_CONFIG } from "@/config";
 import type { SupportedChainId } from "@/config/types";
 import { Erc4626VaultProtocol } from "@/config/vault-protocol";
+import { type RestVaultV1Allocation, withdrawQueueAllocations } from "./adapters";
 
 // The markets the app can show are whatever the configured vaults allocate to. For a vault V2 that
 // means its MarketV1 caps plus whatever its adapters hold: a vault V1 through a vault V1 adapter, or
@@ -15,9 +16,13 @@ import { Erc4626VaultProtocol } from "@/config/vault-protocol";
 //
 // Core REST serves a vault's whole allocation set in one unpaged response, so no read here can stop
 // short of the full set. An adapter's target is on the vault's own chain.
+//
+// REST also serves markets tied to a vault only by a pending, not yet accepted, change: a vault V1
+// market outside the withdraw queue, or a vault V2 cap whose increase is still timelocked. A curator
+// can submit those on their own, so they must not widen the whitelist. GraphQL never listed them.
 
 interface RestVaultV1Allocations {
-  data: { allocations: { market_id: Hex }[] };
+  data: { allocations: RestVaultV1Allocation[] };
 }
 
 type RestVaultV2Target =
@@ -63,7 +68,10 @@ async function collectVaultV1Markets(refs: VaultRef[], add: AddMarket): Promise<
         console.warn(`Vault V1 not returned by the API, skipping its markets: ${refKey(ref)}`);
         return;
       }
-      for (const allocation of response.data.allocations) add(ref.chainId, allocation.market_id);
+      // Only markets in the withdraw queue: the vault can hold them now.
+      for (const allocation of withdrawQueueAllocations(response.data.allocations)) {
+        add(ref.chainId, allocation.market_id);
+      }
     }),
   );
 }
@@ -89,8 +97,9 @@ async function collectVaultV2Markets(refs: VaultRef[], add: AddMarket, visited: 
 
       for (const allocation of response.data.allocations) {
         for (const cap of allocation.caps) {
-          // REST also lists a cap the curator has zeroed; with nothing allocated, the vault can no
-          // longer reach that market. GraphQL omitted these.
+          // REST also lists a cap the curator has zeroed, and a cap whose first increase is still
+          // pending (served as 0 until it executes); with nothing allocated, the vault cannot reach
+          // that market. GraphQL omitted both.
           if (
             cap.cap_type !== "market_v1" ||
             (BigInt(cap.absolute_cap) === 0n && BigInt(cap.allocated_assets) === 0n)

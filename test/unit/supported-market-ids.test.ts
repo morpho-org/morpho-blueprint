@@ -30,18 +30,34 @@ vi.mock("@/common/utils/fetchMorphoRest", () => ({
 const marketId = (n: number) => `0x${n.toString(16).padStart(64, "0")}`;
 const vault = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
 
-const marketV1Cap = (n: number, { absolute = "1000", allocated = "0" } = {}) => ({
+const marketV1Cap = (
+  n: number,
+  { absolute = "1000", allocated = "0", pendingAbsolute = null as string | null } = {},
+) => ({
   cap_type: "market_v1",
   market_id: marketId(n),
   absolute_cap: absolute,
   allocated_assets: allocated,
+  pending: {
+    absolute_cap: pendingAbsolute == null ? null : { value: pendingAbsolute, valid_at_timestamp: 1_900_000_000 },
+    relative_cap_wad: null,
+  },
 });
 const marketAdapter = (...caps: ReturnType<typeof marketV1Cap>[]) => ({ caps, target: { type: "blue_market" } });
 const vaultAdapter = (type: "vault_v1" | "vault_v2", address: string) => ({
   caps: [{ cap_type: "adapter" }],
   target: { type, vault_address: address },
 });
-const v1Allocation = (n: number) => ({ market_id: marketId(n) });
+// A market in the withdraw queue at `index`; `null` means REST ties it to the vault only by a
+// pending cap or removal.
+const v1Allocation = (n: number, index: number | null = n) => ({
+  market_id: marketId(n),
+  supply_assets: "0",
+  supply_shares: "0",
+  supply_cap: index == null ? "0" : "1000",
+  withdraw_queue_index: index,
+  pending: { supply_cap: index == null ? { value: "1000", valid_at_timestamp: 1_900_000_000 } : null, removal: null },
+});
 
 const serve = (kind: "vaults-v1" | "vaults-v2", chainId: number, address: string, rows: unknown[]) =>
   allocations.set(`${kind}/${chainId}:${address.toLowerCase()}`, rows);
@@ -80,6 +96,28 @@ describe("getSupportedMarketIds", () => {
     ]);
 
     expect(await loadWhitelist()).toEqual({ 1: [marketId(1), marketId(3)] });
+  });
+
+  it("drops a vault V2 cap whose first increase is still pending", async () => {
+    serve("vaults-v2", 1, vault(1), [
+      marketAdapter(marketV1Cap(1), marketV1Cap(2, { absolute: "0", pendingAbsolute: "1000" })),
+    ]);
+
+    expect(await loadWhitelist()).toEqual({ 1: [marketId(1)] });
+  });
+
+  it("keeps only withdraw-queue markets of a configured vault V1", async () => {
+    CONFIG.supportedVaults = { 1: [{ address: vault(2), protocol: Erc4626VaultProtocol.MorphoV1 }] };
+    serve("vaults-v1", 1, vault(2), [v1Allocation(1, 1), v1Allocation(2, null), v1Allocation(3, 0)]);
+
+    expect(await loadWhitelist()).toEqual({ 1: [marketId(3), marketId(1)] });
+  });
+
+  it("keeps only withdraw-queue markets of a vault V1 reached through an adapter", async () => {
+    serve("vaults-v2", 1, vault(1), [vaultAdapter("vault_v1", vault(9))]);
+    serve("vaults-v1", 1, vault(9), [v1Allocation(4, 0), v1Allocation(5, null)]);
+
+    expect(await loadWhitelist()).toEqual({ 1: [marketId(4)] });
   });
 
   it("reads configured vault V1s and keys markets by chain", async () => {
