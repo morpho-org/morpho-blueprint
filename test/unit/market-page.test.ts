@@ -62,6 +62,10 @@ vi.mock("@/common/utils/fetchMorphoRest", () => ({
     calls.push(key);
     return routes.get(key) ?? null;
   },
+  fetchAllMorphoRestPages: async (path: string) => {
+    calls.push(path);
+    return (routes.get(path) as unknown[] | undefined) ?? [];
+  },
   restSelector: (chainId: number, id: string) => `${chainId}:${id}`,
 }));
 

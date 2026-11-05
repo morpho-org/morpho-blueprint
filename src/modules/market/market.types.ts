@@ -66,6 +66,11 @@ export interface MarketVaultAllocation {
     metadata: { curator: CuratorInfo | null } | null;
   };
   enabled: boolean;
+  /**
+   * The vault is in the app's config, so it has a vault page. With the Blueprint API on, the table
+   * also lists the other vaults V2 supplying the market; they are not borrow-flow candidates.
+   */
+  configured: boolean;
   position: { supplyAmount: Amount; supplyShares: string };
   supplyCap: Amount;
   marketSupplyShare: number;

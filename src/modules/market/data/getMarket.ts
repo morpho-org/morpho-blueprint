@@ -64,8 +64,9 @@ export function isNonIdleMarket(market: Market | null): market is MarketNonIdle 
 
 /**
  * The market page, from Core REST: params, state, liquidity, borrow APY averages and the oracle
- * price, token metadata and prices, the chain's Merkl borrow rewards, the configured vaults that
- * supply the market, and the chart history. Throws when Core does not know the market.
+ * price, token metadata and prices, the chain's Merkl borrow rewards, the vaults that supply the
+ * market (the configured ones, plus every vault V2 the Blueprint API lists when it is on), and the
+ * chart history. Throws when Core does not know the market.
  */
 export const getMarket = cache(async (chainId: SupportedChainId, marketId: Hex): Promise<Market> => {
   const selector = restSelector(chainId, marketId);
@@ -106,7 +107,7 @@ export const getMarket = cache(async (chainId: SupportedChainId, marketId: Hex):
   const { total_supply_assets: totalSupplyAssets, total_borrow_assets: totalBorrowAssets } = state.data;
 
   const [suppliers, historical, borrowRewards] = await Promise.all([
-    getMarketSupplyingVaults(chainId, marketId),
+    getMarketSupplyingVaults(chainId, marketId, loanAddress),
     getMarketHistory(
       chainId,
       marketId,
