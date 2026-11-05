@@ -10,7 +10,12 @@ vi.mock("react", async (importOriginal) => ({
 type ConfiguredVaults = Record<number, { address: string; protocol: string; description?: string }[]>;
 const CONFIG = vi.hoisted(() => {
   const supportedVaults: ConfiguredVaults = {};
-  return { apyWindow: "6h", chainConfig: { 1: { chain: { name: "Ethereum" }, iconSlug: "eth" } }, supportedVaults };
+  return {
+    apyWindow: "6h",
+    chainConfig: { 1: { chain: { name: "Ethereum" }, iconSlug: "eth" } },
+    featureFlags: { hideCurator: false },
+    supportedVaults,
+  };
 });
 vi.mock("@/config", () => ({ APP_CONFIG: CONFIG }));
 
@@ -133,6 +138,7 @@ beforeEach(() => {
   merkl.requests = 0;
   merkl.reports.length = 0;
   blueprint.enabled = false;
+  CONFIG.featureFlags.hideCurator = false;
   CONFIG.supportedVaults = {
     1: [
       { address: vault(1), protocol: Erc4626VaultProtocol.MorphoV2 },
@@ -444,6 +450,37 @@ describe("getVaultSummaries (vault V2 from Core REST)", () => {
 
       expect(summaries).toHaveLength(2);
       expect(summaries.map((summary) => summary.curatorAum)).toEqual([undefined, undefined]);
+    });
+
+    describe("with hideCurator", () => {
+      beforeEach(() => {
+        blueprint.enabled = true;
+        CONFIG.featureFlags.hideCurator = true;
+        routes.set(key(AUM_ROUTE, { curators: ["steakhouse-financial", "gauntlet"] }), {
+          data: [
+            { curator_id: "steakhouse-financial", aum_usd: 42 },
+            { curator_id: "gauntlet", aum_usd: 1_250_000_000 },
+          ],
+        });
+      });
+
+      it("reads nothing and leaves AUM unset in the earn table", async () => {
+        const summaries = await load();
+
+        expect(aumCalls()).toEqual([]);
+        expect(summaries.map((summary) => summary.curatorAum)).toEqual([undefined, undefined]);
+      });
+
+      it("reads nothing and leaves AUM unset on the vault page", async () => {
+        const { getVaultV2Summary } = await import("@/modules/vault/data/getVaultSummaries");
+        const { getMerklRewardIndex } = await import("@/modules/reward/data/getMerklRewardIndex");
+
+        const read = await getVaultV2Summary(1, vault(1) as `0x${string}`, getMerklRewardIndex(1));
+
+        expect(read).not.toBeNull();
+        expect(aumCalls()).toEqual([]);
+        expect(read?.summary.curatorAum).toBeUndefined();
+      });
     });
   });
 

@@ -104,11 +104,13 @@ export interface VaultV1SummaryRead {
 /**
  * Sets each summary's curator AUM from one batched Blueprint API read. A summary keeps it unset
  * (the UI hides it) when the Blueprint API is off, the read fails, or the route does not know the
- * curator.
+ * curator. With `hideCurator` the AUM is never read, so neither the earn table nor the vault page's
+ * Curator AUC metric can show it.
  */
 async function withCuratorsAum<R extends { summary: { curatorAum?: number }; curatorId: string | null }>(
   reads: readonly R[],
 ): Promise<R[]> {
+  if (APP_CONFIG.featureFlags.hideCurator) return [...reads];
   const aums = await getCuratorsAumUsd(reads.flatMap(({ curatorId }) => (curatorId ? [curatorId] : [])));
   return reads.map((read) => {
     const curatorAum = read.curatorId ? aums.get(read.curatorId) : undefined;
