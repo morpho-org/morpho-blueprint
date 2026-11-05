@@ -83,30 +83,3 @@ graphql(`
     }
   }
 `);
-
-graphql(`
-  # Vault V1 chart series for one chart resolution. The interval and time range are passed in as
-  # \`options\`, so the same document serves hourly / daily / weekly.
-  fragment MorphoVaultV1HistoryFragment on VaultHistory {
-    totalAssets(options: $options) {
-      x
-      y
-    }
-    totalAssetsUsd(options: $options) {
-      x
-      y
-    }
-    dailyNetApy(options: $options) {
-      x
-      y
-    }
-    weeklyNetApy(options: $options) {
-      x
-      y
-    }
-    monthlyNetApy(options: $options) {
-      x
-      y
-    }
-  }
-`);

@@ -3,8 +3,10 @@ import "server-only";
 import { cache } from "react";
 import type { Address } from "viem";
 import { HISTORY_RANGE_KEYS, type HistoryRange, historyOptions } from "@/common/data/adapters/timeseries";
+import { resolutionLookback } from "@/common/data/rest/historyWindow";
 import { executeMorphoQuery } from "@/common/utils/executeMorphoQuery";
-import { apyLookbackPeriod, vaultV1HistoryApyWindow, vaultV2HistoryLookbackHours } from "@/common/utils/timeframe";
+import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
+import { apyLookbackPeriod, vaultV2HistoryLookbackHours } from "@/common/utils/timeframe";
 import { APP_CONFIG } from "@/config";
 import type { SupportedChainId } from "@/config/types";
 import { Erc4626VaultProtocol } from "@/config/vault-protocol";
@@ -56,18 +58,6 @@ const vaultV1Query = graphql(`
   }
 `);
 
-const vaultV1HistoryQuery = graphql(`
-  query VaultV1History($chainId: Int!, $address: String!, $options: TimeseriesOptions!) {
-    vaults(first: 1, where: { chainId_in: [$chainId], address_in: [$address] }) {
-      items {
-        historicalState {
-          ...MorphoVaultV1HistoryFragment
-        }
-      }
-    }
-  }
-`);
-
 export type { Vault };
 
 /**
@@ -86,39 +76,15 @@ export const getVault = cache(
     if (protocol === Erc4626VaultProtocol.MorphoV1) {
       const [data, history] = await Promise.all([
         executeMorphoQuery(vaultV1Query, { chainId, address: vaultAddress, lookbackV1: apyLookbackPeriod }),
-        fetchHistoryRanges(async (range) => {
-          const response = await executeMorphoQuery(vaultV1HistoryQuery, {
-            chainId,
-            address: vaultAddress,
-            options: historyOptions(range),
-          });
-          return response.vaults.items?.[0]?.historicalState ?? null;
-        }),
+        fetchHistoryRanges((range) => fetchVaultV1History(chainId, vaultAddress, range)),
       ]);
 
       const vault = data.vaults.items?.[0];
       if (!vault) throw new Error(`Vault not found: ${chainId}:${vaultAddress}`);
 
       const decimals = Math.round(vault.asset.decimals);
-      // Vault V1 history serves each *averaged* net APY window as its own series, from daily up.
-      // It has no sub-daily averaged series — the bare `netApy` is instantaneous — so a `6h`
-      // deployment plots the daily one (`vaultV1HistoryApyWindow`). Filed under the configured
-      // window like the V2 path below; the chart discloses the window actually plotted.
       const historical: VaultHistoricalData = buildHistoricalData(history, (series) =>
-        toVaultHistoricalEntries(
-          {
-            totalAssets: series.totalAssets,
-            totalAssetsUsd: series.totalAssetsUsd,
-            netApy: {
-              [APP_CONFIG.apyWindow]: {
-                "1d": series.dailyNetApy,
-                "7d": series.weeklyNetApy,
-                "30d": series.monthlyNetApy,
-              }[vaultV1HistoryApyWindow],
-            },
-          },
-          decimals,
-        ),
+        toVaultHistoricalEntries(series, decimals),
       );
 
       return normalizeVault({ ...toMorphoVaultV1Details(vault), historical });
@@ -165,6 +131,32 @@ export const getVault = cache(
     return normalizeVault({ ...toMorphoVaultV2Details(vault), historical });
   },
 );
+
+interface RestHistory<T> {
+  data: ({ timestamp: number } & T)[];
+}
+
+/**
+ * Vault V1 chart series for one resolution, from Core REST. REST serves no USD total-assets history,
+ * and one net APY series whose averaging window follows the lookback; it fills the configured
+ * window's key, as the V2 path does.
+ */
+async function fetchVaultV1History(chainId: SupportedChainId, vaultAddress: Address, range: HistoryRange) {
+  const selector = restSelector(chainId, vaultAddress);
+  // One lookback per resolution, from the Vaults app range table: 1W hourly, 3M daily, All monthly.
+  const query = { lookback: resolutionLookback(range) };
+  const [state, apy] = await Promise.all([
+    fetchMorphoRestResource<RestHistory<{ total_assets: string }>>(`/v0/vaults-v1/${selector}/state/history`, query),
+    fetchMorphoRestResource<RestHistory<{ apy: number | null }>>(`/v0/vaults-v1/${selector}/apy/history`, query),
+  ]);
+  if (!state || !apy) return null;
+
+  return {
+    totalAssets: state.data.map((point) => ({ x: point.timestamp, y: point.total_assets })),
+    totalAssetsUsd: [],
+    netApy: { [APP_CONFIG.apyWindow]: apy.data.map((point) => ({ x: point.timestamp, y: point.apy })) },
+  };
+}
 
 /** Maps each fetched resolution onto its chart series; a range the API served nothing for is empty. */
 function buildHistoricalData<T>(

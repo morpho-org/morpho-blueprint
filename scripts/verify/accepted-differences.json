@@ -1,0 +1,101 @@
+{
+  "$comment": "Differences parity-compare.mjs accepts between a base dump and a head dump. Each entry: path (glob over the difference path; * stays within a segment, ** crosses them), optional kind (value | missing | extra), optional relative or absolute bound (then only numeric value differences inside it match), reason, ticket. A child PR adds the entries its decision accepts, nothing broader.",
+  "accepted": [
+    {
+      "path": "data.vaults.**.market.supplyApy*.*",
+      "kind": "value",
+      "relative": 0.01,
+      "reason": "Market supply APYs are live: the API re-indexes a market between two dumps taken minutes apart (seen main vs main, 1.6e-4 relative)",
+      "ticket": "VAU-3612"
+    },
+    {
+      "path": "data.vaultSummaries*.apy.*",
+      "kind": "value",
+      "absolute": 1e-9,
+      "reason": "Vault APYs are live: a vault accrues between two dumps taken seconds apart (seen 4e-13 on World Chain Re7 USDC, read through unchanged GraphQL code)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.apy*.*",
+      "kind": "value",
+      "absolute": 1e-9,
+      "reason": "Vault APYs are live: a vault accrues between two dumps taken seconds apart (seen 4e-13 on World Chain Re7 USDC, read through unchanged GraphQL code)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.*[*].totalSupplied.usd",
+      "kind": "value",
+      "reason": "Vault V1 history moved to Core REST, whose state/history serves total_assets only: V1 deposits rows carry no USD value (null)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.hourly(window)",
+      "kind": "missing",
+      "reason": "Point counts: the 1W series is Core's seven_days lookback (168 hourly rows); the GraphQL fetch added a 2-day margin (217 rows)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.daily(window)",
+      "kind": "missing",
+      "reason": "Point counts: the 1M/3M series is Core's ninety_days lookback (94 daily rows); the GraphQL fetch added a 10-day margin (101 rows)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.weekly*",
+      "kind": "extra",
+      "reason": "All sampling: Core's inception lookback serves daily rows for the younger V1 vaults (about 7x the points of GraphQL's weekly buckets) and monthly rows for the four oldest V1 vaults (Steakhouse USDC 1:0xBEEF0173, Steakhouse USDT 1:0xbEef047a, Steakhouse RUSD 1:0xBeEf11eC, Moonwell Flagship ETH 8453:0xa0E43087), about 4x coarser",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.weekly*",
+      "kind": "missing",
+      "reason": "All sampling: GraphQL's weekly bucket timestamps are not on Core's inception rows (daily for the younger V1 vaults, monthly for the four oldest V1 vaults (Steakhouse USDC 1:0xBEEF0173, Steakhouse USDT 1:0xbEef047a, Steakhouse RUSD 1:0xBeEf11eC, Moonwell Flagship ETH 8453:0xa0E43087)), and Core's series starts at the first state row",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.*[*]",
+      "kind": "missing",
+      "reason": "Each dump ends on its own request-time row (a non-aligned timestamp); the head dump, taken seconds later, has a later one. GraphQL also served a trailing hourly bucket with no total assets",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.hourly[*].netApy.total",
+      "kind": "value",
+      "absolute": 0.1,
+      "reason": "Smoothing: GraphQL served the daily-averaged V1 series, Core's apy/history serves its own series for the lookback (as the Vaults app plots it); up to 4.9 percentage points seen. Bounded so a null still fails",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.daily[*].netApy.total",
+      "kind": "value",
+      "absolute": 0.2,
+      "reason": "Smoothing: GraphQL daily-averaged points vs Core's daily apy/history series; up to 11.7 percentage points seen on small Katana and Polygon vaults. Bounded so a null still fails",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.*.historical.weekly[*].netApy.total",
+      "kind": "value",
+      "absolute": 1.1,
+      "reason": "Smoothing and All sampling: within 0.61 except the rows listed below. Bounded so a null still fails",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.8453:0x543257eF2161176D7C8cD90BA65C2d4CaEF5a796.historical.weekly[17*].netApy.total",
+      "kind": "value",
+      "reason": "Moonwell Frontier cbBTC held dust (6.1e-7 cbBTC) in its first month (Dec 2024): both sides serve absurd APYs there (GraphQL 1.1e27, Core up to 1,366)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.vaults.42161:0x2281961480216653529A03D6CE03Ee6B8cdF564E.historical.weekly[1765411200].netApy.total",
+      "kind": "value",
+      "reason": "One early Arbitrum row: GraphQL's weekly bucket average (294%) vs Core's daily point (39%)",
+      "ticket": "VAU-3618"
+    },
+    {
+      "path": "data.marketPositions.1.0x27b9a0a5bfee98a31eb51e3850250d103a9f8e41673c782defc66aa943af0e65",
+      "kind": "missing",
+      "reason": "Steakhouse High Yield Instant (vault V2) zeroed its cap on this market (absolute cap 0, nothing allocated): the REST walk drops a zeroed cap, GraphQL listed it. The account only held the loan token in its wallet there",
+      "ticket": "VAU-3618"
+    }
+  ]
+}
