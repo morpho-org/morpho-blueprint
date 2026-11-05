@@ -1,7 +1,17 @@
-import { getChainAddresses, MathLib } from "@morpho-org/blue-sdk";
-import { fetchVaultConfig, metaMorphoAbi } from "@morpho-org/blue-sdk-viem";
+import { getChainAddress, getChainAddresses, MathLib } from "@morpho-org/blue-sdk";
+import { metaMorphoAbi } from "@morpho-org/blue-sdk-viem";
 import type { AnvilTestClient } from "@morpho-org/test";
-import { type Address, erc20Abi, getAddress, type Log, maxUint256, parseEther, parseUnits, zeroAddress } from "viem";
+import {
+  type Address,
+  erc20Abi,
+  erc4626Abi,
+  getAddress,
+  type Log,
+  maxUint256,
+  parseEther,
+  parseUnits,
+  zeroAddress,
+} from "viem";
 import { readContract, writeContract } from "viem/actions";
 import { expect } from "vitest";
 
@@ -34,6 +44,7 @@ export interface Erc4626SupplyTestParameters {
   supplyActionFn: (params: Erc4626SupplyActionParameters) => Promise<VaultAction>;
   expectedApprovalTargets: Address[];
   expectedZeroBalanceAddresses?: Address[];
+  positionRoundingTolerance?: bigint;
 }
 
 export async function runErc4626SupplyTest({
@@ -44,13 +55,13 @@ export async function runErc4626SupplyTest({
   supplyActionFn,
   expectedApprovalTargets,
   expectedZeroBalanceAddresses,
+  positionRoundingTolerance = 1n,
 }: Erc4626SupplyTestParameters): Promise<Log[]> {
   ////
   // Arrange
   ////
   const testAccountAddress = accountAddress ?? client.account.address;
-  const vaultConfig = await fetchVaultConfig(vaultAddress, client);
-  const assetAddress = vaultConfig.asset;
+  const assetAddress = await readContract(client, { address: vaultAddress, abi: erc4626Abi, functionName: "asset" });
 
   // Provide native balance for wrap tests
   await client.setBalance({
@@ -121,7 +132,9 @@ export async function runErc4626SupplyTest({
     expectedWalletUnderlyingBalance - 1n,
   );
   expect(afterExecutionSnapshot.walletNativeAssetBalance).toBeGreaterThanOrEqual(expectedWalletNativeBalance - 1n);
-  expect(afterExecutionSnapshot.positionAssets).toBeGreaterThanOrEqual(expectedPositionAssets - 1n);
+  expect(afterExecutionSnapshot.positionAssets).toBeGreaterThanOrEqual(
+    expectedPositionAssets - positionRoundingTolerance,
+  );
 
   // Make sure no funds left in addresses which we expect zero (ex. bundler or adapters)
   if (expectedZeroBalanceAddresses) {
@@ -236,6 +249,8 @@ export const successTestCases: Array<
   },
   {
     name: "Supply with native asset wrapping enabled but no shortfall (WETH vault, full wrap)",
+    // Rounding down both minted shares and their asset value can lose two wei.
+    positionRoundingTolerance: 2n,
     initialState: {
       walletUnderlyingAssetBalance: parseEther("10"), // 1 WETH
       walletNativeAssetBalance: parseEther("5"), // 5 ETH
@@ -257,9 +272,7 @@ export const successTestCases: Array<
       allowNativeAssetWrapping: true,
     },
     beforeExecutionCb: async (client) => {
-      const {
-        bundler3: { generalAdapter1: generalAdapter1Address },
-      } = getChainAddresses(client.chain.id)!;
+      const vaultBundlesAddress = getChainAddress(client.chain.id, "bundles.vaultBundlesV1");
 
       // Increase of underlying assets
       await client.deal({
@@ -278,7 +291,7 @@ export const successTestCases: Array<
         address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
         abi: erc20Abi,
         functionName: "approve",
-        args: [generalAdapter1Address, maxUint256],
+        args: [vaultBundlesAddress, maxUint256],
       });
 
       // Increase of native assets
@@ -288,7 +301,8 @@ export const successTestCases: Array<
       });
 
       // Let some interest accrue
-      await client.mine({ blocks: 1000 });
+      await client.increaseTime({ seconds: 12_000 });
+      await client.mine({ blocks: 1 });
     },
   },
 ];
@@ -464,7 +478,7 @@ export const failureTestCases: Array<
   },
 ];
 
-// Shared slippage test for bundler3
+// Shared slippage test for the morpho-sdk action
 export async function runSlippageTest(
   client: AnvilTestClient,
   supplyActionFn: (params: Erc4626SupplyActionParameters) => Promise<VaultAction>,
@@ -518,7 +532,7 @@ export async function runErc4626SupplyRevokeApprovalRequiredTest(
   expectedSpender: "vault" | Address,
 ) {
   // USDT vault on mainnet - requires approval revocation
-  const vaultAddress = "0x79FD640000F8563A866322483524a4b48f1Ed702"; // Gauntlet USDT vault
+  const vaultAddress = "0xbEef047a543E45807105E51A8BBEFCc5950fcfBa"; // Gauntlet USDT vault
   const assetAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7"; // USDT
 
   const expectedSpenderAddress = expectedSpender === "vault" ? vaultAddress : expectedSpender;
@@ -563,7 +577,7 @@ export async function runErc4626SupplyRevokeApprovalRequiredTest(
     // Second approval sets the new allowance
     expect(getAddress(secondApproval.asset)).toBe(getAddress(assetAddress));
     expect(getAddress(secondApproval.spender)).toBe(getAddress(expectedSpenderAddress));
-    expect(secondApproval.amount).toBe(parseUnits("1000", 6));
+    expect(secondApproval.amount).toBe(expectedSpender === "vault" ? parseUnits("1000", 6) : maxUint256);
   }
 }
 
@@ -615,7 +629,7 @@ export async function runErc4626SupplySufficientAllowanceTest(
   expectedSpender: "vault" | Address,
 ) {
   // USDT vault on mainnet - using USDT to verify even tokens requiring revocation skip approvals when allowance is sufficient
-  const vaultAddress = "0x79FD640000F8563A866322483524a4b48f1Ed702"; // Gauntlet USDT vault
+  const vaultAddress = "0xbEef047a543E45807105E51A8BBEFCc5950fcfBa"; // Gauntlet USDT vault
   const assetAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7"; // USDT
 
   const expectedSpenderAddress = expectedSpender === "vault" ? vaultAddress : expectedSpender;

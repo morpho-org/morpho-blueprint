@@ -15,10 +15,7 @@ function AvailableLiquidityTooltipContent({
     <div className="body-small flex flex-col gap-4">
       <div className="flex flex-col gap-3">
         <span className="body-medium-plus">Available to borrow</span>
-        <span>
-          Liquidity in this market, plus what the vaults listed in this app can reallocate into it through the Public
-          Allocator.
-        </span>
+        <span>Liquidity in this market, plus what vaults can move into it through the Public Allocator V2</span>
       </div>
       <div className="flex flex-col gap-2">
         <span className="flex justify-between">
@@ -26,7 +23,7 @@ function AvailableLiquidityTooltipContent({
           <span className="body-small-plus">{formatNumber(marketLiquidity, { currency: "USD" })}</span>
         </span>
         <span className="flex justify-between">
-          <span>Via Public Allocator</span>
+          <span>Via Public Allocator V2</span>
           <span className="body-small-plus">{formatNumber(publicAllocatorLiquidity, { currency: "USD" })}</span>
         </span>
       </div>

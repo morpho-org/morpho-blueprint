@@ -1,12 +1,11 @@
-import { getChainAddresses, type MarketId } from "@morpho-org/blue-sdk";
-import type { InputBundlerOperation } from "@morpho-org/bundler-sdk-viem";
-import { type Address, maxUint256 } from "viem";
-
-import { getIsContract } from "@/actions/data/rpc/getIsContract";
-import { APP_CONFIG } from "@/config";
-import { getMarketSimulationStateAccountingForPublicReallocation } from "../data/rpc/getSimulationState";
+import type { MarketId } from "@morpho-org/blue-sdk";
+import { fetchMarket } from "@morpho-org/blue-sdk-viem";
+import { morphoViemExtension } from "@morpho-org/morpho-sdk";
+import { type Address, erc20Abi, maxUint256 } from "viem";
+import { readContract } from "viem/actions";
 import { type ClientWithChain, type MarketAction, UserFacingError } from "../types";
-import { actionFromInputOps } from "../utils/actionFromInputOps";
+import { getMarketBorrowReallocations } from "../utils/getMarketBorrowReallocations";
+import { transactionRequestsFromMorphoAction } from "../utils/morphoAction";
 import { computeMarketPositionChange } from "../utils/positionChange";
 
 interface MarketSupplyCollateralAndBorrowActionParameters {
@@ -14,8 +13,8 @@ interface MarketSupplyCollateralAndBorrowActionParameters {
   marketId: MarketId;
   allocatingVaultAddresses: Address[];
   accountAddress: Address;
-  collateralAmount: bigint; // Max uint256 for entire account collateral balance
-  borrowAmount: bigint; // Don't support max here since we will only allow origination below a marging from LLTV
+  collateralAmount: bigint;
+  borrowAmount: bigint;
 }
 
 export async function marketSupplyCollateralAndBorrowAction({
@@ -26,86 +25,49 @@ export async function marketSupplyCollateralAndBorrowAction({
   collateralAmount,
   borrowAmount,
 }: MarketSupplyCollateralAndBorrowActionParameters): Promise<MarketAction> {
-  // Will throw is unsupported chainId
-  const { morpho: morphoBlueAddress } = getChainAddresses(publicClient.chain.id);
-
   if (collateralAmount < 0n || borrowAmount < 0n) {
     throw new UserFacingError("Collateral and borrow amounts cannot be negative.");
   }
-
   if (collateralAmount === 0n && borrowAmount === 0n) {
     throw new UserFacingError("Collateral and borrow amounts cannot both be 0.");
   }
-
-  const [initialSimulationState, isContract] = await Promise.all([
-    getMarketSimulationStateAccountingForPublicReallocation({
-      marketId,
-      accountAddress,
-      publicClient,
-      allocatingVaultAddresses,
-      requestedBorrowAmount: borrowAmount,
-    }),
-    getIsContract(publicClient, accountAddress),
-  ]);
-
-  const market = initialSimulationState.getMarket(marketId);
-  const userCollateralBalance = initialSimulationState.getHolding(
-    accountAddress,
-    market.params.collateralToken,
-  ).balance;
-
-  const isMaxSupplyCollateral = collateralAmount === maxUint256;
-
-  const isSupply = collateralAmount > 0n;
-  const isBorrow = borrowAmount > 0n;
-
-  const action = actionFromInputOps(
-    publicClient.chain.id,
-    [
-      ...(isSupply
-        ? [
-            {
-              type: "Blue_SupplyCollateral",
-              sender: accountAddress,
-              address: morphoBlueAddress,
-              args: {
-                id: marketId,
-                onBehalf: accountAddress,
-                assets: isMaxSupplyCollateral ? userCollateralBalance : collateralAmount,
-              },
-            } as InputBundlerOperation,
-          ]
-        : []),
-      ...(isBorrow
-        ? [
-            {
-              type: "Blue_Borrow",
-              sender: accountAddress,
-              address: morphoBlueAddress,
-              args: {
-                id: marketId,
-                onBehalf: accountAddress,
-                receiver: accountAddress,
-                assets: borrowAmount,
-                slippage: APP_CONFIG.actionParameters.bundler3Config.slippageToleranceWad,
-              },
-            } as InputBundlerOperation,
-          ]
-        : []),
-    ],
-    accountAddress,
-    isContract,
-    initialSimulationState,
-    `Confirm ${isSupply ? "Supply" : ""}${isSupply && isBorrow ? " & " : ""}${isBorrow ? "Borrow" : ""}`,
-  );
-
+  const marketData = await fetchMarket(marketId, publicClient);
+  const market = publicClient
+    .extend(morphoViemExtension({ supportSignature: false }))
+    .morpho.blue(marketData.params, publicClient.chain.id);
+  const positionData = await market.getPositionData(accountAddress);
+  const collateralBalance = await readContract(publicClient, {
+    address: marketData.params.collateralToken,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [accountAddress],
+  });
+  const collateralAssets = collateralAmount === maxUint256 ? collateralBalance : collateralAmount;
+  if (collateralAssets > collateralBalance) {
+    throw new UserFacingError("Collateral amount exceeds the account balance.");
+  }
+  const reallocations = await getMarketBorrowReallocations({
+    publicClient,
+    market,
+    marketData,
+    allocatingVaultAddresses,
+    borrowAmount,
+  });
+  const output = market.supplyCollateralBorrow({
+    userAddress: accountAddress,
+    positionData,
+    collateralAssets,
+    borrowAssets: borrowAmount,
+    reallocations,
+    deadline: BigInt(Math.floor(Date.now() / 1000) + 30 * 60),
+  });
   return {
-    ...action,
-    positionChange: computeMarketPositionChange(
-      marketId,
-      accountAddress,
-      initialSimulationState,
-      action.finalSimulationState,
+    chainId: publicClient.chain.id,
+    signatureRequests: [],
+    transactionRequests: await transactionRequestsFromMorphoAction(
+      output,
+      `Confirm ${collateralAssets > 0n ? "Supply" : ""}${collateralAssets > 0n && borrowAmount > 0n ? " & " : ""}${borrowAmount > 0n ? "Borrow" : ""}`,
     ),
+    positionChange: computeMarketPositionChange(marketData, positionData, collateralAssets, borrowAmount),
   };
 }

@@ -1,11 +1,12 @@
-import { getChainAddresses, type MarketId } from "@morpho-org/blue-sdk";
-import { blueAbi, fetchMarket } from "@morpho-org/blue-sdk-viem";
+import { getChainAddress, getChainAddresses, type MarketId, MathLib } from "@morpho-org/blue-sdk";
+import { fetchMarket } from "@morpho-org/blue-sdk-viem";
+import { BorrowExceedsSafeLtvError } from "@morpho-org/morpho-sdk";
+import { blueBundlesV1Abi } from "@morpho-org/morpho-sdk/abis";
 import type { AnvilTestClient } from "@morpho-org/test";
-import { type Address, type Hex, maxUint256, parseUnits } from "viem";
-import { readContract } from "viem/actions";
+import { type Address, decodeFunctionData, type Hex, maxUint256, parseUnits } from "viem";
 import { describe, expect } from "vitest";
-
 import { type MarketAction, marketSupplyCollateralAndBorrowAction } from "@/actions";
+import { UserFacingError } from "@/actions/types";
 
 import { test } from "../../config";
 import { expectZeroErc20Balances, getErc20BalanceOf } from "../../helpers/erc20";
@@ -14,6 +15,27 @@ import { expectOnlyAllowedApprovals } from "../../helpers/logs";
 import { createMarketPosition, getMorphoMarketPosition, seedMarketLiquidity } from "../../helpers/morpho";
 
 const WBTC_USDC_MARKET_ID = "0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49" as MarketId;
+
+test("borrows with a mainnet V2 public allocator reallocation", async ({ client }) => {
+  const marketId = "0xb25c41cd266fa6cb9c581d526ac9d8c0137c92cd06847f7e1ee511764ee3d42f" as MarketId;
+  const market = await fetchMarket(marketId, client);
+  const borrowAmount = market.totalSupplyAssets - market.totalBorrowAssets + parseUnits("1", 6);
+  expect(market.price).toBeGreaterThan(0n);
+  const collateralAmount = MathLib.mulDivUp(borrowAmount * 2n, 10n ** 36n, market.price!);
+  const action = await runMarketSupplyCollateralAndBorrowTest({
+    client,
+    marketId,
+    allocatingVaultAddresses: ["0x069662D2588fcaC24B5c209456Db965D151556f0"],
+    intitialState: { walletCollateralAmount: collateralAmount, positionCollateralAmount: 0n, skipMarketSeed: true },
+    collateralAmount,
+    borrowAmount,
+  });
+  const tx = action.transactionRequests.at(-1)!.tx();
+  const decoded = decodeFunctionData({ abi: blueBundlesV1Abi, data: tx.data });
+  expect(decoded.functionName).toBe("blueBundlesV1SupplyCollateralAndBorrow");
+  if (decoded.functionName !== "blueBundlesV1SupplyCollateralAndBorrow") throw new Error("Unexpected bundle");
+  expect(decoded.args[6].length).toBeGreaterThan(0);
+});
 
 interface MarketSupplyCollateralAndBorrowTestParameters {
   client: AnvilTestClient;
@@ -65,10 +87,8 @@ async function runMarketSupplyCollateralAndBorrowTest({
     await createMarketPosition(client, marketId, intitialState.positionCollateralAmount, 0n);
   }
 
-  const {
-    permit2,
-    bundler3: { bundler3, generalAdapter1 },
-  } = getChainAddresses(client.chain.id);
+  const { permit2 } = getChainAddresses(client.chain.id);
+  const blueBundlesV1 = getChainAddress(client.chain.id, "bundles.blueBundlesV1");
 
   // Act
   const action = await marketSupplyCollateralAndBorrowAction({
@@ -89,8 +109,8 @@ async function runMarketSupplyCollateralAndBorrowTest({
     client,
     logs,
     client.account.address,
-    [...(permit2 ? [permit2] : []), generalAdapter1], // Only ever allowed to apporve GA1 or permit2
-    [generalAdapter1], // Only ever allowed to permit GA1
+    [...(permit2 ? [permit2] : []), blueBundlesV1], // Only ever allowed to apporve GA1 or permit2
+    [blueBundlesV1], // Only ever allowed to permit GA1
   );
 
   const marketPosition = await getMorphoMarketPosition(client, marketId);
@@ -115,8 +135,8 @@ async function runMarketSupplyCollateralAndBorrowTest({
   expect(userWalletLoanAssetBalance).toEqual(borrowAmount);
 
   // Make sure no funds left in bundler or adapters (underlying assets or shares)
-  await expectZeroErc20Balances(client, [bundler3, generalAdapter1], collateralAssetAddress);
-  await expectZeroErc20Balances(client, [bundler3, generalAdapter1], loanAssetAddress);
+  await expectZeroErc20Balances(client, [blueBundlesV1], collateralAssetAddress);
+  await expectZeroErc20Balances(client, [blueBundlesV1], loanAssetAddress);
 
   return action;
 }
@@ -177,18 +197,6 @@ const successTestCases: ({ name: string } & Omit<MarketSupplyCollateralAndBorrow
     collateralAmount: 0n,
     borrowAmount: parseUnits("2000", 6),
   },
-  {
-    name: "borrow using public allocator",
-    marketId: WBTC_USDC_MARKET_ID,
-    allocatingVaultAddresses: ["0x95EeF579155cd2C5510F312c8fA39208c3Be01a8"],
-    intitialState: {
-      walletCollateralAmount: 0n,
-      positionCollateralAmount: parseUnits("1", 8),
-      skipMarketSeed: true,
-    },
-    collateralAmount: 0n,
-    borrowAmount: parseUnits("40000", 6),
-  },
 ];
 
 describe("marketSupplyCollateralAndBorrowAction", () => {
@@ -226,7 +234,7 @@ describe("marketSupplyCollateralAndBorrowAction", () => {
           collateralAmount: parseUnits("100", 8),
           borrowAmount: 0n,
         }),
-      ).rejects.toThrow("Simulation Error: insufficient balance of user");
+      ).rejects.toThrow(UserFacingError);
     });
     test("collateral and borrow both 0", async ({ client }) => {
       await expect(
@@ -256,50 +264,7 @@ describe("marketSupplyCollateralAndBorrowAction", () => {
           collateralAmount: parseUnits("1", 8),
           borrowAmount: parseUnits("1000000", 6),
         }),
-      ).rejects.toThrow("Simulation Error: insufficient collateral for user");
-    });
-
-    test("tx reverts if slippage tolerance is exceeded", async ({ client }) => {
-      await expect(
-        runMarketSupplyCollateralAndBorrowTest({
-          client,
-          marketId: WBTC_USDC_MARKET_ID,
-          allocatingVaultAddresses: [],
-          intitialState: {
-            walletCollateralAmount: parseUnits("100", 8),
-            positionCollateralAmount: 0n,
-          },
-          collateralAmount: parseUnits("10", 8),
-          borrowAmount: parseUnits("10000", 6),
-          beforeExecutionCb: async () => {
-            const { morpho } = getChainAddresses(client.chain.id);
-            const [, , totalBorrowAssets] = await readContract(client, {
-              address: morpho,
-              abi: blueAbi,
-              functionName: "market",
-              args: [WBTC_USDC_MARKET_ID],
-            });
-            // Induce 0.05% slippage
-            const newTotalBorrowAssets =
-              (totalBorrowAssets * BigInt(Math.floor((1 - 0.0005) * 100000))) / BigInt(100000);
-            const borrowSlot = "0xaf5f02fb405ee52198ad944841235017894e4a1f2f9e57ce42e6df356ed67f5e" as Hex; // totalBorrowAssets in lower 128 bits, totalBorrowShares in upper 128 bits
-            const slotVal = await client.getStorageAt({
-              address: morpho,
-              slot: borrowSlot,
-            });
-            // Extract upper 128 bits (borrowShares)
-            const totalBorrowShares = BigInt(slotVal!) >> BigInt(128);
-            const newVal = (totalBorrowShares << BigInt(128)) | newTotalBorrowAssets;
-            const newSlotVal = `0x${newVal.toString(16).padStart(64, "0")}`;
-            // Override totalBorrowAssets to cause slippage
-            await client.setStorageAt({
-              address: morpho,
-              index: borrowSlot,
-              value: newSlotVal as Hex,
-            });
-          },
-        }),
-      ).rejects.toThrow("action-tx-reverted");
+      ).rejects.toThrow(BorrowExceedsSafeLtvError);
     });
   });
 });

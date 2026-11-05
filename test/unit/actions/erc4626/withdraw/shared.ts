@@ -1,5 +1,5 @@
-import { getChainAddresses, MathLib } from "@morpho-org/blue-sdk";
-import { fetchVaultConfig, metaMorphoAbi } from "@morpho-org/blue-sdk-viem";
+import { getChainAddress, getChainAddresses, MathLib } from "@morpho-org/blue-sdk";
+import { metaMorphoAbi } from "@morpho-org/blue-sdk-viem";
 import type { AnvilTestClient } from "@morpho-org/test";
 import {
   type Address,
@@ -11,7 +11,7 @@ import {
   parseUnits,
   zeroAddress,
 } from "viem";
-import { writeContract } from "viem/actions";
+import { readContract, writeContract } from "viem/actions";
 import { expect } from "vitest";
 import type { Erc4626WithdrawActionParameters, VaultAction } from "@/actions/types";
 import { RANDOM_ADDRESS } from "../../../../helpers/constants";
@@ -37,6 +37,7 @@ export interface Erc4626WithdrawTestParameters {
   withdrawActionFn: (params: Erc4626WithdrawActionParameters) => Promise<VaultAction>;
   expectedApprovalTargets: Address[];
   expectedZeroBalanceAddresses?: Address[];
+  fullRedeemSlippageTolerance?: bigint;
 }
 
 export async function runErc4626WithdrawTest({
@@ -50,13 +51,13 @@ export async function runErc4626WithdrawTest({
   withdrawActionFn,
   expectedApprovalTargets,
   expectedZeroBalanceAddresses,
+  fullRedeemSlippageTolerance = 0n,
 }: Erc4626WithdrawTestParameters): Promise<Log[]> {
   ////
   // Arrange
   ////
   const testAccountAddress = accountAddress ?? client.account.address;
-  const vaultConfig = await fetchVaultConfig(vaultAddress, client);
-  const assetAddress = vaultConfig.asset;
+  const assetAddress = await readContract(client, { address: vaultAddress, abi: erc4626Abi, functionName: "asset" });
 
   await client.impersonateAccount({
     address: testAccountAddress,
@@ -137,8 +138,11 @@ export async function runErc4626WithdrawTest({
   const { wNative: wrappedNativeAssetAddress } = getChainAddresses(client.chain.id);
   const expectUnwrappedNativeAssets = isAddressEqual(assetAddress, wrappedNativeAssetAddress!) && unwrapNativeAssets;
 
+  const expectedUnwrappedAssets = isFullWithdraw
+    ? MathLib.wMulDown(beforeBuildSnapshot.positionAssets, MathLib.WAD - fullRedeemSlippageTolerance)
+    : withdrawAmount;
   const expectedWalletNativeBalance =
-    beforeExecutionSnapshot.walletNativeAssetBalance + (expectUnwrappedNativeAssets ? expectedWithdrawnAssets : 0n);
+    beforeExecutionSnapshot.walletNativeAssetBalance + (expectUnwrappedNativeAssets ? expectedUnwrappedAssets : 0n);
 
   const expectedWalletUnderlyingBalance =
     beforeExecutionSnapshot.walletUnderlyingAssetBalance + (expectUnwrappedNativeAssets ? 0n : expectedWithdrawnAssets);
@@ -267,17 +271,16 @@ export const successTestCases: Array<
       );
 
       // Give GA1 max share approval
-      const {
-        bundler3: { generalAdapter1: generalAdapter1Address },
-      } = getChainAddresses(client.chain.id)!;
+      const vaultBundlesAddress = getChainAddress(client.chain.id, "bundles.vaultBundlesV1");
       await writeContract(client, {
         address: "0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB",
         abi: metaMorphoAbi,
         functionName: "approve",
-        args: [generalAdapter1Address, maxUint256],
+        args: [vaultBundlesAddress, maxUint256],
       });
 
-      await client.mine({ blocks: 1000 });
+      await client.increaseTime({ seconds: 12_000 });
+      await client.mine({ blocks: 1 });
     },
   },
   {
@@ -313,18 +316,17 @@ export const successTestCases: Array<
       );
 
       // Give GA1 max share approval
-      const {
-        bundler3: { generalAdapter1: generalAdapter1Address },
-      } = getChainAddresses(client.chain.id)!;
+      const vaultBundlesAddress = getChainAddress(client.chain.id, "bundles.vaultBundlesV1");
       await writeContract(client, {
         address: "0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB",
         abi: metaMorphoAbi,
         functionName: "approve",
-        args: [generalAdapter1Address, maxUint256],
+        args: [vaultBundlesAddress, maxUint256],
       });
 
       // Let some interest accrue
-      await client.mine({ blocks: 1000 });
+      await client.increaseTime({ seconds: 12_000 });
+      await client.mine({ blocks: 1 });
     },
   },
   {
@@ -366,7 +368,7 @@ export const successTestCases: Array<
       vaultPositionBalance: parseEther("100"),
     },
     inputs: {
-      vaultAddress: "0x31A5684983EeE865d943A696AAC155363bA024f9",
+      vaultAddress: "0x9a8bC3B04b7f3D87cfC09ba407dCED575f2d61D8",
       withdrawAmount: parseEther("50"),
       unwrapNativeAssets: true,
     },
@@ -384,7 +386,7 @@ export const successTestCases: Array<
       vaultPositionBalance: parseEther("100"),
     },
     inputs: {
-      vaultAddress: "0x31A5684983EeE865d943A696AAC155363bA024f9",
+      vaultAddress: "0x9a8bC3B04b7f3D87cfC09ba407dCED575f2d61D8",
       withdrawAmount: maxUint256,
       unwrapNativeAssets: false,
     },
@@ -395,7 +397,7 @@ export const successTestCases: Array<
       vaultPositionBalance: parseEther("100"),
     },
     inputs: {
-      vaultAddress: "0x31A5684983EeE865d943A696AAC155363bA024f9",
+      vaultAddress: "0x9a8bC3B04b7f3D87cfC09ba407dCED575f2d61D8",
       withdrawAmount: maxUint256,
       unwrapNativeAssets: true,
     },
@@ -537,6 +539,6 @@ export const failureTestCases: Array<
   },
 ];
 
-// Shared slippage test for bundler3
+// Shared slippage test for the morpho-sdk action
 // For withdrawal slippage test, we would need to DECREASE the share price
 // However, in MetaMorpho v1.1, share price can't easily be manipulated downward - i.e this is hard to test in the first place

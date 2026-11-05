@@ -3,7 +3,7 @@ import type { MarketPositionChange } from "@/actions";
 
 /**
  * Caps the position's "available to borrow" (collateral headroom) by what the market can still lend:
- * `marketAvailableToBorrow` (direct liquidity plus Public Allocator V1) before the borrow, and that amount minus
+ * `marketAvailableToBorrow` (direct liquidity plus Public Allocator V2) before the borrow, and that amount minus
  * the borrow being entered (floored at 0) after it.
  */
 export function capAvailableToBorrowByLiquidity({

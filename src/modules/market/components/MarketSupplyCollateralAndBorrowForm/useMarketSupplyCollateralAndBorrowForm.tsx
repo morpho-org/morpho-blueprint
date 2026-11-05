@@ -4,14 +4,13 @@ import { useModal } from "connectkit";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { type UseFormReturn, useForm } from "react-hook-form";
 import { useDebounce } from "use-debounce";
-import { getAddress, type Hex, maxUint256 } from "viem";
+import { type Hex, maxUint256 } from "viem";
 import { useAccount, usePublicClient } from "wagmi";
 import { type MarketAction, marketSupplyCollateralAndBorrowAction, UserFacingError } from "@/actions";
 import { DEBOUNCE_TIME_MS } from "@/common/utils/constants";
 import { parseOnchainAmount } from "@/common/utils/schemas";
 import { tryCatch } from "@/common/utils/tryCatch";
 import type { SupportedChainId } from "@/config/types";
-import { Erc4626VaultProtocol } from "@/config/vault-protocol";
 import type { MarketNonIdle } from "@/modules/market/data/getMarket";
 import type { MarketPosition } from "@/modules/market/data/getMarketPositions";
 import { useMarketPosition } from "@/modules/market/hooks/useMarketPositions";
@@ -88,11 +87,8 @@ export function useMarketSupplyCollateralAndBorrowForm({
           accountAddress: address,
           collateralAmount: supplyCollateralAmount,
           borrowAmount: submittedValues.borrowAmount,
-          // Only MetaMorpho (V1) vaults participate in public-allocator reallocation; the
-          // simulation's fetchAccrualVault reverts on a vault V2 address.
-          allocatingVaultAddresses: market.vaultAllocations
-            .filter((v) => v.protocol === Erc4626VaultProtocol.MorphoV1)
-            .map((v) => getAddress(v.vault.vaultAddress)),
+          // The vaults V2 Core lists for the Public Allocator V2: the same set "Available to Borrow" counts.
+          allocatingVaultAddresses: market.publicAllocatorVaultAddresses,
         }),
       );
 
@@ -190,7 +186,7 @@ function useDerivedFormValues({
   const maxBorrowable = useMemo(() => {
     const maxBorrowAmount = computeMaxBorrow(market, supplyCollateralAmount, position);
     const healthyMax = MathLib.max(maxBorrowAmount - BigInt(position?.borrowAmount?.raw ?? 0), 0n);
-    // Also bounded by what the borrow can reach: the market's liquidity plus Public Allocator V1.
+    // Also bounded by what the borrow can reach: the market's liquidity plus Public Allocator V2.
     return MathLib.min(healthyMax, BigInt(market.availableToBorrow.raw));
   }, [position, market, supplyCollateralAmount]);
 

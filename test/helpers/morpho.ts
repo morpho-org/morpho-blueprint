@@ -1,25 +1,21 @@
 import { getChainAddresses, type MarketId } from "@morpho-org/blue-sdk";
-import { blueAbi, fetchMarket, fetchVault, fetchVaultConfig, metaMorphoAbi } from "@morpho-org/blue-sdk-viem";
+import { blueAbi, fetchMarket, fetchPosition, metaMorphoAbi } from "@morpho-org/blue-sdk-viem";
 import type { AnvilTestClient } from "@morpho-org/test";
 import { type Address, erc20Abi, erc4626Abi, type Hex } from "viem";
 import { getBalance, readContract, writeContract } from "viem/actions";
 
-import { getSimulationState } from "@/actions/data/rpc/getSimulationState";
-
 import { RANDOM_ADDRESS } from "./constants";
 import { getErc20BalanceOf } from "./erc20";
 
-const { morpho } = getChainAddresses(1);
+const { blue: morpho } = getChainAddresses(1);
 
 export async function getMorphoVaultPosition(
   client: AnvilTestClient,
   vaultAddress: Address,
   accountAddress: Address = client.account.address,
 ) {
-  const vault = await fetchVault(vaultAddress, client);
-
   const userShareBalance = await getErc20BalanceOf(client, vaultAddress, accountAddress);
-  const userAssetBalance = vault.toAssets(userShareBalance);
+  const userAssetBalance = await getMorphoVaultSharesToAssets(client, vaultAddress, userShareBalance);
   return userAssetBalance;
 }
 
@@ -28,16 +24,11 @@ export async function getMorphoMarketPosition(
   marketId: Hex,
   accountAddress: Address = client.account.address,
 ) {
-  const simulationState = await getSimulationState({
-    publicClient: client,
-    actionType: "market",
-    accountAddress: accountAddress,
-    marketId: marketId as MarketId,
-    requiresPublicReallocation: false,
-  });
-
-  const accrualPosition = simulationState.getAccrualPosition(accountAddress, marketId as MarketId);
-  return { collateralBalance: accrualPosition.collateral, loanBalance: accrualPosition.borrowAssets };
+  const [market, position] = await Promise.all([
+    fetchMarket(marketId as MarketId, client),
+    fetchPosition(accountAddress, marketId as MarketId, client),
+  ]);
+  return { collateralBalance: position.collateral, loanBalance: market.toBorrowAssets(position.borrowShares) };
 }
 
 export async function createVaultPosition(
@@ -46,15 +37,15 @@ export async function createVaultPosition(
   supplyAmount: bigint,
   account: Address = client.account.address,
 ) {
-  const vaultConfig = await fetchVaultConfig(vaultAddress, client);
+  const asset = await readContract(client, { address: vaultAddress, abi: erc4626Abi, functionName: "asset" });
   await client.deal({
-    erc20: vaultConfig.asset,
+    erc20: asset,
     amount: supplyAmount,
     account,
   });
 
   await writeContract(client, {
-    address: vaultConfig.asset,
+    address: asset,
     abi: erc20Abi,
     functionName: "approve",
     args: [vaultAddress, supplyAmount],
@@ -189,7 +180,7 @@ export async function getVaultPositionAccountingSnapshot(
   vaultAddress: Address,
   accountAddress: Address = client.account.address,
 ) {
-  const vault = await fetchVault(vaultAddress, client);
+  const asset = await readContract(client, { address: vaultAddress, abi: erc4626Abi, functionName: "asset" });
 
   const [positionShares, walletNativeAssetBalance, walletUnderlyingAssetBalance] = await Promise.all([
     readContract(client, {
@@ -199,10 +190,10 @@ export async function getVaultPositionAccountingSnapshot(
       args: [accountAddress],
     }),
     getBalance(client, { address: accountAddress }),
-    getErc20BalanceOf(client, vault.asset, accountAddress),
+    getErc20BalanceOf(client, asset, accountAddress),
   ]);
 
-  const positionAssets = vault.toAssets(positionShares);
+  const positionAssets = await getMorphoVaultSharesToAssets(client, vaultAddress, positionShares);
 
   return { walletNativeAssetBalance, walletUnderlyingAssetBalance, positionShares, positionAssets };
 }

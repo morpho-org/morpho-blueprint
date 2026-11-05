@@ -1,5 +1,4 @@
-import { getChainAddresses } from "@morpho-org/blue-sdk";
-import { generalAdapter1Abi } from "@morpho-org/bundler-sdk-viem";
+import { getChainAddress, getChainAddresses } from "@morpho-org/blue-sdk";
 import { createPublicClient, http } from "viem";
 import { getCode, readContract } from "viem/actions";
 import { describe, expect, test } from "vitest";
@@ -7,8 +6,6 @@ import { merklDistributorAbi } from "@/actions/abis/merklDistributorAbi";
 import { wrappedNativeAssetAbi } from "@/actions/abis/wrappedNativeAssetAbi";
 import { MERKL_DISTRIBUTOR_ADDRESS } from "@/actions/constants";
 import { APP_CONFIG, SUPPORTED_CHAIN_IDS } from "@/config";
-
-import "@/actions/morphoSdkPatch";
 
 describe("chain", async () => {
   for (const chainId of SUPPORTED_CHAIN_IDS) {
@@ -32,10 +29,9 @@ describe("chain", async () => {
 
       test("valid morpho SDK addresses", async () => {
         // Will throw if the id is not even supported by the SDK
-        const {
-          wNative,
-          bundler3: { bundler3, generalAdapter1 },
-        } = getChainAddresses(chainConfig.chain.id);
+        const { wNative } = getChainAddresses(chainConfig.chain.id);
+        const vaultBundlesV1 = getChainAddress(chainConfig.chain.id, "bundles.vaultBundlesV1");
+        const blueBundlesV1 = getChainAddress(chainConfig.chain.id, "bundles.blueBundlesV1");
 
         // Check wNative address is present, and contract has the name function
         expect(wNative).toBeDefined();
@@ -45,19 +41,12 @@ describe("chain", async () => {
           functionName: "name",
         });
 
-        // bundler3
-        expect(bundler3).toBeDefined();
-        const bundler3Code = await getCode(client, { address: bundler3! });
-        expect(bundler3Code).toBeDefined();
-        expect(bundler3Code).toMatch(/374f435d/); // multicall function selector
-
-        // generalAdapter1 - should at least be a contract
-        expect(generalAdapter1).toBeDefined();
-        await readContract(client, {
-          address: generalAdapter1!,
-          abi: generalAdapter1Abi,
-          functionName: "BUNDLER3",
-        });
+        for (const address of [vaultBundlesV1, blueBundlesV1]) {
+          expect(address).toBeDefined();
+          const code = await getCode(client, { address });
+          expect(code).toBeDefined();
+          expect(code).not.toEqual("0x");
+        }
       });
 
       test("supports multicall3", async () => {
