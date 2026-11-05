@@ -23,15 +23,15 @@ const lists = new Map<string, unknown[] | Error>();
 const calls: { path: string; query?: Record<string, unknown>; api?: string }[] = [];
 const key = (path: string, query?: Record<string, unknown>) =>
   query ? `${path}?${new URLSearchParams(Object.entries(query).map(([k, v]) => [k, String(v)]))}` : path;
-const respond = (path: string, query?: Record<string, unknown>) => {
-  calls.push({ path, query });
+const respond = (path: string, query?: Record<string, unknown>, api?: string) => {
+  calls.push({ path, query, api });
   const body = routes.get(key(path, query));
   if (body instanceof Error) throw body;
   return body ?? null;
 };
 vi.mock("@/common/utils/fetchMorphoRest", () => ({
-  fetchMorphoRest: async (path: string, query?: Record<string, unknown>) => {
-    const body = respond(path, query);
+  fetchMorphoRest: async (path: string, query?: Record<string, unknown>, options?: { api?: string }) => {
+    const body = respond(path, query, options?.api);
     if (body === null) throw new Error(`Morpho REST 404 on ${path}`);
     return body;
   },
@@ -48,6 +48,7 @@ vi.mock("@/common/utils/fetchMorphoRest", () => ({
 
 const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 const CURATOR = "0x827e86072B06674a077f592A531dcE4590aDeCdB";
+const OTHER_CURATOR = "0x5a4E19842e09000a582c20A4f524C26Fb48Dd4D0";
 const ZERO = "0x0000000000000000000000000000000000000000";
 const vault = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
 const MORPHO_TOKEN = "0x58D97B57BB95320F9a05dC918Aef65434969c2B2";
@@ -155,6 +156,7 @@ beforeEach(() => {
     data: {
       curators: [
         {
+          id: "steakhouse-financial",
           name: "Steakhouse Financial",
           logo_uri: "https://cdn/steakhouse.svg",
           socials: [
@@ -386,6 +388,63 @@ describe("getVaultSummaries (vault V2 from Core REST)", () => {
 
     expect(summaries.map((summary) => summary.vaultAddress)).toEqual([vault(2)]);
     expect(console.warn).toHaveBeenCalledWith(`Vault not returned by the API: 1:${vault(1)}`);
+  });
+
+  describe("curator AUM (Blueprint API)", () => {
+    const AUM_ROUTE = "/v0/blueprint-app-api/curators/aum";
+    const aumCalls = () => calls.filter((call) => call.path === AUM_ROUTE);
+
+    beforeEach(() => {
+      restVault(2, { curator: OTHER_CURATOR });
+      routes.set(`/v0/curators/1:${OTHER_CURATOR}/details`, {
+        data: { curators: [{ id: "gauntlet", name: "Gauntlet", logo_uri: null, socials: [] }] },
+      });
+    });
+
+    it("reads nothing and leaves AUM unset when the Blueprint API is off", async () => {
+      const summaries = await load();
+
+      expect(aumCalls()).toEqual([]);
+      expect(summaries.map((summary) => summary.curatorAum)).toEqual([undefined, undefined]);
+    });
+
+    it("reads every curator in one request and sets AUM only for the curators the route returns", async () => {
+      blueprint.enabled = true;
+      routes.set(key(AUM_ROUTE, { curators: ["steakhouse-financial", "gauntlet"] }), {
+        data: [{ curator_id: "gauntlet", aum_usd: 1_250_000_000 }],
+      });
+
+      const [first, second] = await load();
+
+      expect(aumCalls()).toEqual([
+        { path: AUM_ROUTE, query: { curators: ["steakhouse-financial", "gauntlet"] }, api: "blueprint" },
+      ]);
+      expect(first?.curatorAum).toBeUndefined();
+      expect(second?.curatorAum).toBe(1_250_000_000);
+    });
+
+    it("asks once for a curator shared by several vaults", async () => {
+      blueprint.enabled = true;
+      restVault(2);
+      routes.set(key(AUM_ROUTE, { curators: ["steakhouse-financial"] }), {
+        data: [{ curator_id: "steakhouse-financial", aum_usd: 42 }],
+      });
+
+      const summaries = await load();
+
+      expect(aumCalls()).toHaveLength(1);
+      expect(summaries.map((summary) => summary.curatorAum)).toEqual([42, 42]);
+    });
+
+    it("leaves AUM unset and keeps the rows when the route fails", async () => {
+      blueprint.enabled = true;
+      routes.set(key(AUM_ROUTE, { curators: ["steakhouse-financial", "gauntlet"] }), new Error("Morpho REST 404"));
+
+      const summaries = await load();
+
+      expect(summaries).toHaveLength(2);
+      expect(summaries.map((summary) => summary.curatorAum)).toEqual([undefined, undefined]);
+    });
   });
 
   it("fails when a vault read fails", async () => {

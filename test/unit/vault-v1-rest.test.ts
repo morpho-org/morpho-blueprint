@@ -50,6 +50,15 @@ const lists = new Map<string, unknown[] | Error>();
 const marketRoots = new Map<string, object>();
 const calls: string[] = [];
 vi.mock("@/common/utils/fetchMorphoRest", () => ({
+  // The Blueprint AUM route, by its `curators` filter.
+  fetchMorphoRest: async (path: string, query?: { curators?: string[] }) => {
+    const key = query?.curators ? `${path}?${query.curators.join(",")}` : path;
+    calls.push(key);
+    const body = routes.get(key);
+    if (body instanceof Error) throw body;
+    if (!body) throw new Error(`Morpho REST 404 on ${path}`);
+    return body;
+  },
   fetchMorphoRestResource: async (path: string, query?: { lookback?: string }) => {
     const key = query?.lookback ? `${path}?${query.lookback}` : path;
     calls.push(key);
@@ -72,7 +81,11 @@ vi.mock("@/common/utils/fetchMorphoRest", () => ({
 }));
 
 const curatorDetails = (name: string) => ({
-  data: { curators: [{ name, logo_uri: null, socials: [{ type: "url", url: `https://${name}.xyz` }] }] },
+  data: {
+    curators: [
+      { id: name.toLowerCase(), name, logo_uri: null, socials: [{ type: "url", url: `https://${name}.xyz` }] },
+    ],
+  },
 });
 
 function seedVault({
@@ -304,6 +317,18 @@ describe("getVaultSummaries (vault V1 from Core REST)", () => {
 
     await expect(loadSummaries()).rejects.toThrow("Morpho REST 500");
   });
+
+  it("sets the curator's AUM from the Blueprint API when it is on, and reads nothing when it is off", async () => {
+    routes.set("/v0/blueprint-app-api/curators/aum?curator", { data: [{ curator_id: "curator", aum_usd: 7_000_000 }] });
+
+    const [off] = await loadSummaries();
+    expect(off?.curatorAum).toBeUndefined();
+    expect(calls).not.toContain("/v0/blueprint-app-api/curators/aum?curator");
+
+    blueprint.enabled = true;
+    const [on] = await loadSummaries();
+    expect(on?.curatorAum).toBe(7_000_000);
+  });
 });
 
 describe("getVault (vault V1 details from Core REST)", () => {
@@ -381,6 +406,15 @@ describe("getVault (vault V1 details from Core REST)", () => {
       guardianAddress: ZERO,
       metadata: { curator: { name: "Owner" } },
     });
+  });
+
+  it("shows the curator's AUM on the vault page, and none when the AUM route fails", async () => {
+    blueprint.enabled = true;
+    routes.set("/v0/blueprint-app-api/curators/aum?curator", { data: [{ curator_id: "curator", aum_usd: 7_000_000 }] });
+    expect((await loadVault()).curatorAum).toBe(7_000_000);
+
+    routes.set("/v0/blueprint-app-api/curators/aum?curator", new Error("Morpho REST 500"));
+    expect((await loadVault()).curatorAum).toBeUndefined();
   });
 
   it("throws not found when REST does not know the vault", async () => {

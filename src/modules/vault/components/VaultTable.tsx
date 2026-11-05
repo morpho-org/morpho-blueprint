@@ -4,7 +4,10 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { ApyTooltip } from "@/common/components/ApyToolip";
 import { Avatar } from "@/common/components/ui/avatar";
 import { Badge } from "@/common/components/ui/badge";
+import { Separator } from "@/common/components/ui/seperator";
 import { Table } from "@/common/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/common/components/ui/tooltip";
+import { formatNumber } from "@/common/utils/format";
 import { sortTableAssetAmount } from "@/common/utils/sort";
 import { rateLabel } from "@/common/utils/timeframe";
 import { APP_CONFIG } from "@/config";
@@ -22,7 +25,16 @@ interface VaultTableProps {
 }
 
 type Column = ColumnDef<VaultTableDataEntry>;
-function getColumns(isPositionLoading: boolean): Column[] {
+
+/**
+ * Curator AUM comes from the Blueprint API, which is off without its key: when no row has it, the
+ * column is the curator alone, with nothing to sort by and no AUM in its header.
+ */
+export function hasCuratorAum(vaultSummaries: readonly VaultSummary[]): boolean {
+  return vaultSummaries.some((vaultSummary) => vaultSummary.curatorAum !== undefined);
+}
+
+export function getColumns(isPositionLoading: boolean, showCuratorAum: boolean): Column[] {
   const includeTypeColumn = Object.values(APP_CONFIG.supportedVaults ?? {}).some((configs) =>
     (configs ?? []).some((c) => c.tag !== undefined),
   );
@@ -142,11 +154,46 @@ function getColumns(isPositionLoading: boolean): Column[] {
       ? [
           {
             id: "curator",
-            header: "Curator",
+            accessorFn: (row) => row.vaultSummary.curatorAum,
+            // A curator the AUM route does not know sorts last either way.
+            sortUndefined: "last",
+            header: showCuratorAum ? "Curator AUC" : "Curator",
+            enableSorting: showCuratorAum,
             cell: ({ row }) => {
               const curator = extractVaultCurator(row.original.vaultSummary);
+              if (!curator) return null;
+
+              const avatar = (
+                <Avatar src={curator.image} alt={curator.name} size="sm" className="rounded-full border" />
+              );
+              const aumComponent =
+                row.original.vaultSummary.curatorAum !== undefined ? (
+                  <span className="body-medium-plus">
+                    {formatNumber(row.original.vaultSummary.curatorAum, { currency: "USD" })}
+                  </span>
+                ) : null;
               return (
-                curator && <Avatar src={curator.image} alt={curator.name} size="sm" className="rounded-full border" />
+                <Tooltip>
+                  <TooltipTrigger className="flex items-center gap-3">
+                    {avatar}
+                    {aumComponent}
+                  </TooltipTrigger>
+                  <TooltipContent className="flex min-w-[280px] flex-col gap-4">
+                    <div className="flex items-center gap-2">
+                      {avatar}
+                      <span className="body-medium-plus">{curator.name}</span>
+                    </div>
+                    {aumComponent && (
+                      <>
+                        <Separator />
+                        <div className="body-small flex items-center justify-between">
+                          <span>Assets Under Curation</span>
+                          <span>{formatNumber(row.original.vaultSummary.curatorAum ?? 0, { currency: "USD" })}</span>
+                        </div>
+                      </>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
               );
             },
             minSize: 120,
@@ -184,7 +231,7 @@ export function VaultTable({ vaultSummaries }: VaultTableProps) {
   const { data, isPositionsLoading } = useVaultTableData({ vaultSummaries });
   return (
     <Table
-      columns={getColumns(isPositionsLoading)}
+      columns={getColumns(isPositionsLoading, hasCuratorAum(vaultSummaries))}
       data={data}
       initialSort={[
         { id: "yourDeposits", desc: true },
