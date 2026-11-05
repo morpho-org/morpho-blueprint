@@ -13,15 +13,6 @@ vi.mock("@/config", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/config")>();
   return { ...actual, APP_CONFIG: { ...actual.APP_CONFIG, apyWindow: "6h" } };
 });
-// Vault V1 pages still read their summary and details from GraphQL.
-const graphql = vi.hoisted((): { queries: number } => ({ queries: 0 }));
-vi.mock("@/common/utils/executeMorphoQuery", () => ({
-  executeMorphoQuery: async () => {
-    graphql.queries += 1;
-    return { vaults: { items: [] } };
-  },
-}));
-
 const VAULT = "0x0000000000000000000000000000000000000001";
 const ADAPTER = getAddress("0x00000000000000000000000000000000000000a1");
 const USDC = getAddress("0x00000000000000000000000000000000000000c1");
@@ -209,14 +200,13 @@ describe("getVault (Vault V2 details from REST)", () => {
     expect(merkl.reads).toBe(1);
   });
 
-  it("reads a vault V1 from GraphQL and its V1 history, with no vault V2 or Merkl read", async () => {
+  it("reads a vault V1 from the vault V1 routes only, with no vault V2 read", async () => {
     const { getVault } = await import("@/modules/vault/data/getVault");
 
     await expect(getVault(1, VAULT, Erc4626VaultProtocol.MorphoV1)).rejects.toThrow(`Vault not found: 1:${VAULT}`);
-    expect(graphql.queries).toBe(1);
     expect(calls.length).toBeGreaterThan(0);
-    expect(calls.every((call) => call.startsWith(`/v0/vaults-v1/1:${VAULT}/`))).toBe(true);
-    expect(merkl.reads).toBe(0);
+    expect(calls.every((call) => call.startsWith(`/v0/vaults-v1/1:${VAULT}`))).toBe(true);
+    expect(merkl.reads).toBe(1);
   });
 
   it("reads the vault root, its state and the asset price once for the whole page", async () => {

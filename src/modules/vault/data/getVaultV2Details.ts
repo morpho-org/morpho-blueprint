@@ -5,7 +5,7 @@ import { type Address, formatUnits, getAddress, type Hex, zeroAddress } from "vi
 import { toAmountWithPrice, toBigInt, toRatio } from "@/common/data/adapters/amount";
 import { assembleApyWithRewards } from "@/common/data/adapters/apy";
 import { getTokenInfo } from "@/common/data/rest/tokens";
-import type { ApyAverages, ChainInfo, TokenInfo } from "@/common/data/types";
+import type { ChainInfo, TokenInfo } from "@/common/data/types";
 import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
 import { restApyLookback } from "@/common/utils/timeframe";
 import { getMarketInfos } from "@/modules/market/data/getMarketInfos";
@@ -14,11 +14,12 @@ import { type MerklRewardIndex, vaultRewardApys } from "@/modules/reward/data/me
 import type {
   MorphoVaultV2,
   UnderlyingMorphoVaultV1,
-  VaultMarketAllocation,
   VaultV2AdapterCap,
   VaultV2Allocation,
   VaultV2MarketCap,
 } from "@/modules/vault/vault.types";
+import { type RestVaultV1Allocation, toRestVaultMarketAllocations } from "./adapters";
+import { fetchVaultApyAverages } from "./fetchVaultApyAverages";
 import { matchRestVaultV2Adapter, type RestVaultV2AdapterKind } from "./matchVaultV2Adapter";
 
 interface RestSentinels {
@@ -64,18 +65,11 @@ interface RestVaultV1 {
 }
 
 interface RestVaultV1Allocations {
-  data: { allocations: { market_id: Hex; supply_assets: string; supply_shares: string; supply_cap: string }[] };
+  data: { allocations: RestVaultV1Allocation[] };
 }
 
 type MarketCapRow = Extract<RestCap, { cap_type: "market_v1" }>;
 type AdapterCapRow = Extract<RestCap, { cap_type: "adapter" }>;
-
-const APY_AVERAGE_LOOKBACKS = {
-  sevenDays: "seven_days",
-  thirtyDays: "thirty_days",
-  ninetyDays: "ninety_days",
-  inception: "inception",
-} as const satisfies Record<keyof ApyAverages, string>;
 
 export type VaultV2Details = Pick<
   MorphoVaultV2,
@@ -139,7 +133,7 @@ export async function getVaultV2Details(
   const [allocations, sentinels, apyAverages] = await Promise.all([
     fetchMorphoRestResource<RestVaultV2Allocations>(`/v0/vaults-v2/${selector}/allocations`),
     fetchMorphoRestResource<RestSentinels>(`/v0/vaults-v2/${selector}/sentinels`),
-    fetchApyAverages(selector),
+    fetchVaultApyAverages(`/v1/vaults-v2/${selector}/apy-averages`),
   ]);
   const context = await contextPromise;
   if (!allocations || !context) return null;
@@ -272,25 +266,6 @@ function toAdapterCap(
   };
 }
 
-/** One realized net APY per chart range; null when REST has none (a vault younger than the window). */
-async function fetchApyAverages(selector: string): Promise<ApyAverages> {
-  const entries = await Promise.all(
-    Object.entries(APY_AVERAGE_LOOKBACKS).map(async ([key, lookback]) => {
-      const response = await fetchMorphoRestResource<RestApyAverage>(`/v1/vaults-v2/${selector}/apy-averages`, {
-        lookback,
-      });
-      return [key, response?.data.apy ?? null] as const;
-    }),
-  );
-  const byKey = Object.fromEntries(entries);
-  return {
-    sevenDays: byKey.sevenDays ?? null,
-    thirtyDays: byKey.thirtyDays ?? null,
-    ninetyDays: byKey.ninetyDays ?? null,
-    inception: byKey.inception ?? null,
-  };
-}
-
 type VaultV1Read = {
   adapterAddress: Address;
   vaultAddress: Address;
@@ -335,7 +310,6 @@ function toUnderlyingVaultV1(
 ): UnderlyingMorphoVaultV1 {
   const decimals = asset.decimals;
   const totalRaw = read.allocations.reduce((sum, row) => sum + toBigInt(row.supply_assets), 0n);
-  const total = Number(formatUnits(totalRaw, decimals));
 
   return {
     __typename: "MorphoVault",
@@ -345,19 +319,6 @@ function toUnderlyingVaultV1(
     asset,
     apy: assembleApyWithRewards(read.apy, vaultRewardApys(rewardIndex, read.vaultAddress, "v1")),
     totalAssets: toAmountWithPrice(totalRaw, decimals, price),
-    marketAllocations: read.allocations.flatMap((row): VaultMarketAllocation[] => {
-      const market = markets.get(row.market_id.toLowerCase());
-      if (!market) return [];
-      const supply = toAmountWithPrice(row.supply_assets, decimals, price);
-      return [
-        {
-          enabled: toBigInt(row.supply_cap) > 0n,
-          vaultSupplyShare: total > 0 ? Number(supply.formatted) / total : 0,
-          position: { supplyAmount: supply, supplyShares: toBigInt(row.supply_shares).toString() },
-          supplyCap: toAmountWithPrice(row.supply_cap, decimals, price),
-          market,
-        },
-      ];
-    }),
+    marketAllocations: toRestVaultMarketAllocations(read.allocations, markets, decimals, price, totalRaw),
   };
 }

@@ -73,14 +73,6 @@ vi.mock("@/common/utils/trackEvent", () => ({
   },
 }));
 
-// Vault V1 summaries still come from GraphQL, one query per chain.
-const graphql = vi.hoisted((): { queries: Record<string, unknown>[] } => ({ queries: [] }));
-vi.mock("@/common/utils/executeMorphoQuery", () => ({
-  executeMorphoQuery: async (_query: unknown, variables: Record<string, unknown>) => {
-    graphql.queries.push(variables);
-    return { vaults: { pageInfo: { count: 0, countTotal: 0 }, items: [] } };
-  },
-}));
 const merklCampaign = (type: string, apr: number, params: Record<string, unknown>) => ({
   id: `${type}-${apr}`,
   type,
@@ -139,7 +131,6 @@ beforeEach(() => {
   merkl.down = false;
   merkl.requests = 0;
   merkl.reports.length = 0;
-  graphql.queries.length = 0;
   blueprint.enabled = false;
   CONFIG.supportedVaults = {
     1: [
@@ -356,22 +347,6 @@ describe("getVaultSummaries (vault V2 from Core REST)", () => {
 
     expect(summaries.map((summary) => summary.vaultAddress)).toEqual([vault(2)]);
     expect(console.warn).toHaveBeenCalledWith(`Vault not returned by the API: 1:${vault(1)}`);
-  });
-
-  it("reads a configured vault V1 from GraphQL, with no REST read for it", async () => {
-    CONFIG.supportedVaults = {
-      1: [
-        { address: vault(1), protocol: Erc4626VaultProtocol.MorphoV2 },
-        { address: vault(3), protocol: Erc4626VaultProtocol.MorphoV1 },
-      ],
-    };
-
-    const summaries = await load();
-
-    expect(summaries.map((summary) => summary.vaultAddress)).toEqual([vault(1)]);
-    expect(graphql.queries).toEqual([expect.objectContaining({ chainIds: [1], addresses: [vault(3)] })]);
-    expect(console.warn).toHaveBeenCalledWith(`Vault not returned by the API: 1:${vault(3)}`);
-    expect(calls.some((call) => call.path.includes(vault(3)))).toBe(false);
   });
 
   it("fails when a vault read fails", async () => {

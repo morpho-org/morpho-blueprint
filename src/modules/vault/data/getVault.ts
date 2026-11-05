@@ -4,31 +4,18 @@ import { cache } from "react";
 import type { Address } from "viem";
 import { HISTORY_RANGE_KEYS, type HistoryRange } from "@/common/data/adapters/timeseries";
 import { resolutionLookback } from "@/common/data/rest/historyWindow";
-import { executeMorphoQuery } from "@/common/utils/executeMorphoQuery";
 import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
-import { apyLookbackPeriod } from "@/common/utils/timeframe";
 import { APP_CONFIG } from "@/config";
 import type { SupportedChainId } from "@/config/types";
 import { Erc4626VaultProtocol } from "@/config/vault-protocol";
-import { graphql } from "@/generated/gql/morpho";
 import { getMerklRewardIndex } from "@/modules/reward/data/getMerklRewardIndex";
 import { normalizeVault } from "@/modules/vault/utils/normalizeVault";
 import type { Vault, VaultHistoricalData } from "@/modules/vault/vault.types";
 import { toMorphoVaultV1Details, toMorphoVaultV2Details, toVaultHistoricalEntries } from "./adapters";
-import { getVaultV2Summary } from "./getVaultSummaries";
+import { getVaultV1Summary, getVaultV2Summary } from "./getVaultSummaries";
+import { getVaultV1Details } from "./getVaultV1Details";
 import { getVaultV2Details } from "./getVaultV2Details";
 import { fetchVaultV2History } from "./getVaultV2History";
-
-const vaultV1Query = graphql(`
-  query VaultV1($chainId: Int!, $address: String!, $lookbackV1: VaultV1LookbackPeriod!) {
-    vaults(first: 1, where: { chainId_in: [$chainId], address_in: [$address] }) {
-      items {
-        ...MorphoVaultV1SummaryFragment
-        ...MorphoVaultV1DetailsFragment
-      }
-    }
-  }
-`);
 
 export type { Vault };
 
@@ -45,25 +32,42 @@ async function fetchHistoryRanges<T>(
 
 export const getVault = cache(
   async (chainId: SupportedChainId, vaultAddress: Address, protocol: Erc4626VaultProtocol): Promise<Vault> => {
+    // One Merkl read for the page, shared by the header APY and the breakdown rows.
+    const rewardIndex = getMerklRewardIndex(chainId);
+
     if (protocol === Erc4626VaultProtocol.MorphoV1) {
-      const [data, history] = await Promise.all([
-        executeMorphoQuery(vaultV1Query, { chainId, address: vaultAddress, lookbackV1: apyLookbackPeriod }),
+      const summaryRead = getVaultV1Summary(chainId, vaultAddress, rewardIndex);
+      // The details reuse the summary's root, state, asset decimals and price; a failed summary
+      // resolves to no context here and surfaces through `summaryRead`.
+      const detailsContext = summaryRead.then(
+        (read) =>
+          read && {
+            chain: read.summary.chain,
+            asset: {
+              address: read.summary.asset.address,
+              decimals: read.summary.asset.decimals,
+              priceUsd: read.summary.asset.priceUsd,
+            },
+            root: read.root,
+            state: read.state,
+          },
+        () => null,
+      );
+      const [read, details, history] = await Promise.all([
+        summaryRead,
+        getVaultV1Details(chainId, vaultAddress, detailsContext, rewardIndex),
         fetchHistoryRanges((range) => fetchVaultV1History(chainId, vaultAddress, range)),
       ]);
+      if (!read || !details) throw new Error(`Vault not found: ${chainId}:${vaultAddress}`);
 
-      const vault = data.vaults.items?.[0];
-      if (!vault) throw new Error(`Vault not found: ${chainId}:${vaultAddress}`);
-
-      const decimals = Math.round(vault.asset.decimals);
+      const decimals = read.summary.asset.decimals;
       const historical: VaultHistoricalData = buildHistoricalData(history, (series) =>
         toVaultHistoricalEntries(series, decimals),
       );
 
-      return normalizeVault({ ...toMorphoVaultV1Details(vault), historical });
+      return normalizeVault({ ...toMorphoVaultV1Details(read.summary, details), historical });
     }
 
-    // One Merkl read for the page, shared by the header APY and the breakdown rows.
-    const rewardIndex = getMerklRewardIndex(chainId);
     const summaryRead = getVaultV2Summary(chainId, vaultAddress, rewardIndex);
     // The details reuse the summary's root, state, asset decimals and price instead of reading them
     // again; their other reads start right away. A failed summary resolves to no context here: its

@@ -169,6 +169,125 @@
       "kind": "extra",
       "reason": "Vault V2 history on Core REST ends on a request-time row (a non-aligned timestamp) that GraphQL's bucketed series did not have. One row per vault and series",
       "ticket": "VAU-3619"
+    },
+    {
+      "path": "data.vaultSummaries*.marketAllocations**",
+      "kind": "value",
+      "reason": "Vault V1 exposure tooltip rows carry no market id, so they compare by position: GraphQL served them in index order, REST in withdraw-queue order. Summed per collateral symbol the shares and USD match (checked on every configured V1 vault); the tooltip sorts by share",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaultSummaries*.apy.*",
+      "kind": "value",
+      "relative": 0.06,
+      "reason": "Vault V1 header APY: REST apy-averages over the 6h window vs GraphQL avgNetApyExcludingRewards (plus windowed rewards in total); up to 5.8% relative seen (Gauntlet USDC on Unichain)",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.apy.*",
+      "kind": "value",
+      "relative": 0.06,
+      "reason": "Vault V1 header APY: REST apy-averages over the 6h window vs GraphQL avgNetApyExcludingRewards (plus windowed rewards in total); up to 5.8% relative seen (Gauntlet USDC on Unichain)",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaultSummaries*.apy.rewards*.apr",
+      "kind": "value",
+      "relative": 0.02,
+      "reason": "Vault V1 reward APRs now come from Merkl directly (VAU-3624 module), GraphQL served its own cached copy; within 1.1% seen",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.apy.rewards*.apr",
+      "kind": "value",
+      "relative": 0.02,
+      "reason": "Vault V1 reward APRs now come from Merkl directly (VAU-3624 module), GraphQL served its own cached copy; within 1.1% seen",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaultSummaries*.apy.rewards*.asset.icon",
+      "kind": "value",
+      "reason": "Vault V1 reward token icons come from Merkl (storage.googleapis.com/merkl-static-assets), GraphQL served the Morpho CDN logo, as on vault V2 rewards",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.apy.rewards*.asset.icon",
+      "kind": "value",
+      "reason": "Vault V1 reward token icons come from Merkl (storage.googleapis.com/merkl-static-assets), GraphQL served the Morpho CDN logo, as on vault V2 rewards",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaultSummaries*.metadata.curator",
+      "kind": "value",
+      "reason": "The three Re7 vaults on World Chain: GraphQL's vault-scoped curators returned none, REST's curator details for the curator role return RE7 Labs; the earn row and header now name the curator",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.metadata.curator",
+      "kind": "value",
+      "reason": "The three Re7 vaults on World Chain: GraphQL's vault-scoped curators returned none, REST's curator details for the curator role return RE7 Labs; the earn row and header now name the curator",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.apyAverages.*",
+      "kind": "value",
+      "relative": 0.03,
+      "reason": "Vault V1 realized APY averages (7d, 30d, 90d): REST apy-averages vs GraphQL avgNetApy, computed on different timestamp grids; up to 2.2% relative seen. Vaults with Merkl rewards differ more and are listed below",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.marketAllocations[*].market.supplyApy*.*",
+      "kind": "value",
+      "relative": 0.1,
+      "reason": "Market 6h/1d/7d supply APYs on vault V1 allocations: GraphQL and REST supply_apy_averages are computed differently; up to 8.4% relative seen (Polygon Compound WETH market 1d), as on the vault V2 breakdown (VAU-3619)",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.marketAllocations[*].market.supplyApy*.*",
+      "kind": "value",
+      "absolute": 0.0001,
+      "reason": "Market supply APYs within 0.01 percentage points: near-zero-APY markets differ by more relative between GraphQL and REST while the displayed value is the same",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.apyAverages.*",
+      "kind": "value",
+      "absolute": 0.0005,
+      "reason": "Near-zero vault V1 APY averages (0.12% vs 0.15% on Katana Gauntlet WETH 90d): within 0.05 percentage points",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.480:0x0Db7E405278c2674F462aC9D9eb8b8346D1c1571.apyAverages.*",
+      "kind": "value",
+      "reason": "Re7 WETH on World Chain earns WLD through Merkl: GraphQL's averages included windowed rewards (2.57%), REST's are native only (0.02%), the same series the chart plots since VAU-3618. The header APY still adds the current reward APR",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.999:0x4346C98E690c17eFbB999aE8e1dA96B089bE320b.totalLiquidity.usd",
+      "kind": "value",
+      "reason": "rUSDC has no USD price on either API: GraphQL served 0 USD of liquidity, REST derives none (null), so the liquidity metric shows a dash instead of $0, like the deposits figure",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.totalLiquidity.usd",
+      "kind": "value",
+      "relative": 0.01,
+      "reason": "Vault V1 available liquidity: GraphQL served a cached figure (the same 47,297,444 USD on Steakhouse USDC in two dumps 20 s apart), REST withdrawable_assets is as of its last indexed block (47,650,715 USD, 0.75% more)",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaultSummaries*.apy.*",
+      "kind": "value",
+      "absolute": 0.0001,
+      "reason": "Near-zero vault V1 APYs within 0.01 percentage points (Compound WETH on Polygon: 0.0134% vs 0.0123%), where the relative bound above is too tight",
+      "ticket": "VAU-3620"
+    },
+    {
+      "path": "data.vaults.*.apy.*",
+      "kind": "value",
+      "absolute": 0.0001,
+      "reason": "Near-zero vault V1 APYs within 0.01 percentage points (Compound WETH on Polygon: 0.0134% vs 0.0123%), where the relative bound above is too tight",
+      "ticket": "VAU-3620"
     }
   ]
 }
