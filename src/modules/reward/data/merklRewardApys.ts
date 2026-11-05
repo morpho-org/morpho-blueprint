@@ -18,6 +18,7 @@ const REWARD_CHAIN_IDS = new Set([
 
 const VAULT_CAMPAIGN_TYPES = new Set(["MORPHOVAULT", "ERC20LOGPROCESSOR"]);
 const MULTILEND_LEND_CAMPAIGN_TYPE = 24;
+const MULTILEND_BORROW_CAMPAIGN_TYPE = 45;
 
 // Merkl may serve lowercase or checksummed addresses; only the hex shape matters here.
 const isAnyCaseAddress = (value: string) => isAddress(value, { strict: false });
@@ -80,12 +81,18 @@ export interface MerklRewardIndex {
   marketSupply: Map<string, IndexedReward[]>;
   /** By lowercased loan token: supply campaigns on every market lending that token. */
   loanTokenSupply: Map<string, IndexedReward[]>;
+  /** By lowercased market id: borrow campaigns on that market. */
+  marketBorrow: Map<string, IndexedReward[]>;
+  /** By lowercased loan token: borrow campaigns on every market lending that token. */
+  loanTokenBorrow: Map<string, IndexedReward[]>;
 }
 
 export const emptyMerklRewardIndex = (): MerklRewardIndex => ({
   vaults: new Map(),
   marketSupply: new Map(),
   loanTokenSupply: new Map(),
+  marketBorrow: new Map(),
+  loanTokenBorrow: new Map(),
 });
 
 /** `{ skip }` for a hook the backend does not handle, else whether the campaign is vault-V2-only. */
@@ -109,6 +116,9 @@ const isVaultCampaign = (campaign: Campaign) =>
 
 const isDirectMarketSupplyCampaign = (campaign: Campaign) =>
   campaign.type === "MORPHOSUPPLY" || (campaign.type === "MORPHO" && campaign.subType === 1);
+
+const isDirectMarketBorrowCampaign = (campaign: Campaign) =>
+  campaign.type === "MORPHOBORROW" || (campaign.type === "MORPHO" && campaign.subType === 2);
 
 function push(map: Map<string, IndexedReward[]>, key: string, reward: IndexedReward) {
   const existing = map.get(key.toLowerCase());
@@ -167,20 +177,24 @@ export function indexMerklRewards(opportunities: readonly unknown[], nowSeconds:
 
       if (isVaultCampaign(campaign)) {
         if (params.targetToken && isAnyCaseAddress(params.targetToken)) push(index.vaults, params.targetToken, reward);
-      } else if (isDirectMarketSupplyCampaign(campaign)) {
+      } else if (isDirectMarketSupplyCampaign(campaign) || isDirectMarketBorrowCampaign(campaign)) {
         // The full id from the params: the opportunity identifier is truncated to 20 bytes.
         const marketId = params.marketId ?? params.market;
-        if (marketId) push(index.marketSupply, marketId, reward);
+        const target = isDirectMarketSupplyCampaign(campaign) ? index.marketSupply : index.marketBorrow;
+        if (marketId) push(target, marketId, reward);
       } else if (campaign.type === "MULTILENDBORROW") {
         for (const entry of params.markets ?? []) {
           const market = multilendMarketSchema.safeParse(entry);
-          if (market.success && market.data.campaignType === MULTILEND_LEND_CAMPAIGN_TYPE) {
+          if (!market.success) continue;
+          if (market.data.campaignType === MULTILEND_LEND_CAMPAIGN_TYPE) {
             push(index.marketSupply, market.data.campaignParameters.market, reward);
+          } else if (market.data.campaignType === MULTILEND_BORROW_CAMPAIGN_TYPE) {
+            push(index.marketBorrow, market.data.campaignParameters.market, reward);
           }
         }
-      } else if (campaign.type === "MORPHOSUPPLY_SINGLETOKEN") {
-        if (params.targetToken && isAnyCaseAddress(params.targetToken))
-          push(index.loanTokenSupply, params.targetToken, reward);
+      } else if (campaign.type === "MORPHOSUPPLY_SINGLETOKEN" || campaign.type === "MORPHOBORROW_SINGLETOKEN") {
+        const target = campaign.type === "MORPHOSUPPLY_SINGLETOKEN" ? index.loanTokenSupply : index.loanTokenBorrow;
+        if (params.targetToken && isAnyCaseAddress(params.targetToken)) push(target, params.targetToken, reward);
       }
     }
   }
@@ -213,6 +227,18 @@ export function marketSupplyRewardApys(index: MerklRewardIndex, marketId: string
   const rewards = [
     ...(index.marketSupply.get(marketId.toLowerCase()) ?? []),
     ...(index.loanTokenSupply.get(loanToken.toLowerCase()) ?? []),
+  ];
+  return byToken(rewards.filter((reward) => !reward.vaultV2Only));
+}
+
+/**
+ * The current reward APRs for borrowing from a market, as positive APRs: the borrow rate net of
+ * rewards is the native rate minus their sum.
+ */
+export function marketBorrowRewardApys(index: MerklRewardIndex, marketId: string, loanToken: Address): RewardApy[] {
+  const rewards = [
+    ...(index.marketBorrow.get(marketId.toLowerCase()) ?? []),
+    ...(index.loanTokenBorrow.get(loanToken.toLowerCase()) ?? []),
   ];
   return byToken(rewards.filter((reward) => !reward.vaultV2Only));
 }

@@ -17,7 +17,7 @@ function AvailableLiquidityTooltipContent({
         <span className="body-medium-plus">Market Liquidity</span>
         <span>
           The total amount of assets available for borrowing, including liquidity that can be reallocated from other
-          markets through the public allocator.
+          markets through the Public Allocator V2.
         </span>
       </div>
       <div className="flex flex-col gap-2">
@@ -26,7 +26,7 @@ function AvailableLiquidityTooltipContent({
           <span className="body-small-plus">{formatNumber(marketLiquidity, { currency: "USD" })}</span>
         </span>
         <span className="flex justify-between">
-          <span>Liquidity via Public Allocator</span>
+          <span>Liquidity via Public Allocator V2</span>
           <span className="body-small-plus">{formatNumber(publicAllocatorLiquidity, { currency: "USD" })}</span>
         </span>
       </div>

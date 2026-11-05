@@ -14,8 +14,9 @@ const list = (value: string | undefined) =>
     .filter(Boolean);
 const vaultFilter = list(process.env.PARITY_VAULTS).map((key) => key.toLowerCase());
 const providers = new Set(list(process.env.PARITY_PROVIDERS || "summaries,vaults"));
+const marketKeys = list(process.env.PARITY_MARKETS);
 
-const KNOWN_PROVIDERS = ["summaries", "vaults", "vault-positions", "market-positions"];
+const KNOWN_PROVIDERS = ["summaries", "vaults", "vault-positions", "market-positions", "markets"];
 
 type Provider = (...args: unknown[]) => Promise<unknown>;
 interface ConfiguredVault {
@@ -57,6 +58,7 @@ test("parity dump", async () => {
   if (unknown.length > 0) throw new Error(`Unknown provider ${unknown.join(",")}; known: ${KNOWN_PROVIDERS}`);
   const needsAccount = providers.has("vault-positions") || providers.has("market-positions");
   if (needsAccount && !account) throw new Error("vault-positions and market-positions need --account");
+  if (providers.has("markets") && marketKeys.length === 0) throw new Error("markets needs --markets 1:0x...");
 
   const { APP_CONFIG } = await load<{ APP_CONFIG: { supportedVaults: Record<string, ConfiguredVault[]> } }>("@/config");
   const vaults = Object.entries(APP_CONFIG.supportedVaults)
@@ -96,6 +98,16 @@ test("parity dump", async () => {
         "@/modules/market/data/getMarketPositions",
       );
       data.marketPositions = await getMarketPositions(account);
+    }
+    if (providers.has("markets")) {
+      const { getMarket } = await load<{ getMarket: Provider }>("@/modules/market/data/getMarket");
+      const markets: Record<string, unknown> = {};
+      // Sequential, like vaults: one market page's burst at a time.
+      for (const key of marketKeys) {
+        const [chainId, marketId] = key.split(":");
+        markets[key] = await getMarket(Number(chainId), marketId);
+      }
+      data.markets = markets;
     }
   } finally {
     const hosts = [...requestsByHost].map(([host, n]) => `${host}=${n}`).join(", ");

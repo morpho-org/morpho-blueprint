@@ -1,18 +1,15 @@
-import { formatUnits, getAddress } from "viem";
-import { descale, toAmount, toBigInt, toRatio } from "@/common/data/adapters/amount";
+import { AdaptiveCurveIrmLib, MarketUtils, MathLib } from "@morpho-org/blue-sdk";
+import { formatUnits, getAddress, type Hex } from "viem";
+import { descale, toAmount, toAmountWithPrice, toBigInt, toRatio } from "@/common/data/adapters/amount";
 import { assembleApy, toRewardApys } from "@/common/data/adapters/apy";
-import { toChainInfo, toCuratorInfo, toTokenInfo } from "@/common/data/adapters/entity";
-import { warnIfTruncated } from "@/common/data/adapters/pagination";
+import { toChainInfo, toTokenInfo } from "@/common/data/adapters/entity";
 import { type DataPoint, descaleSeries, zipTimeseries } from "@/common/data/adapters/timeseries";
+import type { Apy, ChainInfo, CuratorInfo, RewardApy, TokenInfo } from "@/common/data/types";
 import { numberToString } from "@/common/utils/format";
-import { Erc4626VaultProtocol } from "@/config/vault-protocol";
+import type { Erc4626VaultProtocol } from "@/config/vault-protocol";
+import type { MarketInfoFragmentFragment, MarketSummaryFragmentFragment } from "@/generated/gql/morpho/graphql";
 import type {
-  MarketInfoFragmentFragment,
-  MarketSummaryFragmentFragment,
-  MarketSupplyingVaultV1FragmentFragment,
-  MarketSupplyingVaultV2FragmentFragment,
-} from "@/generated/gql/morpho/graphql";
-import type {
+  IrmCurvePoint,
   MarketHistoricalEntry,
   MarketInfo,
   MarketSummary,
@@ -42,8 +39,8 @@ export function computeLiquidationPenalty(lltvWad: BigIntish | null | undefined)
 }
 
 /**
- * `MarketState.price` is the oracle price of one collateral unit in loan-asset units, scaled by
- * `36 + loanDecimals - collateralDecimals`. `raw` is passed straight to the blue-sdk math helpers
+ * The oracle price (`/v0/oracles/{oracle}/state`) is one collateral unit in loan-asset units,
+ * scaled by `36 + loanDecimals - collateralDecimals`. `raw` is passed straight to the blue-sdk math helpers
  * (which expect the 1e36-scaled oracle price), `formatted` is the human-readable price.
  */
 export function toCollateralPriceInLoanAsset(
@@ -110,11 +107,6 @@ export function toMarketSummary(market: MarketSummaryFragmentFragment): MarketSu
     collateralAsset,
     loanAsset,
     lltv: toRatio(market.lltv),
-    borrowApy: assembleApy({
-      apyExcludingRewards: state?.borrowApy,
-      netApy: state?.netBorrowApy,
-      rewards,
-    }),
     borrowApy6h: assembleApy({
       apyExcludingRewards: state?.avgBorrowApy,
       netApy: state?.avgNetBorrowApy,
@@ -138,145 +130,118 @@ export function toMarketSummary(market: MarketSummaryFragmentFragment): MarketSu
   };
 }
 
-/**
- * `Market.publicAllocatorSharedLiquidity` lists every reallocatable chunk; the UI shows the total.
- * Priced with the loan asset price, since the API exposes no USD value on these entries.
- */
-export function sumPublicAllocatorSharedLiquidity(
-  entries: readonly { assets: BigIntish }[] | null | undefined,
-  loanDecimals: number,
-  loanPriceUsd: number | null | undefined,
-) {
-  const total = (entries ?? []).reduce((acc, entry) => acc + toBigInt(entry.assets), 0n);
-  const amount = toAmount(total, loanDecimals);
-  return { ...amount, usd: loanPriceUsd == null ? null : descale(total, loanDecimals) * loanPriceUsd };
-}
-
-/* -------------------------------------------------------------------------------------------- */
-/* Inverse vault-allocation join (market page)                                                    */
-/* -------------------------------------------------------------------------------------------- */
-
-function marketShare(
-  part: BigIntish | null | undefined,
-  marketSupplyAssets: BigIntish | null | undefined,
-  decimals: number,
-): number {
-  const total = descale(marketSupplyAssets, decimals);
-  return total > 0 ? descale(part, decimals) / total : 0;
-}
+/** Core REST's `apy-averages` window keys, as the market list reads them. */
+export type RestApyAverageKey = "6h" | "24h" | "7d" | "30d";
 
 /**
- * Whisk served `Market.vaultAllocations` directly. Morpho exposes the vaults supplying a market and
- * leaves the per-market amount to be picked out of each vault's own allocation list (vault V1) or
- * MarketV1 caps (vault V2).
+ * A borrow APY from a REST native average and the current Merkl borrow reward APRs. Rewards lower
+ * what a borrower pays, so `total` is the native rate minus their sum (GraphQL's `netBorrowApy`).
  */
-export function toMarketVaultAllocations(
-  marketId: string,
-  marketSupplyAssets: BigIntish | null | undefined,
-  loanDecimals: number,
-  loanPriceUsd: number | null,
-  supplyingVaults: readonly MarketSupplyingVaultV1FragmentFragment[],
-  supplyingVaultV2s: readonly MarketSupplyingVaultV2FragmentFragment[],
-): MarketVaultAllocation[] {
-  const fromV1 = supplyingVaults.flatMap((vault): MarketVaultAllocation[] => {
-    const allocation = vault.state?.allocation.find((entry) => entry.market.marketId === marketId);
-    if (!allocation) return [];
+function toRestBorrowApy(nativeApy: number | null | undefined, rewards: RewardApy[]): Apy {
+  const afterFees = nativeApy ?? 0;
+  return { afterFees, total: rewards.reduce((sum, reward) => sum - reward.apr, afterFees), rewards };
+}
 
-    return [
-      {
-        protocol: Erc4626VaultProtocol.MorphoV1,
-        vault: {
-          vaultAddress: getAddress(vault.address),
-          name: vault.name,
-          curatorAddress: vault.state?.curator ? getAddress(vault.state.curator) : null,
-          asset: toTokenInfo(vault.asset),
-          chain: toChainInfo(vault.chain),
-          metadata: { curator: toCuratorInfo(vault.state?.curators?.[0]) },
-        },
-        enabled: toBigInt(allocation.supplyCap) > 0n,
-        position: {
-          supplyAmount: toAmount(allocation.supplyAssets, loanDecimals, allocation.supplyAssetsUsd),
-          supplyShares: toBigInt(allocation.supplyShares).toString(),
-        },
-        supplyCap: toAmount(allocation.supplyCap, loanDecimals, allocation.supplyCapUsd),
-        marketSupplyShare: marketShare(allocation.supplyAssets, marketSupplyAssets, loanDecimals),
-      },
-    ];
+/** One borrow-table row from Core REST reads. `loanPriceUsd` null leaves the USD value unknown. */
+export function toRestMarketSummary(source: {
+  marketId: Hex;
+  chain: ChainInfo;
+  lltvWad: string;
+  collateralAsset: TokenInfo | null;
+  loanAsset: TokenInfo;
+  totalBorrowAssets: string;
+  loanPriceUsd: number | null;
+  borrowApyAverages: Partial<Record<RestApyAverageKey, number | null>>;
+  borrowRewards: RewardApy[];
+}): MarketSummary {
+  const { borrowApyAverages: averages, borrowRewards: rewards } = source;
+  return {
+    chain: source.chain,
+    name: composeMarketName(source.collateralAsset?.symbol, source.loanAsset.symbol),
+    marketId: source.marketId,
+    totalBorrowed: toAmountWithPrice(source.totalBorrowAssets, source.loanAsset.decimals, source.loanPriceUsd),
+    collateralAsset: source.collateralAsset,
+    loanAsset: source.loanAsset,
+    lltv: toRatio(source.lltvWad),
+    borrowApy6h: toRestBorrowApy(averages["6h"], rewards),
+    borrowApy1d: toRestBorrowApy(averages["24h"], rewards),
+    borrowApy7d: toRestBorrowApy(averages["7d"], rewards),
+    borrowApy30d: toRestBorrowApy(averages["30d"], rewards),
+  };
+}
+
+/**
+ * The AdaptiveCurveIRM curve at the current rate at target, on 101 utilization points, computed
+ * with blue-sdk as the contract does (no elapsed time). Supply APY follows `Market.getSupplyApy`.
+ * Empty when Core serves no rate at target (the market's IRM is not the AdaptiveCurveIRM).
+ */
+export function computeIrmCurve(
+  rateAtTargetWad: BigIntish | null | undefined,
+  feeWad: BigIntish | null | undefined,
+  numberOfPoints = 100,
+): IrmCurvePoint[] {
+  if (rateAtTargetWad == null) return [];
+  const rateAtTarget = toBigInt(rateAtTargetWad);
+  const fee = toBigInt(feeWad);
+  return Array.from({ length: numberOfPoints + 1 }, (_, i) => {
+    const utilization = (MathLib.WAD * BigInt(i)) / BigInt(numberOfPoints);
+    const { endBorrowRate } = AdaptiveCurveIrmLib.getBorrowRate(utilization, rateAtTarget, 0n);
+    const supplyRate = MathLib.wMulUp(MathLib.wMulDown(endBorrowRate, utilization), MathLib.WAD - fee);
+    return {
+      utilization: i / numberOfPoints,
+      borrowApy: MarketUtils.rateToApy(endBorrowRate),
+      supplyApy: MarketUtils.rateToApy(supplyRate),
+    };
   });
+}
 
-  const fromV2 = supplyingVaultV2s.flatMap((vault): MarketVaultAllocation[] => {
-    // A cap past the first page would drop this vault from the market's supplier table entirely.
-    warnIfTruncated("vault V2 caps", vault.caps.pageInfo);
-    warnIfTruncated("vault V2 adapters", vault.adapters.pageInfo);
+/** Borrow over supply, 0 for an empty market. */
+export function computeUtilization(totalSupplyAssets: BigIntish, totalBorrowAssets: BigIntish): number {
+  const supply = toBigInt(totalSupplyAssets);
+  return supply > 0n ? Number(formatUnits((toBigInt(totalBorrowAssets) * MathLib.WAD) / supply, 18)) : 0;
+}
 
-    // A vault can cap the same market through more than one adapter, so the supplier row is the
-    // sum over the market's caps rather than the first match.
-    const capsForMarket = (vault.caps.items ?? []).filter(
-      (entry) =>
-        entry.type === "MarketV1" &&
-        entry.data?.__typename === "MarketV1CapData" &&
-        entry.data.market?.marketId === marketId,
-    );
-    if (capsForMarket.length === 0) return [];
+/** One configured vault's position on the market, as read from Core REST. */
+export interface RestMarketSupplier {
+  protocol: Erc4626VaultProtocol;
+  vaultAddress: string;
+  name: string;
+  curatorAddress: string | null;
+  curator: CuratorInfo | null;
+  supplyAssets: bigint;
+  /** Vault V2 allocations are not share-denominated: "0". */
+  supplyShares: string;
+  supplyCap: bigint;
+}
 
-    // `cap.allocation` is only refreshed on (de)allocation, while the adapter's position on the
-    // market accrues interest and losses — prefer each cap's own adapter's position for the current
-    // amount (joined on the cap's `adapterAddress`) and keep the cap only for limits (and as a
-    // fallback while the position is not indexed yet).
-    const positionByAdapter = new Map<string, { supplyAssets?: BigIntish | null; supplyAssetsUsd?: number | null }>();
-    for (const adapter of vault.adapters.items ?? []) {
-      if (adapter.__typename !== "MorphoMarketV1Adapter") continue;
-      warnIfTruncated("vault V2 adapter positions", adapter.positions.pageInfo);
-      const state = (adapter.positions.items ?? []).find((entry) => entry.market.marketId === marketId)?.state;
-      if (state) positionByAdapter.set(adapter.address.toLowerCase(), state);
-    }
-
-    const priceUsd = loanPriceUsd;
-    let supplyAssets = 0n;
-    let supplyAssetsUsd: number | null = 0;
-    let absoluteCap = 0n;
-    for (const cap of capsForMarket) {
-      const adapterAddress = cap.data?.__typename === "MarketV1CapData" ? cap.data.adapterAddress : null;
-      const position = adapterAddress ? positionByAdapter.get(adapterAddress.toLowerCase()) : undefined;
-      const assets = position?.supplyAssets ?? cap.allocation;
-      supplyAssets += toBigInt(assets);
-      const entryUsd =
-        position?.supplyAssetsUsd ?? (priceUsd == null ? null : descale(assets, loanDecimals) * priceUsd);
-      supplyAssetsUsd = supplyAssetsUsd == null || entryUsd == null ? null : supplyAssetsUsd + entryUsd;
-      absoluteCap += toBigInt(cap.absoluteCap);
-    }
-
-    // A curator can leave a cap configured on a market the vault holds nothing in; drop those
-    // rather than rendering a $0 supplier row (same rule as the vault-side allocation breakdown).
-    if (supplyAssets === 0n) return [];
-
-    return [
-      {
-        protocol: Erc4626VaultProtocol.MorphoV2,
-        vault: {
-          vaultAddress: getAddress(vault.address),
-          name: vault.name,
-          curatorAddress: getAddress(vault.curator.address),
-          asset: toTokenInfo(vault.asset),
-          chain: toChainInfo(vault.chain),
-          metadata: { curator: toCuratorInfo(vault.curators.items?.[0]) },
-        },
-        enabled: absoluteCap > 0n,
-        position: {
-          supplyAmount: { ...toAmount(supplyAssets, loanDecimals), usd: supplyAssetsUsd },
-          // Vault V2 allocations are not share-denominated.
-          supplyShares: "0",
-        },
-        supplyCap: {
-          ...toAmount(absoluteCap, loanDecimals),
-          usd: priceUsd == null ? null : descale(absoluteCap, loanDecimals) * priceUsd,
-        },
-        marketSupplyShare: marketShare(supplyAssets, marketSupplyAssets, loanDecimals),
-      },
-    ];
-  });
-
-  return [...fromV1, ...fromV2];
+/**
+ * A supplier-table row. The vault's asset is the market's loan token, so it is priced and described
+ * with it; the supply share is against the market's total supply.
+ */
+export function toMarketVaultAllocation(
+  supplier: RestMarketSupplier,
+  market: { chain: ChainInfo; loanAsset: TokenInfo; loanPriceUsd: number | null; totalSupplyAssets: BigIntish },
+): MarketVaultAllocation {
+  const { decimals } = market.loanAsset;
+  const total = toBigInt(market.totalSupplyAssets);
+  return {
+    protocol: supplier.protocol,
+    vault: {
+      vaultAddress: getAddress(supplier.vaultAddress),
+      name: supplier.name,
+      curatorAddress: supplier.curatorAddress ? getAddress(supplier.curatorAddress) : null,
+      asset: market.loanAsset,
+      chain: market.chain,
+      metadata: { curator: supplier.curator },
+    },
+    enabled: supplier.supplyCap > 0n,
+    position: {
+      supplyAmount: toAmountWithPrice(supplier.supplyAssets, decimals, market.loanPriceUsd),
+      supplyShares: supplier.supplyShares,
+    },
+    supplyCap: toAmountWithPrice(supplier.supplyCap, decimals, market.loanPriceUsd),
+    marketSupplyShare: total > 0n ? descale(supplier.supplyAssets, decimals) / descale(total, decimals) : 0,
+  };
 }
 
 /** Joins the market chart series into the bucket rows the chart expects. */

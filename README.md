@@ -105,6 +105,7 @@ node scripts/verify/parity-dump.mjs --app . --out /tmp/parity/head.json
 
 -   `--providers`: `summaries` (`getVaultSummaries`) and `vaults` (`getVault` for every configured vault) by default; `vault-positions` and `market-positions` need `--account 0x...`.
 -   `--vaults 1:0xabc,1:0xdef`: only these configured vaults.
+-   `--markets 1:0xid,8453:0xid`: the market pages (`getMarket`) the `markets` provider dumps.
 -   `--max-requests` (default 50): every `fetch` counts, retries included. A request past the cap is refused and the run fails without writing a dump. The public API locks a client out for 10 minutes above 750 requests a minute. Raise the cap for a large provider such as `market-positions`, and run it on its own.
 -   The upstream is whatever the shell sets (`MORPHO_API_URL`, `MORPHO_REST_API_URL`, `MORPHO_API_KEY`), the public API otherwise. Positions read wallet balances from `MAINNET_RPC_URL_1`.
 

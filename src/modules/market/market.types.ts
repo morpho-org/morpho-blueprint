@@ -48,8 +48,6 @@ export interface MarketSummary extends MarketBorrowApyWindows {
   collateralAsset: TokenInfo | null;
   loanAsset: TokenInfo;
   lltv: Ratio;
-  /** Instantaneous borrow APY, kept alongside the windowed variants. */
-  borrowApy: Apy;
 }
 
 export interface MarketVaultAllocation {
@@ -94,7 +92,7 @@ export interface Market extends MarketSummary {
   isIdle: boolean;
   totalSupplied: Amount;
   liquidityInMarket: Amount;
-  /** Summed from `Market.publicAllocatorSharedLiquidity[].assets`. */
+  /** Core REST `reallocatable_liquidity`: what the Public Allocator V2 can move in. */
   publicAllocatorSharedLiquidity: Amount;
   collateralAsset: (TokenInfo & { priceUsd: number | null }) | null;
   loanAsset: TokenInfo & { priceUsd: number | null };
