@@ -144,7 +144,8 @@ type RestVaultSummaryBase = Omit<Adapted<MorphoVaultV2Summary>, "__typename" | "
 
 /**
  * The fields both protocols' summaries share. `total` is the native APY plus the current Merkl
- * reward APRs. Curator AUM has no production route, so it stays unset and the table hides it.
+ * reward APRs. Curator AUM is set afterwards from one batched Blueprint API read for every summary
+ * (`getVaultSummaries`).
  */
 function toRestVaultSummaryBase(source: RestVaultSummarySource): RestVaultSummaryBase {
   const { root, token, decimals, priceUsd } = source;
@@ -216,12 +217,7 @@ export function toMorphoVaultV2Details(
   summary: Adapted<MorphoVaultV2Summary>,
   details: VaultV2Details,
 ): Adapted<Omit<MorphoVaultV2, "historical">> {
-  return {
-    ...summary,
-    ...details,
-    // Hidden until the curators AUM route is in API prod (VAU-3630), as on the earn table.
-    curatorAum: undefined,
-  };
+  return { ...summary, ...details };
 }
 
 /* -------------------------------------------------------------------------------------------- */

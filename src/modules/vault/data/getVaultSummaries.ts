@@ -3,9 +3,9 @@ import "server-only";
 import { cache } from "react";
 import { type Address, getAddress, type Hex, zeroAddress } from "viem";
 import { toRoleAddress } from "@/common/data/adapters/entity";
-import { getCuratorInfo } from "@/common/data/rest/curators";
+import { getCurator, getCuratorsAumUsd, type RestCurator } from "@/common/data/rest/curators";
 import { getTokenInfo, getTokenMetadata, getTokenPriceUsd, getVaultAssetDecimals } from "@/common/data/rest/tokens";
-import type { CuratorInfo, TokenInfo } from "@/common/data/types";
+import type { TokenInfo } from "@/common/data/types";
 import { SECONDS_PER_DAY } from "@/common/utils/constants";
 import { chunk, fetchAllMorphoRestPages, fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
 import { isBlueprintApiEnabled } from "@/common/utils/morphoApiConfig";
@@ -88,6 +88,8 @@ export interface VaultV2SummaryRead {
   summary: Adapted<MorphoVaultV2Summary>;
   root: RestVaultV2Root["data"];
   state: RestVaultV2State["data"];
+  /** The curator's registry id, which keys the AUM read; `null` without a known curator. */
+  curatorId: string | null;
 }
 
 /** One vault V1's summary with the root and state it was built from, which the vault page reuses. */
@@ -95,6 +97,23 @@ export interface VaultV1SummaryRead {
   summary: Adapted<MorphoVaultV1Summary>;
   root: RestVaultV1Root["data"];
   state: RestVaultV1State["data"];
+  /** The curator's registry id, which keys the AUM read; `null` without a known curator. */
+  curatorId: string | null;
+}
+
+/**
+ * Sets each summary's curator AUM from one batched Blueprint API read. A summary keeps it unset
+ * (the UI hides it) when the Blueprint API is off, the read fails, or the route does not know the
+ * curator.
+ */
+async function withCuratorsAum<R extends { summary: { curatorAum?: number }; curatorId: string | null }>(
+  reads: readonly R[],
+): Promise<R[]> {
+  const aums = await getCuratorsAumUsd(reads.flatMap(({ curatorId }) => (curatorId ? [curatorId] : [])));
+  return reads.map((read) => {
+    const curatorAum = read.curatorId ? aums.get(read.curatorId) : undefined;
+    return curatorAum === undefined ? read : { ...read, summary: { ...read.summary, curatorAum } };
+  });
 }
 
 /** One read per unique key, shared by every vault that needs it (vaults share assets and curators). */
@@ -146,7 +165,7 @@ async function getVaultV2Summaries(
 ): Promise<VaultV2SummaryRead[]> {
   const tokenOf = once(getTokenMetadata);
   const priceOf = once(getTokenPriceUsd);
-  const curatorOf = once(getCuratorInfo);
+  const curatorOf = once(getCurator);
   // One Merkl read per chain, shared by every vault on it: React `cache` does not dedupe outside a
   // render (the health-check route), so the call site does.
   for (const { chainId } of vaults) {
@@ -170,7 +189,7 @@ async function getVaultV2Summaries(
     const [token, priceUsd, curator] = await Promise.all([
       tokenOf(chainId, asset),
       priceOf(chainId, asset),
-      curatorRole ? curatorOf(chainId, curatorRole) : Promise.resolve<CuratorInfo | null>(null),
+      curatorRole ? curatorOf(chainId, curatorRole) : Promise.resolve<RestCurator | null>(null),
     ]);
     const decimals = await getVaultAssetDecimals(chainId, root.data.asset, token);
     // A vault with unknown decimals is dropped below: no reward metadata read for it.
@@ -185,7 +204,8 @@ async function getVaultV2Summaries(
       rewards,
       token,
       priceUsd,
-      curator,
+      curator: curator?.info ?? null,
+      curatorId: curator?.id ?? null,
       decimals,
     };
   };
@@ -197,14 +217,14 @@ async function getVaultV2Summaries(
 
   return reads.flatMap((read): VaultV2SummaryRead[] => {
     if (!read) return [];
-    const { decimals, state, ...source } = read;
+    const { decimals, state, curatorId, ...source } = read;
     // Formatting with a guessed scale would misstate every amount by orders of magnitude.
     if (decimals === null) {
       console.warn(`Vault asset decimals unknown: ${read.chainId}:${read.root.address}`);
       return [];
     }
     const description = descriptions.get(vaultKey(read.chainId, read.root.address)) ?? null;
-    return [{ summary: toRestVaultV2Summary({ ...source, decimals, description }), root: read.root, state }];
+    return [{ summary: toRestVaultV2Summary({ ...source, decimals, description }), root: read.root, state, curatorId }];
   });
 }
 
@@ -252,7 +272,7 @@ async function getVaultV1Summaries(
 ): Promise<VaultV1SummaryRead[]> {
   const tokenOf = once(getTokenMetadata);
   const priceOf = once(getTokenPriceUsd);
-  const curatorOf = once(getCuratorInfo);
+  const curatorOf = once(getCurator);
   const collateralTokenOf = once(getTokenInfo);
   for (const { chainId } of vaults) {
     if (!rewardIndexes.has(chainId)) rewardIndexes.set(chainId, getMerklRewardIndex(chainId));
@@ -285,7 +305,7 @@ async function getVaultV1Summaries(
     const [token, priceUsd, curator] = await Promise.all([
       tokenOf(chainId, asset),
       priceOf(chainId, asset),
-      curatorRole ? curatorOf(chainId, curatorRole) : Promise.resolve<CuratorInfo | null>(null),
+      curatorRole ? curatorOf(chainId, curatorRole) : Promise.resolve<RestCurator | null>(null),
     ]);
     const decimals = await getVaultAssetDecimals(chainId, root.data.asset, token);
     // A vault with unknown decimals is dropped below: no reward metadata read for it.
@@ -299,7 +319,8 @@ async function getVaultV1Summaries(
       rewards: await withRewardTokenMetadata(rewardIndex, rewardApys),
       token,
       priceUsd,
-      curator,
+      curator: curator?.info ?? null,
+      curatorId: curator?.id ?? null,
       allocations: withdrawQueueAllocations(allocations?.data?.data.allocations ?? []),
       decimals,
     };
@@ -331,7 +352,7 @@ async function getVaultV1Summaries(
 
   return reads.flatMap((read): VaultV1SummaryRead[] => {
     if (!read) return [];
-    const { decimals, state, allocations, ...source } = read;
+    const { decimals, state, allocations, curatorId, ...source } = read;
     // Formatting with a guessed scale would misstate every amount by orders of magnitude.
     if (decimals === null) {
       console.warn(`Vault asset decimals unknown: ${read.chainId}:${read.root.address}`);
@@ -350,6 +371,7 @@ async function getVaultV1Summaries(
         summary: toRestVaultV1Summary({ ...source, decimals, description }, marketAllocations),
         root: read.root,
         state,
+        curatorId,
       },
     ];
   });
@@ -365,9 +387,9 @@ export async function getVaultV1Summary(
   address: Address,
   rewardIndex: Promise<MerklRewardIndex>,
 ): Promise<VaultV1SummaryRead | null> {
-  const [summary] = await getVaultV1Summaries([{ chainId, address }], new Map([[chainId, rewardIndex]]), {
-    withCollateral: false,
-  });
+  const [summary] = await withCuratorsAum(
+    await getVaultV1Summaries([{ chainId, address }], new Map([[chainId, rewardIndex]]), { withCollateral: false }),
+  );
   return summary ?? null;
 }
 
@@ -381,7 +403,9 @@ export async function getVaultV2Summary(
   address: Address,
   rewardIndex: Promise<MerklRewardIndex>,
 ): Promise<VaultV2SummaryRead | null> {
-  const [summary] = await getVaultV2Summaries([{ chainId, address }], new Map([[chainId, rewardIndex]]));
+  const [summary] = await withCuratorsAum(
+    await getVaultV2Summaries([{ chainId, address }], new Map([[chainId, rewardIndex]])),
+  );
   return summary ?? null;
 }
 
@@ -406,8 +430,9 @@ export const getVaultSummaries = cache(async (): Promise<VaultSummary[]> => {
     ),
   ]);
 
+  // One AUM read for both protocols' curators.
   const byKey = new Map<string, VaultSummary>();
-  for (const { summary } of [...v2Summaries, ...v1Summaries]) {
+  for (const { summary } of await withCuratorsAum([...v2Summaries, ...v1Summaries])) {
     byKey.set(vaultKey(summary.chain.id, summary.vaultAddress), normalizeVault(summary));
   }
 
