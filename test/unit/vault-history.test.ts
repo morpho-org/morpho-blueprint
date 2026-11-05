@@ -10,21 +10,22 @@ vi.mock("react", async (importOriginal) => ({
 
 const VAULT = "0x0000000000000000000000000000000000000001";
 const USDC = getAddress("0x00000000000000000000000000000000000000c1");
-const BASE = `/v0/vaults-v2/1:${VAULT}`;
 const PRICES = `/v0/blueprint-app-api/token-prices/1:${USDC}/history`;
 
-// The summary read is covered by vault-v2-details; here it only supplies the asset to price.
-vi.mock("@/modules/vault/data/getVaultSummaries", () => ({
-  getVaultV2Summary: async () => ({
-    summary: { asset: { address: USDC, decimals: 6, priceUsd: 1 }, chain: { id: 1, name: "Ethereum" } },
-    root: { curator: null, performance_fee_wad: null, management_fee_wad: null },
-    state: { idle_assets: "0" },
-  }),
-}));
+// The summary reads are covered by vault-v1-rest and vault-v2-details; here they only supply the
+// asset to price.
+const summary = async () => ({
+  summary: { asset: { address: USDC, decimals: 6, priceUsd: 1 }, chain: { id: 1, name: "Ethereum" } },
+  root: { curator: null, performance_fee_wad: null, management_fee_wad: null },
+  state: { idle_assets: "0" },
+});
+vi.mock("@/modules/vault/data/getVaultSummaries", () => ({ getVaultV1Summary: summary, getVaultV2Summary: summary }));
 vi.mock("@/modules/reward/data/getMerklRewardIndex", () => ({ getMerklRewardIndex: async () => ({}) }));
+vi.mock("@/modules/vault/data/getVaultV1Details", () => ({ getVaultV1Details: async () => ({}) }));
 vi.mock("@/modules/vault/data/getVaultV2Details", () => ({ getVaultV2Details: async () => ({}) }));
 vi.mock("@/modules/vault/data/adapters", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/vault/data/adapters")>()),
+  toMorphoVaultV1Details: () => ({}),
   toMorphoVaultV2Details: () => ({}),
 }));
 vi.mock("@/modules/vault/utils/normalizeVault", () => ({ normalizeVault: <T>(vault: T) => vault }));
@@ -58,30 +59,36 @@ vi.mock("@/common/utils/fetchMorphoRest", () => ({
   restSelector: (chainId: number, id: string) => `${chainId}:${id}`,
 }));
 
-async function loadHistory() {
-  const { getVault } = await import("@/modules/vault/data/getVault");
-  const vault = await getVault(1, VAULT, Erc4626VaultProtocol.MorphoV2);
-  return vault.historical;
-}
+// V1 and V2 vaults read the same history routes under their own prefix and price them the same way.
+describe.each([
+  { protocol: Erc4626VaultProtocol.MorphoV1, prefix: "/v0/vaults-v1" },
+  { protocol: Erc4626VaultProtocol.MorphoV2, prefix: "/v0/vaults-v2" },
+])("getVault ($protocol history)", ({ protocol, prefix }) => {
+  const BASE = `${prefix}/1:${VAULT}`;
 
-function seedHourly() {
-  routes.set(`${BASE}/state/history?seven_days`, {
-    data: [
-      { timestamp: 3600, total_assets: "1500000" },
-      { timestamp: 7200, total_assets: "2000000" },
-      // Core appends a request-time point off the hourly grid.
-      { timestamp: 7300, total_assets: "2100000" },
-    ],
-  });
-  routes.set(`${BASE}/apy/history?seven_days`, {
-    data: [
-      { timestamp: 3600, apy: 0.04 },
-      { timestamp: 7200, apy: 0.05 },
-    ],
-  });
-}
+  async function loadHistory() {
+    const { getVault } = await import("@/modules/vault/data/getVault");
+    const vault = await getVault(1, VAULT, protocol);
+    return vault.historical;
+  }
 
-describe("getVault (Vault V2 history)", () => {
+  function seedHourly() {
+    routes.set(`${BASE}/state/history?seven_days`, {
+      data: [
+        { timestamp: 3600, total_assets: "1500000" },
+        { timestamp: 7200, total_assets: "2000000" },
+        // Core appends a request-time point off the hourly grid.
+        { timestamp: 7300, total_assets: "2100000" },
+      ],
+    });
+    routes.set(`${BASE}/apy/history?seven_days`, {
+      data: [
+        { timestamp: 3600, apy: 0.04 },
+        { timestamp: 7200, apy: 0.05 },
+      ],
+    });
+  }
+
   beforeEach(() => {
     vi.resetModules();
     routes.clear();

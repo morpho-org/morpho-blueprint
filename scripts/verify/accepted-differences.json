@@ -25,7 +25,7 @@
     {
       "path": "data.vaults.*.historical.*[*].totalSupplied.usd",
       "kind": "value",
-      "reason": "Vault V1 history moved to Core REST, whose state/history serves total_assets only: V1 deposits rows carry no USD value (null)",
+      "reason": "Core REST serves no USD vault history: V1 and V2 deposits rows are priced from the Blueprint price history only when its key is set (null without it, so the USD toggle hides; with it, nearest price sample vs GraphQL's own USD series)",
       "ticket": "VAU-3618"
     },
     {
