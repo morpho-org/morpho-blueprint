@@ -7,11 +7,11 @@
     "node": ">=22.22.0"
   },
   "scripts": {
-    "dev": "concurrently --names \"next,codegen\" --prefix-colors \"cyan.bold,yellow.bold\" \"next dev --turbopack\" \"pnpm codegen --watch\"",
-    "prebuild": "pnpm codegen && pnpm check && pnpm check:types",
+    "dev": "next dev --turbopack",
+    "prebuild": "pnpm check && pnpm check:types",
     "build": "next build",
     "start": "next start",
-    "codegen": "graphql-codegen --config codegen.ts",
+    "codegen": "echo \"No codegen: the app reads Core REST only.\"",
     "test": "vitest",
     "check": "biome check --fix",
     "check:types": "tsc --noEmit"
@@ -46,7 +46,6 @@
     "cmdk": "1.1.1",
     "connectkit": "1.9.1",
     "dotenv": "17.2.2",
-    "graphql": "16.11.0",
     "lucide-react": "0.544.0",
     "motion": "12.23.12",
     "next": "15.5.28",
@@ -68,21 +67,15 @@
     "zod": "4.1.12"
   },
   "devDependencies": {
-    "@0no-co/graphqlsp": "^1.15.0",
     "@biomejs/biome": "2.1.1",
     "@fast-check/vitest": "^0.2.2",
-    "@graphql-codegen/cli": "^7.0.0",
-    "@graphql-codegen/schema-ast": "^6.0.0",
-    "@graphql-typed-document-node/core": "^3.2.0",
     "@morpho-org/test": "^2.6.0",
-    "@parcel/watcher": "^2.5.1",
     "@tailwindcss/postcss": "^4.2.4",
     "@tanstack/react-query-devtools": "^5.87.4",
     "@types/node": "^24",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@types/react-scroll-sync": "^0.9.0",
-    "concurrently": "^9.2.1",
     "fast-check": "^4.3.0",
     "jsdom": "^27.0.0",
     "pino-pretty": "^13.1.1",
@@ -122,8 +115,7 @@
       "socket.io-parser@>=4 <4.2.7": "4.2.7",
       "source-map-js@>=1 <1.2.2": "1.2.2",
       "ws@>=8 <8.21.3": "8.21.3",
-      "ws@>=7 <7.5.13": "7.5.13",
-      "@graphql-tools/executor-legacy-ws@>=1 <1.1.36": "1.1.36"
+      "ws@>=7 <7.5.13": "7.5.13"
     }
   }
 }

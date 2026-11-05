@@ -4,8 +4,7 @@ import "server-only";
 const DEFAULT_MORPHO_API_URL = "https://api.morpho.org";
 
 /**
- * The two Morpho API hosts the app reads. `core` serves Core REST (`/v0/...`) on the host the
- * GraphQL API already uses. `blueprint` serves the Blueprint API routes (`/v0/blueprint-app-api/...`)
+ * The two Morpho API hosts the app reads. `core` serves Core REST (`/v0/...`, `/v1/...`). `blueprint` serves the Blueprint API routes (`/v0/blueprint-app-api/...`)
  * on the internal deployment, and is off unless its key is set.
  */
 export type MorphoApi = "core" | "blueprint";
@@ -17,7 +16,7 @@ export interface MorphoApiHost {
 
 const env = (name: string) => process.env[name]?.trim() || undefined;
 
-// `MORPHO_API_URL` is the GraphQL endpoint (`<host>/graphql`); Core REST lives on the same host.
+// `MORPHO_API_URL` was the GraphQL endpoint (`<host>/graphql`); deployments that only set it keep its host.
 function coreBaseUrl(): string {
   const restUrl = env("MORPHO_REST_API_URL");
   if (restUrl) return restUrl;

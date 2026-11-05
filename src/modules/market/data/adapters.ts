@@ -1,17 +1,13 @@
 import { AdaptiveCurveIrmLib, MarketUtils, MathLib } from "@morpho-org/blue-sdk";
 import { formatUnits, getAddress, type Hex } from "viem";
-import { descale, toAmount, toAmountWithPrice, toBigInt, toRatio } from "@/common/data/adapters/amount";
-import { assembleApy, toRewardApys } from "@/common/data/adapters/apy";
-import { toChainInfo, toTokenInfo } from "@/common/data/adapters/entity";
+import { descale, toAmountWithPrice, toBigInt, toRatio } from "@/common/data/adapters/amount";
 import { type DataPoint, descaleSeries, zipTimeseries } from "@/common/data/adapters/timeseries";
 import type { Apy, ChainInfo, CuratorInfo, RewardApy, TokenInfo } from "@/common/data/types";
 import { numberToString } from "@/common/utils/format";
 import type { Erc4626VaultProtocol } from "@/config/vault-protocol";
-import type { MarketInfoFragmentFragment, MarketSummaryFragmentFragment } from "@/generated/gql/morpho/graphql";
 import type {
   IrmCurvePoint,
   MarketHistoricalEntry,
-  MarketInfo,
   MarketSummary,
   MarketVaultAllocation,
 } from "@/modules/market/market.types";
@@ -52,82 +48,6 @@ export function toCollateralPriceInLoanAsset(
   const raw = toBigInt(price);
   const scale = 36 + Math.round(loanDecimals) - Math.round(collateralDecimals);
   return { raw: raw.toString(), formatted: formatUnits(raw, scale) };
-}
-
-export function toMarketInfo(market: MarketInfoFragmentFragment): MarketInfo {
-  const state = market.state;
-  const collateralAsset = market.collateralAsset ? toTokenInfo(market.collateralAsset) : null;
-  const loanAsset = toTokenInfo(market.loanAsset);
-  const rewards = toRewardApys(state?.rewards, "supply");
-
-  return {
-    marketId: market.marketId,
-    chain: toChainInfo(market.chain),
-    name: composeMarketName(collateralAsset?.symbol, loanAsset.symbol),
-    // A market with no collateral asset is an idle market.
-    isIdle: collateralAsset === null,
-    lltv: toRatio(market.lltv),
-    collateralAsset,
-    loanAsset,
-    totalSupplied: { usd: state?.supplyAssetsUsd ?? null },
-    supplyApy6h: assembleApy({
-      apyExcludingRewards: state?.avgSupplyApy,
-      netApy: state?.avgNetSupplyApy,
-      rewards,
-    }),
-    supplyApy1d: assembleApy({
-      apyExcludingRewards: state?.dailySupplyApy,
-      netApy: state?.dailyNetSupplyApy,
-      rewards,
-    }),
-    supplyApy7d: assembleApy({
-      apyExcludingRewards: state?.weeklySupplyApy,
-      netApy: state?.weeklyNetSupplyApy,
-      rewards,
-    }),
-    supplyApy30d: assembleApy({
-      apyExcludingRewards: state?.monthlySupplyApy,
-      netApy: state?.monthlyNetSupplyApy,
-      rewards,
-    }),
-  };
-}
-
-export function toMarketSummary(market: MarketSummaryFragmentFragment): MarketSummary {
-  const state = market.state;
-  const collateralAsset = market.collateralAsset ? toTokenInfo(market.collateralAsset) : null;
-  const loanAsset = toTokenInfo(market.loanAsset);
-  const rewards = toRewardApys(state?.rewards, "borrow");
-
-  return {
-    chain: toChainInfo(market.chain),
-    name: composeMarketName(collateralAsset?.symbol, loanAsset.symbol),
-    marketId: market.marketId,
-    totalBorrowed: toAmount(state?.borrowAssets, loanAsset.decimals, state?.borrowAssetsUsd),
-    collateralAsset,
-    loanAsset,
-    lltv: toRatio(market.lltv),
-    borrowApy6h: assembleApy({
-      apyExcludingRewards: state?.avgBorrowApy,
-      netApy: state?.avgNetBorrowApy,
-      rewards,
-    }),
-    borrowApy1d: assembleApy({
-      apyExcludingRewards: state?.dailyBorrowApy,
-      netApy: state?.dailyNetBorrowApy,
-      rewards,
-    }),
-    borrowApy7d: assembleApy({
-      apyExcludingRewards: state?.weeklyBorrowApy,
-      netApy: state?.weeklyNetBorrowApy,
-      rewards,
-    }),
-    borrowApy30d: assembleApy({
-      apyExcludingRewards: state?.monthlyBorrowApy,
-      netApy: state?.monthlyNetBorrowApy,
-      rewards,
-    }),
-  };
 }
 
 /** Core REST's `apy-averages` window keys, as the market list reads them. */

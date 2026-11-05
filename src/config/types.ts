@@ -88,7 +88,7 @@ export interface AppConfig {
   // `iconSlug` (optional) names the chain's icon on the Morpho CDN
   // (https://cdn.morpho.org/assets/chains/<slug>), overriding the built-in defaults in
   // `getChainIconUrl` (which cover all demo chains). A slug without an extension resolves as .svg;
-  // a few CDN assets are .png only (e.g. "base.png", "world.png"). The GraphQL API serves no chain
+  // a few CDN assets are .png only (e.g. "base.png", "world.png"). The Morpho API serves no chain
   // icon, so a chain with no slug and no default simply renders without one.
   readonly chainConfig: Record<
     SupportedChainId,
