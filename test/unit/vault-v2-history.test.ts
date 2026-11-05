@@ -172,6 +172,8 @@ describe("getVault (Vault V2 history)", () => {
         { timestamp: 259_200, total_assets: "3000000" },
         { timestamp: 345_600, total_assets: "4000000" },
         { timestamp: 432_000, total_assets: "5000000" },
+        { timestamp: 518_400, total_assets: "6000000" },
+        { timestamp: 604_800, total_assets: "7000000" },
       ],
     });
     routes.set(`${BASE}/apy/history?inception`, {
@@ -181,6 +183,9 @@ describe("getVault (Vault V2 history)", () => {
         { timestamp: 259_200, apy: 0.04 },
         { timestamp: 345_600, apy: 1e37 },
         { timestamp: 432_000, apy: 10 },
+        // Core serves -99.99% for a Gauntlet USDT Frontier vault in Dec 2025, while it held about $2.
+        { timestamp: 518_400, apy: -0.9999 },
+        { timestamp: 604_800, apy: -0.98 },
       ],
     });
 
@@ -194,6 +199,9 @@ describe("getVault (Vault V2 history)", () => {
       { bucketTimestamp: 345_600, totalSupplied: { formatted: "4", usd: null }, netApy: { total: null } },
       // 1000% is the top of the kept range.
       { bucketTimestamp: 432_000, totalSupplied: { formatted: "5", usd: null }, netApy: { total: 10 } },
+      // -99% and below is a gap; just above it is kept.
+      { bucketTimestamp: 518_400, totalSupplied: { formatted: "6", usd: null }, netApy: { total: null } },
+      { bucketTimestamp: 604_800, totalSupplied: { formatted: "7", usd: null }, netApy: { total: -0.98 } },
     ]);
   });
 
