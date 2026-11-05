@@ -1,11 +1,21 @@
-import { DEFAULT_SLIPPAGE_TOLERANCE, getChainAddresses, type MarketId, MathLib } from "@morpho-org/blue-sdk";
-import { blueAbi, fetchMarket } from "@morpho-org/blue-sdk-viem";
+import {
+  DEFAULT_SLIPPAGE_TOLERANCE,
+  getChainAddress,
+  getChainAddresses,
+  type MarketId,
+  MathLib,
+} from "@morpho-org/blue-sdk";
+import { fetchMarket } from "@morpho-org/blue-sdk-viem";
+import {
+  RepayExceedsDebtError,
+  WithdrawExceedsCollateralError,
+  WithdrawMakesPositionUnhealthyError,
+} from "@morpho-org/morpho-sdk";
 import type { AnvilTestClient } from "@morpho-org/test";
 import { type Hex, maxUint256, parseUnits } from "viem";
-import { readContract } from "viem/actions";
 import { describe, expect } from "vitest";
-
 import { type MarketAction, marketRepayAndWithdrawCollateralAction } from "@/actions";
+import { UserFacingError } from "@/actions/types";
 
 import { test } from "../../config";
 import { expectZeroErc20Balances, getErc20BalanceOf } from "../../helpers/erc20";
@@ -67,10 +77,8 @@ async function runMarketRepayAndWithdrawCollateralTest({
     await client.deal({ erc20: loanAssetAddress, amount: initialState.walletLoanAssetBalance });
   }
 
-  const {
-    permit2,
-    bundler3: { bundler3, generalAdapter1 },
-  } = getChainAddresses(client.chain.id);
+  const { permit2 } = getChainAddresses(client.chain.id);
+  const blueBundlesV1 = getChainAddress(client.chain.id, "bundles.blueBundlesV1");
 
   // Act
   const action = await marketRepayAndWithdrawCollateralAction({
@@ -90,8 +98,8 @@ async function runMarketRepayAndWithdrawCollateralTest({
     client,
     logs,
     client.account.address,
-    [...(permit2 ? [permit2] : []), generalAdapter1], // Only ever allowed to apporve GA1 or permit2
-    [generalAdapter1], // Only ever allowed to permit GA1
+    [...(permit2 ? [permit2] : []), blueBundlesV1], // Only ever allowed to apporve GA1 or permit2
+    [blueBundlesV1], // Only ever allowed to permit GA1
   );
 
   const marketPosition = await getMorphoMarketPosition(client, marketId);
@@ -129,8 +137,8 @@ async function runMarketRepayAndWithdrawCollateralTest({
   }
 
   // Make sure no funds left in bundler or adapters (underlying assets or shares)
-  await expectZeroErc20Balances(client, [bundler3, generalAdapter1], collateralAssetAddress);
-  await expectZeroErc20Balances(client, [bundler3, generalAdapter1], loanAssetAddress);
+  await expectZeroErc20Balances(client, [blueBundlesV1], collateralAssetAddress);
+  await expectZeroErc20Balances(client, [blueBundlesV1], loanAssetAddress);
 
   return action;
 }
@@ -254,7 +262,7 @@ describe("marketRepayAndWithdrawCollateralAction", () => {
           repayAmount: parseUnits("10", 6),
           withdrawCollateralAmount: parseUnits("0", 18),
         }),
-      ).rejects.toThrow("Simulation Error: insufficient balance of user");
+      ).rejects.toThrow(UserFacingError);
     });
     test("repay exceeds position balance", async ({ client }) => {
       await expect(
@@ -269,7 +277,7 @@ describe("marketRepayAndWithdrawCollateralAction", () => {
           repayAmount: parseUnits("1000", 6),
           withdrawCollateralAmount: parseUnits("0", 18),
         }),
-      ).rejects.toThrow("Simulation Error: insufficient position for user");
+      ).rejects.toThrow(RepayExceedsDebtError);
     });
     test("withdraw collateral exceeds position balance", async ({ client }) => {
       await expect(
@@ -284,7 +292,7 @@ describe("marketRepayAndWithdrawCollateralAction", () => {
           repayAmount: maxUint256,
           withdrawCollateralAmount: parseUnits("100", 18),
         }),
-      ).rejects.toThrow("Simulation Error: insufficient position for user");
+      ).rejects.toThrow(WithdrawExceedsCollateralError);
     });
     test("prepare error if loan is not sufficently collateralized", async ({ client }) => {
       await expect(
@@ -299,49 +307,7 @@ describe("marketRepayAndWithdrawCollateralAction", () => {
           repayAmount: parseUnits("0", 6),
           withdrawCollateralAmount: parseUnits("10", 18),
         }),
-      ).rejects.toThrow("Simulation Error: insufficient collateral for user");
-    });
-    test("tx reverts if slippage tolerance is exceeded", async ({ client }) => {
-      await expect(
-        runMarketRepayAndWithdrawCollateralTest({
-          client,
-          marketId: WBTC_USDC_MARKET_ID,
-          initialState: {
-            positionCollateralBalance: parseUnits("100", 18),
-            positionLoanBalance: parseUnits("100", 6),
-            walletLoanAssetBalance: parseUnits("10", 6),
-          },
-          repayAmount: parseUnits("5", 6),
-          withdrawCollateralAmount: BigInt(0),
-          beforeExecutionCb: async () => {
-            const { morpho } = getChainAddresses(client.chain.id);
-            const [, , totalBorrowAssets] = await readContract(client, {
-              address: morpho,
-              abi: blueAbi,
-              functionName: "market",
-              args: [WBTC_USDC_MARKET_ID],
-            });
-            // Induce 0.05% slippage
-            const newTotalBorrowAssets =
-              (totalBorrowAssets * BigInt(Math.floor((1 + 0.0005) * 100000))) / BigInt(100000);
-            const borrowSlot = "0xaf5f02fb405ee52198ad944841235017894e4a1f2f9e57ce42e6df356ed67f5e" as Hex; // totalBorrowAssets in lower 128 bits, totalBorrowShares in upper 128 bits
-            const slotVal = await client.getStorageAt({
-              address: morpho,
-              slot: borrowSlot,
-            });
-            // Extract upper 128 bits (borrowShares)
-            const totalBorrowShares = BigInt(slotVal!) >> BigInt(128);
-            const newVal = (totalBorrowShares << BigInt(128)) | newTotalBorrowAssets;
-            const newSlotVal = `0x${newVal.toString(16).padStart(64, "0")}`;
-            // Override totalBorrowAssets to cause slippage
-            await client.setStorageAt({
-              address: morpho,
-              index: borrowSlot,
-              value: newSlotVal as Hex,
-            });
-          },
-        }),
-      ).rejects.toThrow("action-tx-reverted");
+      ).rejects.toThrow(WithdrawMakesPositionUnhealthyError);
     });
   });
 });

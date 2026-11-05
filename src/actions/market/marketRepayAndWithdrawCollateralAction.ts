@@ -1,20 +1,18 @@
-import { getChainAddresses, type MarketId } from "@morpho-org/blue-sdk";
-import type { InputBundlerOperation } from "@morpho-org/bundler-sdk-viem";
-import { type Address, maxUint256 } from "viem";
-
-import { getIsContract } from "@/actions/data/rpc/getIsContract";
-import { getSimulationState } from "@/actions/data/rpc/getSimulationState";
-import { APP_CONFIG } from "@/config";
+import type { MarketId } from "@morpho-org/blue-sdk";
+import { fetchMarket } from "@morpho-org/blue-sdk-viem";
+import { morphoViemExtension } from "@morpho-org/morpho-sdk";
+import { type Address, erc20Abi, maxUint256 } from "viem";
+import { readContract } from "viem/actions";
 import { type ClientWithChain, type MarketAction, UserFacingError } from "../types";
-import { actionFromInputOps } from "../utils/actionFromInputOps";
+import { transactionRequestsFromMorphoAction } from "../utils/morphoAction";
 import { computeMarketPositionChange } from "../utils/positionChange";
 
 interface MarketRepayAndWithdrawCollateralActionParameters {
   publicClient: ClientWithChain;
   marketId: MarketId;
   accountAddress: Address;
-  repayAmount: bigint; // Max uint256 for entire position balance
-  withdrawCollateralAmount: bigint; // Max uint256 for entire position collateral balance
+  repayAmount: bigint;
+  withdrawCollateralAmount: bigint;
 }
 
 export async function marketRepayAndWithdrawCollateralAction({
@@ -24,82 +22,48 @@ export async function marketRepayAndWithdrawCollateralAction({
   repayAmount,
   withdrawCollateralAmount,
 }: MarketRepayAndWithdrawCollateralActionParameters): Promise<MarketAction> {
-  const { morpho: morphoBlueAddress } = getChainAddresses(publicClient.chain.id);
-
   if (repayAmount < 0n || withdrawCollateralAmount < 0n) {
     throw new UserFacingError("Repay and withdraw collateral amounts cannot be negative.");
   }
   if (repayAmount === 0n && withdrawCollateralAmount === 0n) {
     throw new UserFacingError("Repay and withdraw collateral amounts cannot both be 0.");
   }
-
-  const [initialSimulationState, isContract] = await Promise.all([
-    getSimulationState({
-      actionType: "market",
-      accountAddress,
-      marketId,
-      publicClient,
-      requiresPublicReallocation: false,
-    }),
-    getIsContract(publicClient, accountAddress),
-  ]);
-
+  const marketData = await fetchMarket(marketId, publicClient);
+  const market = publicClient
+    .extend(morphoViemExtension({ supportSignature: false }))
+    .morpho.blue(marketData.params, publicClient.chain.id);
+  const positionData = await market.getPositionData(accountAddress);
   const isMaxRepay = repayAmount === maxUint256;
-  const isMaxWithdrawCollateral = withdrawCollateralAmount === maxUint256;
-
-  const userPosition = initialSimulationState.getPosition(accountAddress, marketId);
-
-  const isRepay = repayAmount > 0n;
-  const isWithdraw = withdrawCollateralAmount > 0n;
-
-  const action = actionFromInputOps(
-    publicClient.chain.id,
-    [
-      ...(isRepay
-        ? [
-            {
-              type: "Blue_Repay",
-              sender: accountAddress,
-              address: morphoBlueAddress,
-              args: {
-                id: marketId,
-                onBehalf: accountAddress,
-                // Use shares if a max repay to ensure fully closed position
-                ...(isMaxRepay ? { shares: userPosition.borrowShares } : { assets: repayAmount }),
-                slippage: APP_CONFIG.actionParameters.bundler3Config.slippageToleranceWad,
-              },
-            } as InputBundlerOperation,
-          ]
-        : []),
-      ...(isWithdraw
-        ? [
-            {
-              type: "Blue_WithdrawCollateral",
-              sender: accountAddress,
-              address: morphoBlueAddress,
-              args: {
-                id: marketId,
-                onBehalf: accountAddress,
-                receiver: accountAddress,
-                assets: isMaxWithdrawCollateral ? userPosition.collateral : withdrawCollateralAmount,
-              },
-            } as InputBundlerOperation,
-          ]
-        : []),
-    ],
-    accountAddress,
-    isContract,
-    initialSimulationState,
-    `Confirm ${isRepay ? "Repay" : ""}${isRepay && isWithdraw ? " & " : ""}${isWithdraw ? "Withdraw" : ""}`,
-  );
-
+  const collateralAssets = withdrawCollateralAmount === maxUint256 ? positionData.collateral : withdrawCollateralAmount;
+  const output = market.repayWithdrawCollateral({
+    userAddress: accountAddress,
+    positionData,
+    collateralAssets,
+    ...(isMaxRepay ? { repayShares: maxUint256 } : { repayAssets: repayAmount }),
+    deadline: BigInt(Math.floor(Date.now() / 1000) + 30 * 60),
+  });
+  const loanBalance = await readContract(publicClient, {
+    address: marketData.params.loanToken,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [accountAddress],
+  });
+  const repayAssets = isMaxRepay ? marketData.toBorrowAssets(positionData.borrowShares) : repayAmount;
+  if (repayAssets > loanBalance) {
+    throw new UserFacingError("Repay amount exceeds the account balance.");
+  }
   return {
-    ...action,
+    chainId: publicClient.chain.id,
+    signatureRequests: [],
+    transactionRequests: await transactionRequestsFromMorphoAction(
+      output,
+      `Confirm ${repayAmount > 0n ? "Repay" : ""}${repayAmount > 0n && collateralAssets > 0n ? " & " : ""}${collateralAssets > 0n ? "Withdraw" : ""}`,
+    ),
     positionChange: computeMarketPositionChange(
-      marketId,
-      accountAddress,
-      initialSimulationState,
-      action.finalSimulationState,
+      marketData,
+      positionData,
+      -collateralAssets,
+      -(isMaxRepay ? marketData.toBorrowAssets(positionData.borrowShares) : repayAmount),
     ),
   };
 }

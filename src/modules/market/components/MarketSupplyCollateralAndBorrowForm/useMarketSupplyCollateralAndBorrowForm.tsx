@@ -7,11 +7,11 @@ import { useDebounce } from "use-debounce";
 import { getAddress, type Hex, maxUint256 } from "viem";
 import { useAccount, usePublicClient } from "wagmi";
 import { type MarketAction, marketSupplyCollateralAndBorrowAction, UserFacingError } from "@/actions";
+import { filterMorphoV2VaultAddresses } from "@/actions/utils/filterMorphoV2VaultAddresses";
 import { DEBOUNCE_TIME_MS } from "@/common/utils/constants";
 import { parseOnchainAmount } from "@/common/utils/schemas";
 import { tryCatch } from "@/common/utils/tryCatch";
 import type { SupportedChainId } from "@/config/types";
-import { Erc4626VaultProtocol } from "@/config/vault-protocol";
 import type { MarketNonIdle } from "@/modules/market/data/getMarket";
 import type { MarketPosition } from "@/modules/market/data/getMarketPositions";
 import { useMarketPosition } from "@/modules/market/hooks/useMarketPositions";
@@ -87,11 +87,7 @@ export function useMarketSupplyCollateralAndBorrowForm({
           accountAddress: address,
           collateralAmount: supplyCollateralAmount,
           borrowAmount: submittedValues.borrowAmount,
-          // Only MetaMorpho (V1) vaults participate in public-allocator reallocation; the
-          // simulation's fetchAccrualVault reverts on a vault V2 address.
-          allocatingVaultAddresses: market.vaultAllocations
-            .filter((v) => v.protocol === Erc4626VaultProtocol.MorphoV1)
-            .map((v) => getAddress(v.vault.vaultAddress)),
+          allocatingVaultAddresses: filterMorphoV2VaultAddresses(market.vaultAllocations).map(getAddress),
         }),
       );
 

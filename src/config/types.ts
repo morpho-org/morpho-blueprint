@@ -105,9 +105,7 @@ export interface AppConfig {
     // Target utilization above which the public allocator shared liquidity algorithm is enabled for borrowing
     readonly publicAllocatorSupplyTargetUtilizationWad: bigint; // Scaled by WAD
 
-    // Configuration for bundler3 support.
-    // NOTE: currently `enable` only controls vault actions, market actions always use bundler3.
-    //       in the future `enable` will control both vault and market actions (but not bundler3 actions are not yet implemented).
+    // Select morpho-sdk vault actions instead of Direct actions. Markets always use morpho-sdk.
     readonly bundler3Config: {
       readonly enabled: boolean;
       readonly slippageToleranceWad: bigint;

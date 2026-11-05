@@ -1,5 +1,6 @@
-import type { BundlerCall, SignatureRequirementFunction } from "@morpho-org/bundler-sdk-viem";
 import type { Address, Chain, Client, Hex, Transport, TransactionRequest as ViemTransactionRequest } from "viem";
+
+export type SignatureRequirementFunction = (client: Client) => Promise<unknown>;
 
 export type ClientWithChain = Client<Transport, Chain>;
 
@@ -34,12 +35,6 @@ export type Action = {
 export type VaultAction = Action & { positionChange: VaultPositionChange };
 
 export type MarketAction = Action & { positionChange: MarketPositionChange };
-
-export interface Subbundle {
-  signatureRequirements: SignatureRequest[];
-  transactionRequirements: TransactionRequest[];
-  bundlerCalls: () => BundlerCall[]; // Encode just in time so we can use signatures
-}
 
 export interface SimulatedValueChange<T> {
   before: T;

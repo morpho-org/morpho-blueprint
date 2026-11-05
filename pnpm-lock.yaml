@@ -43,20 +43,17 @@ importers:
         specifier: 5.2.2
         version: 5.2.2(react-hook-form@7.65.0(react@19.1.1))
       '@morpho-org/blue-sdk':
-        specifier: 5.3.0
-        version: 5.3.0(@morpho-org/morpho-ts@2.4.4)
+        specifier: 8.1.0
+        version: 8.1.0(@morpho-org/morpho-ts@4.1.0)
       '@morpho-org/blue-sdk-viem':
-        specifier: 4.0.1
-        version: 4.0.1(@morpho-org/blue-sdk@5.3.0(@morpho-org/morpho-ts@2.4.4))(@morpho-org/morpho-ts@2.4.4)(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))
-      '@morpho-org/bundler-sdk-viem':
-        specifier: 4.0.2
-        version: 4.0.2(@morpho-org/blue-sdk-viem@4.0.1(@morpho-org/blue-sdk@5.3.0(@morpho-org/morpho-ts@2.4.4))(@morpho-org/morpho-ts@2.4.4)(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12)))(@morpho-org/blue-sdk@5.3.0(@morpho-org/morpho-ts@2.4.4))(@morpho-org/morpho-ts@2.4.4)(@morpho-org/simulation-sdk@3.1.3(@morpho-org/blue-sdk@5.3.0(@morpho-org/morpho-ts@2.4.4))(@morpho-org/morpho-ts@2.4.4))(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))
+        specifier: 7.2.0
+        version: 7.2.0(@morpho-org/blue-sdk@8.1.0(@morpho-org/morpho-ts@4.1.0))(@morpho-org/morpho-ts@4.1.0)(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))
+      '@morpho-org/morpho-sdk':
+        specifier: 9.3.0
+        version: 9.3.0(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))
       '@morpho-org/morpho-ts':
-        specifier: 2.4.4
-        version: 2.4.4
-      '@morpho-org/simulation-sdk':
-        specifier: 3.1.3
-        version: 3.1.3(@morpho-org/blue-sdk@5.3.0(@morpho-org/morpho-ts@2.4.4))(@morpho-org/morpho-ts@2.4.4)
+        specifier: 4.1.0
+        version: 4.1.0
       '@number-flow/react':
         specifier: 0.5.10
         version: 0.5.10(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
@@ -206,8 +203,8 @@ importers:
         specifier: ^3.2.0
         version: 3.2.0(graphql@16.11.0)
       '@morpho-org/test':
-        specifier: ^2.6.0
-        version: 2.6.0(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))(vitest@3.2.7(@types/debug@4.1.12)(@types/node@24.5.2)(jiti@2.6.1)(jsdom@27.0.0(bufferutil@4.0.9)(postcss@8.5.23)(utf-8-validate@5.0.10))(lightningcss@1.32.0)(terser@5.44.0)(yaml@2.8.4))
+        specifier: ^2.12.0
+        version: 2.12.0(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))(vitest@3.2.7(@types/debug@4.1.12)(@types/node@24.5.2)(jiti@2.6.1)(jsdom@27.0.0(bufferutil@4.0.9)(postcss@8.5.23)(utf-8-validate@5.0.10))(lightningcss@1.32.0)(terser@5.44.0)(yaml@2.8.4))
       '@parcel/watcher':
         specifier: ^2.5.1
         version: 2.5.1
@@ -1417,42 +1414,38 @@ packages:
     resolution: {integrity: sha512-w8CVbdkDrVXFJbfBSlDfafDR6BAkpDmv1bC1UJVCoVny5tW2RKAdn9i68Xf7asYT4TnUhl/hN4zfUiKQq9II4g==}
     engines: {node: '>=16.0.0'}
 
-  '@morpho-org/blue-sdk-viem@4.0.1':
-    resolution: {integrity: sha512-4ZDFzTACJiPwb0faclwQaC+wFC24UibP7aC08caCW1ojnAIrnH1Dc95Cfkplln+ZdM5CFDc71Ko4vGY1UaYK+Q==}
+  '@morpho-org/blue-sdk-viem@7.2.0':
+    resolution: {integrity: sha512-XyleDRABlOfGYyYFnMzbLWs1eymcV0xZAyyFwaX3NYJEBfAF3u8kvbiPqbKw/s9rDbvQ24BvtoN3r2+f54hpJQ==}
     peerDependencies:
-      '@morpho-org/blue-sdk': ^5.2.2
-      '@morpho-org/morpho-ts': ^2.4.3
+      '@morpho-org/blue-sdk': ^8.1.0
+      '@morpho-org/morpho-ts': ^3.0.0 || ^4.0.0
       viem: ^2.0.0
 
-  '@morpho-org/blue-sdk@5.3.0':
-    resolution: {integrity: sha512-fHjpNJZZF+zi/ElDkh2pCsWCODcmxJmgwgkNeRPRtHK5ITeQ3hJ+Eccr7sLg6R1dsqC4JNbxkQPDtIaa8h5QHw==}
+  '@morpho-org/blue-sdk@8.1.0':
+    resolution: {integrity: sha512-i2Z6qE0chJUPTXRCj84JI8ds5eGhBRjwmcY3tzvX2PB8CDRo21NjSXRLfoAyzRlAmxCrHKrZlHZDG8wKHudEQg==}
     peerDependencies:
-      '@morpho-org/morpho-ts': ^2.4.3
+      '@morpho-org/morpho-ts': ^4.0.0
 
-  '@morpho-org/bundler-sdk-viem@4.0.2':
-    resolution: {integrity: sha512-kDUjap16Z3GJMBE7ThjyI/8l9fRt6/QnRUyrdB0/8h9EzHEWdVR9AgCLfxU60zucHHXCHzUnu0rB907ukoIGYw==}
+  '@morpho-org/midnight-sdk@2.3.0':
+    resolution: {integrity: sha512-clUzdXOMIzD0pMw2Kwh+h+w0wmc74vhgnta6boj8WT8f2EcAuEOyr8qXC24z/51clij7uuoQwOCzbfvY0hb58Q==}
     peerDependencies:
-      '@morpho-org/blue-sdk': ^5.3.0
-      '@morpho-org/blue-sdk-viem': ^4.0.1
-      '@morpho-org/morpho-ts': ^2.4.3
-      '@morpho-org/simulation-sdk': ^3.1.3
+      '@morpho-org/morpho-ts': ^2.8.0 || ^3.0.0 || ^4.0.0
       viem: ^2.0.0
 
-  '@morpho-org/morpho-ts@2.4.4':
-    resolution: {integrity: sha512-Nb6sVXOtE6CajMBceXpEnPbV42nszvTIeDOJt4+E66nWtTHLvk2z5xAx/qbrQyiBtyDQmCWhP1oQnjf7yg8Zow==}
-
-  '@morpho-org/simulation-sdk@3.1.3':
-    resolution: {integrity: sha512-Gs0fVInhekFqTJGC1zYVP+inzd6lZQkBxBZNAmYPYj79wYU4FUxm8+MyfGnDZIfUktcSJCJRW/gApVAv9Qdu9g==}
+  '@morpho-org/morpho-sdk@9.3.0':
+    resolution: {integrity: sha512-9ulKKiZd+uH3wcOzSB/uWz+1P40g1vfKk1ZspCsYCBIHF4h4UPy/FdnuCz5Q4GWdAX8OPKZ3NED9sRC8DXJcAw==}
     peerDependencies:
-      '@morpho-org/blue-sdk': ^4.9.0
-      '@morpho-org/morpho-ts': ^2.4.1
+      viem: ^2.0.0
 
-  '@morpho-org/test@2.6.0':
-    resolution: {integrity: sha512-NUGA3RnqLwwEypPRMCa9Y1C41Qrglr22Zs8H0Kz4gqx/MvD0GErUWwbWW3RhNgf9GHafbd8HqUsmh+mrOgbm2Q==}
+  '@morpho-org/morpho-ts@4.1.0':
+    resolution: {integrity: sha512-cFUJ0lI9dSzcV+68MzS8+ITsJYCgqURsUPqD5gaAdbQkX1sjotK7WXS+OikG2e87VnmQvr2S7l3Umo7+30s6xA==}
+
+  '@morpho-org/test@2.12.0':
+    resolution: {integrity: sha512-4JlnMU3I+SSggkpS6HGQSLUFhrbNzUEqCBTbo861fnjjyiISb++rfDxZ7N0iikwGoZYhiF4bAaZfKmTphlSw9g==}
     peerDependencies:
       '@playwright/test': ^1.48.1
       viem: ^2.21.10
-      vitest: '>=2.0.0 <4.0.0'
+      vitest: '>=2.1.2 <5.0.0'
     peerDependenciesMeta:
       '@playwright/test':
         optional: true
@@ -1574,6 +1567,10 @@ packages:
   '@noble/hashes@1.8.0':
     resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
     engines: {node: ^14.21.3 || >=16}
+
+  '@noble/hashes@2.4.0':
+    resolution: {integrity: sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA==}
+    engines: {node: '>= 20.19.0'}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -2743,12 +2740,6 @@ packages:
 
   '@types/hast@3.0.4':
     resolution: {integrity: sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ==}
-
-  '@types/lodash.isplainobject@4.0.9':
-    resolution: {integrity: sha512-QC8nKcap5hRrbtIaPRjUMlcXXnLeayqQZPSaWJDx3xeuN17+2PW5wkmEJ4+lZgNnQRlSPzxjTYKCfV1uTnPaEg==}
-
-  '@types/lodash.mergewith@4.6.9':
-    resolution: {integrity: sha512-fgkoCAOF47K7sxrQ7Mlud2TH023itugZs2bUg8h/KzT+BnZNrR2jAOmaokbLunHNnobXVWOezAeNn/lZqwxkcw==}
 
   '@types/lodash@4.17.20':
     resolution: {integrity: sha512-H3MHACvFUEiujabxhaI/ImO6gUrd8oOurg7LQtS7mbwIXA/cUqWrvBsaeJ23aZEPk1TAYkurjfMbSELfoCXlGA==}
@@ -4034,10 +4025,6 @@ packages:
     resolution: {integrity: sha512-NqADB8VjPFLM2V0VvHUewwwsw0ZWBaIdgo+ieHtK3hasLz4qeCRjYcqfB6AQrBggRKppKF8L52/VqdVsO47Dlw==}
     engines: {node: '>= 0.4'}
 
-  hasown@2.0.2:
-    resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
-    engines: {node: '>= 0.4'}
-
   hasown@2.0.4:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
@@ -4420,14 +4407,8 @@ packages:
   lodash.debounce@4.0.8:
     resolution: {integrity: sha512-FT1yDzDYEoYWhnSGnpE/4Kj1fLZkDFyqRb7fNt6FdYOSxlUWAtp42Eh6Wb0rGIv/m9Bgo7x4GhQbm5Ys4SG5ow==}
 
-  lodash.isplainobject@4.0.6:
-    resolution: {integrity: sha512-oSXzaWypCMHkPC3NvBEaPHf0KsA5mvPrOPgQWDsbg8n7orZ290M0BmC/jgRZ4vcJ6DTAhjrsSYgdsW/F+MFOBA==}
-
   lodash.kebabcase@4.1.1:
     resolution: {integrity: sha512-N8XRTIMMqqDgSy4VLKPnJ/+hpGZN+PHQiJnSenYqPaVV/NCqEogTnAdZLQiGKhxX+JCs8waWq2t1XHWKOmlY8g==}
-
-  lodash.mergewith@4.6.2:
-    resolution: {integrity: sha512-GK3g5RPZWTRSeLSpgP8Xhra+pnjBC56q9FZYe1d5RN3TJ35dbkGy3YqBSMbyCrlbi+CM9Z3Jk5yTL7RCsqboyQ==}
 
   lodash.sortby@4.7.0:
     resolution: {integrity: sha512-HDWXG8isMntAyRF5vZ7xKuEvOhT4AhlRt/3czTSjvGUxjYCBVRQY48ViDHyfYz9VIoBkW4TMGQNapx+l3RUwdA==}
@@ -4647,10 +4628,6 @@ packages:
 
   multiformats@9.9.0:
     resolution: {integrity: sha512-HoMUjhH9T8DDBNT+6xzkrd9ga/XiBI4xLr58LJACwK6G3HTOPeMz4nB4KJs33L2BelrIJa7P0VuNaVF3hMYfjg==}
-
-  mutative@1.3.0:
-    resolution: {integrity: sha512-8MJj6URmOZAV70dpFe1YnSppRTKC4DsMkXQiBDFayLcDI4ljGokHxmpqaBQuDWa4iAxWaJJ1PS8vAmbntjjKmQ==}
-    engines: {node: '>=14.0'}
 
   mute-stream@3.0.0:
     resolution: {integrity: sha512-dkEJPVvun4FryqBmZ5KhDo0K9iDXAwn08tMLDinNdRBNPcYEDiWYysLcc6k3mjTMlbP9KyylvRpd4wFtwrT9rw==}
@@ -5780,8 +5757,8 @@ packages:
     peerDependencies:
       viem: ^2.21.18
 
-  viem-tracer@1.7.1:
-    resolution: {integrity: sha512-+BUlxdRxxT0Tk/qyhMJtB8RShtt/xD2OtxqaZa3BURWub5SNTJaEfIZnAUDP2zLPlGvjS1i/wPZ5mAW3ogwpQQ==}
+  viem-tracer@1.8.0:
+    resolution: {integrity: sha512-4cyMux8N9v8gBLpmgtayhdPsNz7C46SNqaS2RrURKRFqEgDGvCGuRNn5I+PhDrnY/NZoLWWosUF3gOQ/r60lcA==}
     peerDependencies:
       viem: ^2.21.0
 
@@ -7495,43 +7472,40 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@morpho-org/blue-sdk-viem@4.0.1(@morpho-org/blue-sdk@5.3.0(@morpho-org/morpho-ts@2.4.4))(@morpho-org/morpho-ts@2.4.4)(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))':
+  '@morpho-org/blue-sdk-viem@7.2.0(@morpho-org/blue-sdk@8.1.0(@morpho-org/morpho-ts@4.1.0))(@morpho-org/morpho-ts@4.1.0)(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))':
     dependencies:
-      '@morpho-org/blue-sdk': 5.3.0(@morpho-org/morpho-ts@2.4.4)
-      '@morpho-org/morpho-ts': 2.4.4
+      '@morpho-org/blue-sdk': 8.1.0(@morpho-org/morpho-ts@4.1.0)
+      '@morpho-org/morpho-ts': 4.1.0
       viem: 2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12)
 
-  '@morpho-org/blue-sdk@5.3.0(@morpho-org/morpho-ts@2.4.4)':
+  '@morpho-org/blue-sdk@8.1.0(@morpho-org/morpho-ts@4.1.0)':
     dependencies:
-      '@morpho-org/morpho-ts': 2.4.4
-      '@noble/hashes': 1.8.0
-      '@types/lodash.isplainobject': 4.0.9
-      '@types/lodash.mergewith': 4.6.9
-      lodash.isplainobject: 4.0.6
-      lodash.mergewith: 4.6.2
+      '@morpho-org/morpho-ts': 4.1.0
+      '@noble/hashes': 2.4.0
 
-  '@morpho-org/bundler-sdk-viem@4.0.2(@morpho-org/blue-sdk-viem@4.0.1(@morpho-org/blue-sdk@5.3.0(@morpho-org/morpho-ts@2.4.4))(@morpho-org/morpho-ts@2.4.4)(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12)))(@morpho-org/blue-sdk@5.3.0(@morpho-org/morpho-ts@2.4.4))(@morpho-org/morpho-ts@2.4.4)(@morpho-org/simulation-sdk@3.1.3(@morpho-org/blue-sdk@5.3.0(@morpho-org/morpho-ts@2.4.4))(@morpho-org/morpho-ts@2.4.4))(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))':
+  '@morpho-org/midnight-sdk@2.3.0(@morpho-org/morpho-ts@4.1.0)(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))':
     dependencies:
-      '@morpho-org/blue-sdk': 5.3.0(@morpho-org/morpho-ts@2.4.4)
-      '@morpho-org/blue-sdk-viem': 4.0.1(@morpho-org/blue-sdk@5.3.0(@morpho-org/morpho-ts@2.4.4))(@morpho-org/morpho-ts@2.4.4)(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))
-      '@morpho-org/morpho-ts': 2.4.4
-      '@morpho-org/simulation-sdk': 3.1.3(@morpho-org/blue-sdk@5.3.0(@morpho-org/morpho-ts@2.4.4))(@morpho-org/morpho-ts@2.4.4)
+      '@morpho-org/morpho-ts': 4.1.0
       viem: 2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12)
 
-  '@morpho-org/morpho-ts@2.4.4': {}
-
-  '@morpho-org/simulation-sdk@3.1.3(@morpho-org/blue-sdk@5.3.0(@morpho-org/morpho-ts@2.4.4))(@morpho-org/morpho-ts@2.4.4)':
+  '@morpho-org/morpho-sdk@9.3.0(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))':
     dependencies:
-      '@morpho-org/blue-sdk': 5.3.0(@morpho-org/morpho-ts@2.4.4)
-      '@morpho-org/morpho-ts': 2.4.4
-      mutative: 1.3.0
+      '@morpho-org/blue-sdk': 8.1.0(@morpho-org/morpho-ts@4.1.0)
+      '@morpho-org/blue-sdk-viem': 7.2.0(@morpho-org/blue-sdk@8.1.0(@morpho-org/morpho-ts@4.1.0))(@morpho-org/morpho-ts@4.1.0)(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))
+      '@morpho-org/midnight-sdk': 2.3.0(@morpho-org/morpho-ts@4.1.0)(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))
+      '@morpho-org/morpho-ts': 4.1.0
+      viem: 2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12)
 
-  '@morpho-org/test@2.6.0(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))(vitest@3.2.7(@types/debug@4.1.12)(@types/node@24.5.2)(jiti@2.6.1)(jsdom@27.0.0(bufferutil@4.0.9)(postcss@8.5.23)(utf-8-validate@5.0.10))(lightningcss@1.32.0)(terser@5.44.0)(yaml@2.8.4))':
+  '@morpho-org/morpho-ts@4.1.0':
+    dependencies:
+      '@noble/hashes': 2.4.0
+
+  '@morpho-org/test@2.12.0(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))(vitest@3.2.7(@types/debug@4.1.12)(@types/node@24.5.2)(jiti@2.6.1)(jsdom@27.0.0(bufferutil@4.0.9)(postcss@8.5.23)(utf-8-validate@5.0.10))(lightningcss@1.32.0)(terser@5.44.0)(yaml@2.8.4))':
     dependencies:
       lodash.kebabcase: 4.1.1
       viem: 2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12)
       viem-deal: 2.0.4(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))
-      viem-tracer: 1.7.1(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))
+      viem-tracer: 1.8.0(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12))
     optionalDependencies:
       vitest: 3.2.7(@types/debug@4.1.12)(@types/node@24.5.2)(jiti@2.6.1)(jsdom@27.0.0(bufferutil@4.0.9)(postcss@8.5.23)(utf-8-validate@5.0.10))(lightningcss@1.32.0)(terser@5.44.0)(yaml@2.8.4)
 
@@ -7627,6 +7601,8 @@ snapshots:
   '@noble/hashes@1.7.1': {}
 
   '@noble/hashes@1.8.0': {}
+
+  '@noble/hashes@2.4.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
@@ -9083,14 +9059,6 @@ snapshots:
   '@types/hast@3.0.4':
     dependencies:
       '@types/unist': 3.0.3
-
-  '@types/lodash.isplainobject@4.0.9':
-    dependencies:
-      '@types/lodash': 4.17.20
-
-  '@types/lodash.mergewith@4.6.9':
-    dependencies:
-      '@types/lodash': 4.17.20
 
   '@types/lodash@4.17.20': {}
 
@@ -10830,10 +10798,6 @@ snapshots:
     dependencies:
       has-symbols: 1.1.0
 
-  hasown@2.0.2:
-    dependencies:
-      function-bind: 1.1.2
-
   hasown@2.0.4:
     dependencies:
       function-bind: 1.1.2
@@ -10999,7 +10963,7 @@ snapshots:
       call-bound: 1.0.4
       gopd: 1.2.0
       has-tostringtag: 1.0.2
-      hasown: 2.0.2
+      hasown: 2.0.4
 
   is-relative@1.0.0:
     dependencies:
@@ -11210,11 +11174,7 @@ snapshots:
 
   lodash.debounce@4.0.8: {}
 
-  lodash.isplainobject@4.0.6: {}
-
   lodash.kebabcase@4.1.1: {}
-
-  lodash.mergewith@4.6.2: {}
 
   lodash.sortby@4.7.0: {}
 
@@ -11542,8 +11502,6 @@ snapshots:
   ms@2.1.3: {}
 
   multiformats@9.9.0: {}
-
-  mutative@1.3.0: {}
 
   mute-stream@3.0.0: {}
 
@@ -12721,7 +12679,7 @@ snapshots:
     dependencies:
       viem: 2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12)
 
-  viem-tracer@1.7.1(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12)):
+  viem-tracer@1.8.0(viem@2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12)):
     dependencies:
       colors: 1.4.0
       viem: 2.38.5(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@4.1.12)

@@ -70,7 +70,13 @@ export async function expectOnlyAllowedApprovals(
   }
 
   // Verify that the entire approval is used up (or at least up to the rebasing margin)
-  for (const erc20Approval of erc20Approvals) {
+  for (const [index, erc20Approval] of erc20Approvals.entries()) {
+    if (
+      erc20Approvals
+        .slice(index + 1)
+        .some((later) => later.asset === erc20Approval.asset && later.spender === erc20Approval.spender)
+    )
+      continue;
     const erc20Allowance = await readContract(client, {
       address: erc20Approval.asset,
       abi: erc20Abi,

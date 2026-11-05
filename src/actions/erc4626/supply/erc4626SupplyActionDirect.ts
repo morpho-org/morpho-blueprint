@@ -1,8 +1,8 @@
 import { MathLib } from "@morpho-org/blue-sdk";
 import { encodeFunctionData, erc4626Abi, isAddressEqual } from "viem";
 import { wrappedNativeAssetAbi } from "@/actions/abis/wrappedNativeAssetAbi";
-import { requiredApprovalTransactionRequests } from "@/actions/subbundles/requiredApprovalTransactionRequests";
 import { getChainAddressesRequired } from "@/actions/utils/getChainAddressesRequired";
+import { requiredApprovalTransactionRequests } from "@/actions/utils/requiredApprovalTransactionRequests";
 import { tryCatch } from "@/common/utils/tryCatch";
 import {
   type Erc4626SupplyActionParameters,

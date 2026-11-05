@@ -3,24 +3,24 @@ import { describe, expect, vi } from "vitest";
 
 import { erc4626SupplyAction } from "@/actions/erc4626/supply/erc4626SupplyAction";
 import { erc4626SupplyActionDirect } from "@/actions/erc4626/supply/erc4626SupplyActionDirect";
-import { erc4626SupplyViaBundler3Action } from "@/actions/erc4626/supply/erc4626SupplyViaBundler3Action";
+import { erc4626SupplyViaMorphoSdkAction } from "@/actions/erc4626/supply/erc4626SupplyViaMorphoSdkAction";
 import { APP_CONFIG } from "@/config";
 
 import { test } from "../../../../config";
 
 // Mock the underlying action implementations
 vi.mock("@/actions/erc4626/supply/erc4626SupplyActionDirect");
-vi.mock("@/actions/erc4626/supply/erc4626SupplyViaBundler3Action");
+vi.mock("@/actions/erc4626/supply/erc4626SupplyViaMorphoSdkAction");
 
 describe("erc4626SupplyAction (wrapper)", () => {
   const vaultAddress = "0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB";
   const supplyAmount = parseUnits("1000", 6);
 
-  test("routes to bundler3 implementation when bundler3 is enabled", async ({ client }) => {
+  test("routes to the morpho-sdk implementation when bundler3Config is enabled", async ({ client }) => {
     const originalEnabled = APP_CONFIG.actionParameters.bundler3Config.enabled;
 
     try {
-      // Enable bundler3
+      // Enable the morpho-sdk path
       // biome-ignore lint/suspicious/noExplicitAny: Needed to override readonly config for testing
       (APP_CONFIG.actionParameters.bundler3Config as any).enabled = true;
 
@@ -31,7 +31,7 @@ describe("erc4626SupplyAction (wrapper)", () => {
         signatureRequests: [],
         positionChange: { balance: { before: 0n, after: 0n } },
       };
-      vi.mocked(erc4626SupplyViaBundler3Action).mockResolvedValue(mockResult);
+      vi.mocked(erc4626SupplyViaMorphoSdkAction).mockResolvedValue(mockResult);
 
       // Call wrapper
       await erc4626SupplyAction({
@@ -42,8 +42,8 @@ describe("erc4626SupplyAction (wrapper)", () => {
         allowNativeAssetWrapping: false,
       });
 
-      // Verify bundler3 implementation was called
-      expect(erc4626SupplyViaBundler3Action).toHaveBeenCalledWith({
+      // Verify the morpho-sdk implementation was called
+      expect(erc4626SupplyViaMorphoSdkAction).toHaveBeenCalledWith({
         client,
         vaultAddress,
         accountAddress: client.account.address,
@@ -59,11 +59,11 @@ describe("erc4626SupplyAction (wrapper)", () => {
     }
   });
 
-  test("routes to direct implementation when bundler3 is disabled", async ({ client }) => {
+  test("routes to direct implementation when bundler3Config is disabled", async ({ client }) => {
     const originalEnabled = APP_CONFIG.actionParameters.bundler3Config.enabled;
 
     try {
-      // Disable bundler3
+      // Disable the morpho-sdk path
       // biome-ignore lint/suspicious/noExplicitAny: Needed to override readonly config for testing
       (APP_CONFIG.actionParameters.bundler3Config as any).enabled = false;
 
@@ -93,7 +93,7 @@ describe("erc4626SupplyAction (wrapper)", () => {
         supplyAmount,
         allowNativeAssetWrapping: true,
       });
-      expect(erc4626SupplyViaBundler3Action).not.toHaveBeenCalled();
+      expect(erc4626SupplyViaMorphoSdkAction).not.toHaveBeenCalled();
     } finally {
       // Restore original config
       // biome-ignore lint/suspicious/noExplicitAny: Needed to restore readonly config after testing
