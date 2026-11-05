@@ -54,6 +54,15 @@ vi.mock("@/modules/reward/data/getMerklRewardIndex", async () => {
 const blueprint = { enabled: false };
 vi.mock("@/common/utils/morphoApiConfig", () => ({ isBlueprintApiEnabled: () => blueprint.enabled }));
 
+// What the on-chain Public Allocator V1 read returns, and the candidates it was asked about.
+const publicAllocatorV1 = { liquidity: 0n, calls: [] as string[][] };
+vi.mock("@/modules/market/data/getPublicAllocatorV1Liquidity", () => ({
+  getPublicAllocatorV1Liquidity: async (_chainId: number, _marketId: string, vaults: readonly string[]) => {
+    publicAllocatorV1.calls.push([...vaults]);
+    return vaults.length === 0 ? 0n : publicAllocatorV1.liquidity;
+  },
+}));
+
 const routes = new Map<string, unknown>();
 const calls: string[] = [];
 vi.mock("@/common/utils/fetchMorphoRest", () => ({
@@ -194,6 +203,8 @@ describe("getMarket (Core REST)", () => {
     calls.length = 0;
     merkl.borrowRewards = [];
     blueprint.enabled = false;
+    publicAllocatorV1.liquidity = 0n;
+    publicAllocatorV1.calls.length = 0;
     seedMarket();
     seedVaults();
   });
@@ -205,7 +216,6 @@ describe("getMarket (Core REST)", () => {
     expect(market.totalSupplied).toEqual({ raw: "1000000000", formatted: "1000", usd: 1000 });
     expect(market.totalBorrowed.usd).toBe(800);
     expect(market.liquidityInMarket.usd).toBe(200);
-    expect(market.publicAllocatorSharedLiquidity.usd).toBe(50);
     expect(market.utilization).toBeCloseTo(0.8, 12);
     expect(market.collateralPriceInLoanAsset?.formatted).toBe("2000");
     expect(market.oracleAddress).toBe(ORACLE);
@@ -341,7 +351,38 @@ describe("getMarket (Core REST)", () => {
     routes.delete(`${BASE}/liquidity`);
     const market = await loadMarket();
     expect(market.liquidityInMarket.usd).toBe(200);
-    expect(market.publicAllocatorSharedLiquidity.usd).toBe(0);
+    expect(market.availableToBorrow.usd).toBe(200);
+  });
+
+  describe("available to borrow", () => {
+    it("is the market's own liquidity when no configured V1 vault supplies it", async () => {
+      // Only the vault V2 supplies the market.
+      routes.set(`/v0/vaults-v1/1:${VAULT_V1}/allocations`, { data: { allocations: [] } });
+      publicAllocatorV1.liquidity = 999_000000n;
+      const market = await loadMarket();
+      expect(publicAllocatorV1.calls).toEqual([[]]);
+      expect(market.publicAllocatorV1Liquidity.raw).toBe("0");
+      expect(market.availableToBorrow).toEqual({ raw: "200000000", formatted: "200", usd: 200 });
+    });
+
+    it("adds what the configured V1 suppliers can reallocate through the Public Allocator V1", async () => {
+      publicAllocatorV1.liquidity = 75_000000n;
+      const market = await loadMarket();
+      // The borrow action's candidates: the V1 supplier only, never the vault V2.
+      expect(publicAllocatorV1.calls).toEqual([[VAULT_V1]]);
+      expect(market.publicAllocatorV1Liquidity).toEqual({ raw: "75000000", formatted: "75", usd: 75 });
+      expect(market.availableToBorrow).toEqual({ raw: "275000000", formatted: "275", usd: 275 });
+    });
+
+    it("ignores Core's Public Allocator V2 reallocatable liquidity", async () => {
+      routes.set(`${BASE}/liquidity`, {
+        data: { market_liquidity: "200000000", reallocatable_liquidity: "5000000000000" },
+      });
+      publicAllocatorV1.liquidity = 0n;
+      const market = await loadMarket();
+      expect(market.availableToBorrow.raw).toBe("200000000");
+      expect(market.publicAllocatorV1Liquidity.raw).toBe("0");
+    });
   });
 
   it("throws when Core does not know the market", async () => {

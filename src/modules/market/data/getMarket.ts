@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { MarketId } from "@morpho-org/blue-sdk";
 import { cache } from "react";
 import { type Address, getAddress, type Hex, zeroAddress } from "viem";
 import { toAmountWithPrice, toBigInt } from "@/common/data/adapters/amount";
@@ -8,6 +9,7 @@ import { getTokenInfo, getTokenPriceUsd } from "@/common/data/rest/tokens";
 import { SECONDS_PER_DAY } from "@/common/utils/constants";
 import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
 import type { SupportedChainId } from "@/config/types";
+import { Erc4626VaultProtocol } from "@/config/vault-protocol";
 import type { Market, MarketNonIdle } from "@/modules/market/market.types";
 import { getMerklRewardIndex } from "@/modules/reward/data/getMerklRewardIndex";
 import { marketBorrowRewardApys } from "@/modules/reward/data/merklRewardApys";
@@ -24,6 +26,7 @@ import {
 } from "./adapters";
 import { getMarketHistory } from "./getMarketHistory";
 import { getMarketSupplyingVaults } from "./getMarketSupplyingVaults";
+import { getPublicAllocatorV1Liquidity } from "./getPublicAllocatorV1Liquidity";
 
 interface RestMarketRoot {
   data: {
@@ -45,7 +48,8 @@ interface RestMarketState {
 }
 
 interface RestMarketLiquidity {
-  data: { market_liquidity: string; reallocatable_liquidity: string };
+  // `reallocatable_liquidity` (Public Allocator V2) is not read: the borrow cannot reach it.
+  data: { market_liquidity: string };
 }
 
 interface RestMarketApyAverages {
@@ -66,7 +70,8 @@ export function isNonIdleMarket(market: Market | null): market is MarketNonIdle 
  * The market page, from Core REST: params, state, liquidity, borrow APY averages and the oracle
  * price, token metadata and prices, the chain's Merkl borrow rewards, the vaults that supply the
  * market (the configured ones, plus every vault V2 the Blueprint API lists when it is on), and the
- * chart history. Throws when Core does not know the market.
+ * chart history. The Public Allocator V1 liquidity of the configured vaults V1 is read on chain.
+ * Throws when Core does not know the market.
  */
 export const getMarket = cache(async (chainId: SupportedChainId, marketId: Hex): Promise<Market> => {
   const selector = restSelector(chainId, marketId);
@@ -106,8 +111,19 @@ export const getMarket = cache(async (chainId: SupportedChainId, marketId: Hex):
   const loanDecimals = loanAsset.decimals;
   const { total_supply_assets: totalSupplyAssets, total_borrow_assets: totalBorrowAssets } = state.data;
 
-  const [suppliers, historical, borrowRewards] = await Promise.all([
-    getMarketSupplyingVaults(chainId, marketId, loanAddress),
+  const [{ suppliers, publicAllocatorV1Liquidity }, historical, borrowRewards] = await Promise.all([
+    getMarketSupplyingVaults(chainId, marketId, loanAddress).then(async (suppliers) => ({
+      suppliers,
+      // The borrow action's reallocation candidates: the bundler only reallocates from vaults V1.
+      publicAllocatorV1Liquidity: await getPublicAllocatorV1Liquidity(
+        chainId,
+        marketId as MarketId,
+        // An idle market has no borrow to fund.
+        suppliers
+          .filter((supplier) => !isIdle && supplier.protocol === Erc4626VaultProtocol.MorphoV1)
+          .map((supplier) => getAddress(supplier.vaultAddress)),
+      ),
+    })),
     getMarketHistory(
       chainId,
       marketId,
@@ -131,19 +147,17 @@ export const getMarket = cache(async (chainId: SupportedChainId, marketId: Hex):
   });
 
   // Without a liquidity read, what the market itself holds is still supply minus borrow.
-  const marketLiquidity =
-    liquidity?.data.market_liquidity ?? (toBigInt(totalSupplyAssets) - toBigInt(totalBorrowAssets)).toString();
+  const marketLiquidity = toBigInt(
+    liquidity?.data.market_liquidity ?? toBigInt(totalSupplyAssets) - toBigInt(totalBorrowAssets),
+  );
 
   return {
     ...summary,
     isIdle,
     totalSupplied: toAmountWithPrice(totalSupplyAssets, loanDecimals, loanPriceUsd),
     liquidityInMarket: toAmountWithPrice(marketLiquidity, loanDecimals, loanPriceUsd),
-    publicAllocatorSharedLiquidity: toAmountWithPrice(
-      liquidity?.data.reallocatable_liquidity ?? 0n,
-      loanDecimals,
-      loanPriceUsd,
-    ),
+    publicAllocatorV1Liquidity: toAmountWithPrice(publicAllocatorV1Liquidity, loanDecimals, loanPriceUsd),
+    availableToBorrow: toAmountWithPrice(marketLiquidity + publicAllocatorV1Liquidity, loanDecimals, loanPriceUsd),
     collateralAsset: collateralAsset ? { ...collateralAsset, priceUsd: collateralPriceUsd } : null,
     loanAsset: { ...loanAsset, priceUsd: loanPriceUsd },
     vaultAllocations: suppliers.map((supplier) =>

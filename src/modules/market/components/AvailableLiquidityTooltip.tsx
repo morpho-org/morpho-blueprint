@@ -14,25 +14,25 @@ function AvailableLiquidityTooltipContent({
   return (
     <div className="body-small flex flex-col gap-4">
       <div className="flex flex-col gap-3">
-        <span className="body-medium-plus">Market Liquidity</span>
+        <span className="body-medium-plus">Available to borrow</span>
         <span>
-          The total amount of assets available for borrowing, including liquidity that can be reallocated from other
-          markets through the Public Allocator V2.
+          Liquidity in this market, plus what the vaults listed in this app can reallocate into it through the Public
+          Allocator.
         </span>
       </div>
       <div className="flex flex-col gap-2">
         <span className="flex justify-between">
-          <span>Liquidity In Market</span>
+          <span>In this market</span>
           <span className="body-small-plus">{formatNumber(marketLiquidity, { currency: "USD" })}</span>
         </span>
         <span className="flex justify-between">
-          <span>Liquidity via Public Allocator V2</span>
+          <span>Via Public Allocator</span>
           <span className="body-small-plus">{formatNumber(publicAllocatorLiquidity, { currency: "USD" })}</span>
         </span>
       </div>
       <div className="h-[1px] bg-border" />
       <span className="flex justify-between">
-        <span>Total Available Liquidity</span>
+        <span>Total available</span>
         <span className="body-small-plus">
           {formatNumber(marketLiquidity + publicAllocatorLiquidity, { currency: "USD" })}
         </span>
