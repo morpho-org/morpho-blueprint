@@ -1,13 +1,13 @@
-import { cva, type VariantProps } from "class-variance-authority";
-import Link from "next/link";
+import { cva, type VariantProps } from 'class-variance-authority';
+import Link from 'next/link';
 
 const navItemVariants = cva(
-  "text-muted-foreground hover:bg-accent group inline-flex h-9 items-center rounded-sm px-2 md:px-3 transition body-medium",
+  'text-muted-foreground hover:bg-accent group inline-flex h-9 items-center rounded-sm px-2 md:px-3 transition body-medium',
   {
     variants: {
       active: {
-        true: "text-primary",
-        false: "text-muted-foreground",
+        true: 'text-primary',
+        false: 'text-muted-foreground',
       },
     },
     defaultVariants: {
@@ -21,7 +21,9 @@ type LinkProps = {
   name: string;
 };
 
-type NavItemProps = LinkProps & React.ComponentProps<typeof Link> & VariantProps<typeof navItemVariants>;
+type NavItemProps = LinkProps &
+  React.ComponentProps<typeof Link> &
+  VariantProps<typeof navItemVariants>;
 
 function NavItem({ className, active, href, name }: NavItemProps) {
   return (

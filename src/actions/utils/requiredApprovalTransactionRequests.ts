@@ -1,6 +1,8 @@
-import { type Address, encodeFunctionData, erc20Abi } from "viem";
-import { TOKENS_REQUIRING_APPROVAL_REVOCATION } from "../constants";
-import type { TransactionRequest } from "../types";
+import { type Address, encodeFunctionData, erc20Abi } from 'viem';
+
+import type { TransactionRequest } from '../types';
+
+import { TOKENS_REQUIRING_APPROVAL_REVOCATION } from '../constants';
 
 interface RequiredApprovalTransactionParameters {
   readonly approvalTransactionName: string;
@@ -31,12 +33,12 @@ export function requiredApprovalTransactionRequests({
   // Revoke existing approval if required
   if (currentAllowance > 0n && TOKENS_REQUIRING_APPROVAL_REVOCATION[chainId]?.[erc20Address]) {
     transactionRequests.push({
-      name: "Revoke existing approval",
+      name: 'Revoke existing approval',
       tx: () => ({
         to: erc20Address,
         data: encodeFunctionData({
           abi: erc20Abi,
-          functionName: "approve",
+          functionName: 'approve',
           args: [spenderAddress, 0n],
         }),
       }),
@@ -50,7 +52,7 @@ export function requiredApprovalTransactionRequests({
       to: erc20Address,
       data: encodeFunctionData({
         abi: erc20Abi,
-        functionName: "approve",
+        functionName: 'approve',
         args: [spenderAddress, requiredAllowance],
       }),
     }),

@@ -1,20 +1,21 @@
-import type { VaultAction, VaultPositionChange } from "@/actions";
-import { ApyTooltip } from "@/common/components/ApyToolip";
-import { MetricChange } from "@/common/components/MetricChange";
-import { NumberFlowWithLoading } from "@/common/components/ui/number-flow";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import { descaleBigIntToNumber } from "@/common/utils/format";
-import { rateLabel } from "@/common/utils/timeframe";
-import { ActionFlow, type ActionFlowProps } from "@/modules/action-flow/components/ActionFlow";
-import { AssetChangeSummary } from "@/modules/token/components/AssetChangeSummary";
-import type { Vault } from "@/modules/vault/data/getVault";
+import type { VaultAction, VaultPositionChange } from '@/actions';
+import type { Vault } from '@/modules/vault/data/getVault';
+
+import { ApyTooltip } from '@/common/components/ApyToolip';
+import { MetricChange } from '@/common/components/MetricChange';
+import { NumberFlowWithLoading } from '@/common/components/ui/number-flow';
+import { Skeleton } from '@/common/components/ui/skeleton';
+import { descaleBigIntToNumber } from '@/common/utils/format';
+import { rateLabel } from '@/common/utils/timeframe';
+import { ActionFlow, type ActionFlowProps } from '@/modules/action-flow/components/ActionFlow';
+import { AssetChangeSummary } from '@/modules/token/components/AssetChangeSummary';
 
 export function VaultActionFlow({
   vault,
   action,
   trackingTag,
   ...props
-}: Omit<ActionFlowProps, "summary" | "metrics" | "chainId" | "actionName" | "trackingPayload"> & {
+}: Omit<ActionFlowProps, 'summary' | 'metrics' | 'chainId' | 'actionName' | 'trackingPayload'> & {
   action: VaultAction | null;
   vault: Vault;
   trackingTag: string;
@@ -22,9 +23,17 @@ export function VaultActionFlow({
   return (
     <ActionFlow
       action={action}
-      summary={action && <VaultActionSummary vault={vault} positionChange={action.positionChange} />}
-      metrics={action && <VaultActionSimulationMetrics vault={vault} positionChange={action.positionChange} />}
-      actionName={action ? vaultPositionChangeToActionName(action.positionChange) : "Send Transaction"} // Fallback won't occur
+      summary={
+        action && <VaultActionSummary vault={vault} positionChange={action.positionChange} />
+      }
+      metrics={
+        action && (
+          <VaultActionSimulationMetrics vault={vault} positionChange={action.positionChange} />
+        )
+      }
+      actionName={
+        action ? vaultPositionChangeToActionName(action.positionChange) : 'Send Transaction'
+      } // Fallback won't occur
       trackingPayload={getTrackingPayload(vault, action, trackingTag)}
       {...props}
     />
@@ -48,11 +57,17 @@ function getTrackingPayload(vault: Vault, action: VaultAction | null, tag: strin
   };
 }
 
-export function VaultActionSummary({ vault, positionChange }: { vault: Vault; positionChange: VaultPositionChange }) {
+export function VaultActionSummary({
+  vault,
+  positionChange,
+}: {
+  vault: Vault;
+  positionChange: VaultPositionChange;
+}) {
   const deltaAmountRaw = positionChange.balance.after - positionChange.balance.before;
   const deltaAmount = descaleBigIntToNumber(deltaAmountRaw, vault.asset.decimals);
   const deltaAmountUsd = deltaAmount * (vault.asset?.priceUsd ?? 0);
-  const action = deltaAmount > 0 ? "Supply" : "Withdraw";
+  const action = deltaAmount > 0 ? 'Supply' : 'Withdraw';
 
   return (
     <AssetChangeSummary
@@ -95,7 +110,7 @@ export function VaultActionSimulationMetrics({
         }
       />
       <MetricChange
-        name={rateLabel("Net APY")}
+        name={rateLabel('Net APY')}
         initialValue={
           <ApyTooltip
             type="earn"
@@ -113,5 +128,5 @@ export function VaultActionSimulationMetrics({
 
 function vaultPositionChangeToActionName(positonChange: VaultPositionChange) {
   const positionDelta = positonChange.balance.after - positonChange.balance.before;
-  return positionDelta > 0 ? "Supply" : "Withdraw";
+  return positionDelta > 0 ? 'Supply' : 'Withdraw';
 }

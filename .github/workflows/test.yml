@@ -10,15 +10,10 @@ on:
       - staging
   workflow_dispatch: # Adds "Run workflow" button in GitHub UI
 
-env:
-  NEXT_PUBLIC_URL: ${{ secrets.NEXT_PUBLIC_URL }}
-  MAINNET_RPC_URL_1: ${{ secrets.MAINNET_RPC_URL_1 }}
-  POLYGON_RPC_URL_1: ${{ secrets.POLYGON_RPC_URL_1 }}
-  POLYGON_RPC_URL_2: ${{ secrets.POLYGON_RPC_URL_2 }}
-
 jobs:
   vitest:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
 
@@ -45,7 +40,16 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - run: pnpm check
+
+      - run: pnpm check:types
+
       - run: pnpm test run
+        env:
+          NEXT_PUBLIC_URL: ${{ secrets.NEXT_PUBLIC_URL }}
+          MAINNET_RPC_URL_1: ${{ secrets.MAINNET_RPC_URL_1 }}
+          POLYGON_RPC_URL_1: ${{ secrets.POLYGON_RPC_URL_1 }}
+          POLYGON_RPC_URL_2: ${{ secrets.POLYGON_RPC_URL_2 }}
 
       - name: Save Foundry RPC cache
         if: always()

@@ -1,7 +1,9 @@
-import { type Address, encodeFunctionData, type Hex } from "viem";
-import { merklDistributorAbi } from "@/actions/abis/merklDistributorAbi";
-import { MERKL_DISTRIBUTOR_ADDRESS } from "./constants";
-import { type Action, UserFacingError } from "./types";
+import { type Address, encodeFunctionData, type Hex } from 'viem';
+
+import { merklDistributorAbi } from '@/actions/abis/merklDistributorAbi';
+
+import { MERKL_DISTRIBUTOR_ADDRESS } from './constants';
+import { type Action, UserFacingError } from './types';
 
 interface BuildClaimMerklRewardsActionParameters {
   chainId: number;
@@ -20,19 +22,19 @@ export function claimMerklRewardsAction({
 }: BuildClaimMerklRewardsActionParameters): Action {
   const len = tokens.length;
   if (creditedAmounts.length !== len || proofs.length !== len) {
-    throw new UserFacingError("Invalid arguments, must have same length");
+    throw new UserFacingError('Invalid arguments, must have same length');
   }
 
   return {
     chainId,
     transactionRequests: [
       {
-        name: "Claim rewards",
+        name: 'Claim rewards',
         tx: () => ({
           to: MERKL_DISTRIBUTOR_ADDRESS,
           data: encodeFunctionData({
             abi: merklDistributorAbi,
-            functionName: "claim",
+            functionName: 'claim',
             args: [Array(len).fill(accountAddress), tokens, creditedAmounts, proofs],
           }),
         }),

@@ -1,9 +1,12 @@
-import { type Market, MathLib } from "@morpho-org/blue-sdk";
-import type { BlueActions } from "@morpho-org/morpho-sdk";
-import type { Address } from "viem";
-import { getBlock } from "viem/actions";
-import { APP_CONFIG } from "@/config";
-import type { ClientWithChain } from "../types";
+import type { BlueActions } from '@morpho-org/morpho-sdk';
+import type { Address } from 'viem';
+
+import { type Market, MathLib } from '@morpho-org/blue-sdk';
+import { getBlock } from 'viem/actions';
+
+import { APP_CONFIG } from '@/config';
+
+import type { ClientWithChain } from '../types';
 
 export async function getMarketBorrowReallocations({
   publicClient,
@@ -13,8 +16,8 @@ export async function getMarketBorrowReallocations({
   borrowAmount,
 }: {
   publicClient: ClientWithChain;
-  market: Pick<BlueActions, "getVaultV2BlueReallocationData" | "getVaultV2BlueReallocations">;
-  marketData: Pick<Market, "totalSupplyAssets" | "totalBorrowAssets">;
+  market: Pick<BlueActions, 'getVaultV2BlueReallocationData' | 'getVaultV2BlueReallocations'>;
+  marketData: Pick<Market, 'totalSupplyAssets' | 'totalBorrowAssets'>;
   allocatingVaultAddresses: Address[];
   borrowAmount: bigint;
 }) {
@@ -34,6 +37,6 @@ export async function getMarketBorrowReallocations({
       vaultAddresses: allocatingVaultAddresses,
       block: await getBlock(publicClient),
     }),
-    options: { operation: { type: "borrow", amount: borrowAmount } },
+    options: { operation: { type: 'borrow', amount: borrowAmount } },
   }).reallocations;
 }

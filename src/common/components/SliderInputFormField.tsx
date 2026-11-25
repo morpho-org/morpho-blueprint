@@ -1,15 +1,24 @@
-"use client";
+'use client';
 
-import { type ComponentProps, type ReactNode, useMemo } from "react";
+import type { FieldValues } from 'react-hook-form';
 
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/common/components/ui/form";
-import { Input } from "@/common/components/ui/input";
-import { Slider } from "@/common/components/ui/slider";
-import { formatNumber } from "@/common/utils/format";
+import { type ComponentProps, type ReactNode, useMemo } from 'react';
 
-// biome-ignore lint/suspicious/noExplicitAny: Allow any for the FormField component
-interface SliderInputFormFieldProps<TFieldValues extends Record<string, any>>
-  extends Omit<ComponentProps<typeof FormField<TFieldValues>>, "render"> {
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/common/components/ui/form';
+import { Input } from '@/common/components/ui/input';
+import { Slider } from '@/common/components/ui/slider';
+import { formatNumber } from '@/common/utils/format';
+
+interface SliderInputFormFieldProps<TFieldValues extends FieldValues> extends Omit<
+  ComponentProps<typeof FormField<TFieldValues>>,
+  'render'
+> {
   includeInput?: boolean;
   labelContent: ReactNode;
   sliderMin: number;
@@ -19,8 +28,7 @@ interface SliderInputFormFieldProps<TFieldValues extends Record<string, any>>
   unit: string;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: Allow any for the FormField component
-function SliderInputFormField<TFieldValues extends Record<string, any>>({
+function SliderInputFormField<TFieldValues extends FieldValues>({
   labelContent,
   includeInput = true,
   sliderMin,
@@ -40,7 +48,7 @@ function SliderInputFormField<TFieldValues extends Record<string, any>>({
         (_, stepNumber) =>
           `${formatNumber(step + step * stepNumber, { minimumFractionDigits: 0, maximumFractionDigits: 1 })}${unit}`,
       )
-      .concat(["Max"]);
+      .concat(['Max']);
   }, [sliderMin, sliderMax, unit]);
 
   return (
@@ -63,7 +71,7 @@ function SliderInputFormField<TFieldValues extends Record<string, any>>({
                         onChange(value);
                       }
                     }}
-                    value={value ?? ""}
+                    value={value ?? ''}
                     className="max-w-[76px] pr-9"
                     variantSize="sm"
                     {...props}
@@ -79,7 +87,13 @@ function SliderInputFormField<TFieldValues extends Record<string, any>>({
           </div>
 
           <FormControl>
-            <Slider min={sliderMin} max={sliderMax} step={sliderStep} value={[value]} onValueChange={onChange} />
+            <Slider
+              min={sliderMin}
+              max={sliderMax}
+              step={sliderStep}
+              value={[value]}
+              onValueChange={onChange}
+            />
           </FormControl>
 
           {showTicks && (

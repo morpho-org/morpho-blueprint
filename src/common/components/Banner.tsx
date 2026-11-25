@@ -1,10 +1,13 @@
-"use client";
-import clsx from "clsx";
-import type { ReactNode } from "react";
-import { cn } from "@/common/utils/shadcn";
-import { APP_CONFIG } from "@/config";
-import { LinkExternalUnstyled } from "./LinkExternal";
-import { Button } from "./ui/button";
+'use client';
+import type { ReactNode } from 'react';
+
+import clsx from 'clsx';
+
+import { cn } from '@/common/utils/shadcn';
+import { APP_CONFIG } from '@/config';
+
+import { LinkExternalUnstyled } from './LinkExternal';
+import { Button } from './ui/button';
 
 interface BannerProps {
   text: string;
@@ -18,12 +21,17 @@ export function Banner({ text, cta, singleLineOnly }: BannerProps) {
   return (
     <div className="w-full bg-primary">
       <div
-        className={cn("mx-auto flex max-w-[1182px] items-center px-4 py-2 text-primary-foreground", {
-          "justify-between gap-4": hasCta,
-          "justify-center": !hasCta,
-        })}
+        className={cn(
+          'mx-auto flex max-w-[1182px] items-center px-4 py-2 text-primary-foreground',
+          {
+            'justify-between gap-4': hasCta,
+            'justify-center': !hasCta,
+          },
+        )}
       >
-        <p className={clsx("body-medium", singleLineOnly ? "line-clamp-1" : "line-clamp-3")}>{text}</p>
+        <p className={clsx('body-medium', singleLineOnly ? 'line-clamp-1' : 'line-clamp-3')}>
+          {text}
+        </p>
         {cta !== undefined && cta}
       </div>
     </div>

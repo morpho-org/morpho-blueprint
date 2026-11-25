@@ -1,14 +1,21 @@
-import "server-only";
+import 'server-only';
+import { type Address, getAddress } from 'viem';
 
-import { type Address, getAddress } from "viem";
-import { toTokenInfo } from "@/common/data/adapters/entity";
-import type { TokenInfo } from "@/common/data/types";
-import { SECONDS_PER_DAY } from "@/common/utils/constants";
-import { fetchMorphoRestResource, MorphoRestError, restSelector } from "@/common/utils/fetchMorphoRest";
+import type { TokenInfo } from '@/common/data/types';
+
+import { toTokenInfo } from '@/common/data/adapters/entity';
+import { SECONDS_PER_DAY } from '@/common/utils/constants';
+import {
+  fetchMorphoRestResource,
+  MorphoRestError,
+  restSelector,
+} from '@/common/utils/fetchMorphoRest';
 
 /** ERC-20 decimals are a uint8. Anything else (null, a float, a string) is unknown, never a default. */
 export function parseTokenDecimals(value: unknown): number | null {
-  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 255 ? value : null;
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 255
+    ? value
+    : null;
 }
 
 /** Core REST's `/v0/tokens/{token}` body. */
@@ -54,7 +61,8 @@ export async function getVaultAssetDecimals(
 ): Promise<number | null> {
   const rootDecimals = parseTokenDecimals(asset.decimals);
   if (rootDecimals !== null) return rootDecimals;
-  const metadata = token === undefined ? await getTokenMetadata(chainId, getAddress(asset.address)) : token;
+  const metadata =
+    token === undefined ? await getTokenMetadata(chainId, getAddress(asset.address)) : token;
   return parseTokenDecimals(metadata?.decimals);
 }
 
@@ -90,7 +98,8 @@ export async function getTokenPriceUsd(
     );
     return response?.data.price ?? null;
   } catch (error) {
-    if (throwWhenRateLimited && error instanceof MorphoRestError && error.status === 429) throw error;
+    if (throwWhenRateLimited && error instanceof MorphoRestError && error.status === 429)
+      throw error;
     return null;
   }
 }
@@ -106,8 +115,8 @@ export async function getTokenInfo(chainId: number, address: Address): Promise<T
   if (!token || decimals == null) return null;
   return toTokenInfo({
     ...token,
-    name: token.name ?? token.symbol ?? "UNKNOWN",
-    symbol: token.symbol ?? token.name ?? "UNKNOWN",
+    name: token.name ?? token.symbol ?? 'UNKNOWN',
+    symbol: token.symbol ?? token.name ?? 'UNKNOWN',
     decimals,
     logoURI: token.logo_uri,
   });

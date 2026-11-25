@@ -1,18 +1,19 @@
-import "server-only";
+import 'server-only';
+import { type Address, formatUnits, getAddress, type Hex } from 'viem';
+import { z } from 'zod';
 
-import { type Address, formatUnits, getAddress, type Hex } from "viem";
-import { z } from "zod";
-import { fetchJsonResponse } from "@/common/utils/fetch";
-import { SUPPORTED_CHAIN_IDS } from "@/config";
-import type { SupportedChainId } from "@/config/types";
+import type { SupportedChainId } from '@/config/types';
 
-const MERKL_API_BASE_URL = "https://api.merkl.xyz/v4";
+import { fetchJsonResponse } from '@/common/utils/fetch';
+import { SUPPORTED_CHAIN_IDS } from '@/config';
+
+const MERKL_API_BASE_URL = 'https://api.merkl.xyz/v4';
 
 // Proof elements are encoded as `bytes32[][]` by the claim action, so anything else would throw
 // during calldata encoding instead of dropping just the offending reward here
 const bytes32Schema = z
   .string()
-  .regex(/^0x[0-9a-fA-F]{64}$/, "Invalid bytes32")
+  .regex(/^0x[0-9a-fA-F]{64}$/, 'Invalid bytes32')
   .transform((value) => value as Hex);
 
 // Every transform below must be total: `safeParse` does not trap exceptions thrown inside one, so a
@@ -21,7 +22,7 @@ const addressSchema = z.string().transform((value, ctx) => {
   try {
     return getAddress(value);
   } catch {
-    ctx.addIssue({ code: "custom", message: `Invalid address: ${value}` });
+    ctx.addIssue({ code: 'custom', message: `Invalid address: ${value}` });
     return z.NEVER;
   }
 });
@@ -32,7 +33,7 @@ const addressSchema = z.string().transform((value, ctx) => {
 // wrong value here produces a reverting claim instead of a dropped reward.
 const amountSchema = z.string().transform((value, ctx) => {
   if (!/^\d+$/.test(value)) {
-    ctx.addIssue({ code: "custom", message: `Invalid amount: ${value}` });
+    ctx.addIssue({ code: 'custom', message: `Invalid amount: ${value}` });
     return z.NEVER;
   }
   return BigInt(value);
@@ -113,16 +114,20 @@ function isSupportedChainId(chainId: number): chainId is SupportedChainId {
 
 function breakdownsUrl(accountAddress: Address, chainIds: readonly number[]): URL {
   // `getAddress` validates; Merkl's API contract wants the path address lowercase.
-  const url = new URL(`${MERKL_API_BASE_URL}/users/${getAddress(accountAddress).toLowerCase()}/rewards/breakdowns`);
+  const url = new URL(
+    `${MERKL_API_BASE_URL}/users/${getAddress(accountAddress).toLowerCase()}/rewards/breakdowns`,
+  );
   // `chainIds` is required and plural, the singular form is rejected with a 400
   for (const chainId of chainIds) {
-    url.searchParams.append("chainIds", chainId.toString());
+    url.searchParams.append('chainIds', chainId.toString());
   }
-  url.searchParams.set("claimableOnly", "true");
+  url.searchParams.set('claimableOnly', 'true');
   return url;
 }
 
-export const getAccountRewards = async (accountAddress: Address): Promise<MerklAccountRewardsMap> => {
+export const getAccountRewards = async (
+  accountAddress: Address,
+): Promise<MerklAccountRewardsMap> => {
   let response: unknown;
   try {
     // All chains come back in a single request on the happy path.
@@ -133,10 +138,12 @@ export const getAccountRewards = async (accountAddress: Address): Promise<MerklA
     // that still fail degrade to no rewards (errors are logged at the fetch layer), matching the
     // previous per-chain `Promise.allSettled` behavior.
     const settled = await Promise.allSettled(
-      SUPPORTED_CHAIN_IDS.map((chainId) => fetchJsonResponse<unknown>(breakdownsUrl(accountAddress, [chainId]))),
+      SUPPORTED_CHAIN_IDS.map((chainId) =>
+        fetchJsonResponse<unknown>(breakdownsUrl(accountAddress, [chainId])),
+      ),
     );
     response = settled.flatMap((result) =>
-      result.status === "fulfilled" && Array.isArray(result.value) ? result.value : [],
+      result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : [],
     );
   }
 
@@ -147,18 +154,22 @@ export const getAccountRewards = async (accountAddress: Address): Promise<MerklA
   }
 
   const data: MerklAccountRewardsMap = {};
-  for (const chainEntry of parseValidEntries(merklChainRewardsSchema, parsedResponse.data, "chain entry")) {
+  for (const chainEntry of parseValidEntries(
+    merklChainRewardsSchema,
+    parsedResponse.data,
+    'chain entry',
+  )) {
     const chainId = chainEntry.chain.id;
     if (!isSupportedChainId(chainId)) {
       continue;
     }
 
     const rewards: MerklAccountReward[] = [];
-    for (const reward of parseValidEntries(merklRewardSchema, chainEntry.rewards, "reward")) {
+    for (const reward of parseValidEntries(merklRewardSchema, chainEntry.rewards, 'reward')) {
       const { token } = reward;
 
       // Whisk parity: real, non-test tokens only, and no protocol filter
-      if (token.type !== "TOKEN" || token.isTest) {
+      if (token.type !== 'TOKEN' || token.isTest) {
         continue;
       }
 

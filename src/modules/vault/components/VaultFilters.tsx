@@ -1,10 +1,11 @@
-"use client";
-import { useCallback } from "react";
-import { MultiSelect, type MultiSelectOption } from "@/common/components/MultiSelect/MultiSelect";
-import { ResetFiltersButton } from "@/common/components/ResetFiltersButton";
-import { useShallowSearchParams } from "@/common/hooks/useShallowSearchParams";
-import { FilterKey } from "@/common/utils/constants";
-import { APP_CONFIG } from "@/config";
+'use client';
+import { useCallback } from 'react';
+
+import { MultiSelect, type MultiSelectOption } from '@/common/components/MultiSelect/MultiSelect';
+import { ResetFiltersButton } from '@/common/components/ResetFiltersButton';
+import { useShallowSearchParams } from '@/common/hooks/useShallowSearchParams';
+import { FilterKey } from '@/common/utils/constants';
+import { APP_CONFIG } from '@/config';
 
 interface VaultFiltersProps {
   chainOptions: MultiSelectOption[];
@@ -13,7 +14,12 @@ interface VaultFiltersProps {
   tagOptions?: MultiSelectOption[];
 }
 
-export function VaultFilters({ chainOptions, assetOptions, curatorOptions, tagOptions = [] }: VaultFiltersProps) {
+export function VaultFilters({
+  chainOptions,
+  assetOptions,
+  curatorOptions,
+  tagOptions = [],
+}: VaultFiltersProps) {
   const {
     values: [chainValues, assetValues, curatorValues, tagValues],
     addShallowSearchParams,
@@ -40,7 +46,9 @@ export function VaultFilters({ chainOptions, assetOptions, curatorOptions, tagOp
     <div className="flex gap-4 overflow-x-auto pb-0.5">
       {chainOptions.length > 1 && (
         <MultiSelect
-          emptyValue={chainValues === undefined || chainValues.length === 0 ? "All Chains" : "Chains"}
+          emptyValue={
+            chainValues === undefined || chainValues.length === 0 ? 'All Chains' : 'Chains'
+          }
           options={chainOptions}
           value={chainValues ?? []}
           onSelect={(value) => onSelect(FilterKey.Chains, chainValues ?? [], value)}
@@ -49,7 +57,9 @@ export function VaultFilters({ chainOptions, assetOptions, curatorOptions, tagOp
       )}
       {assetOptions.length > 1 && (
         <MultiSelect
-          emptyValue={assetValues === undefined || assetValues.length === 0 ? "All Assets" : "Assets"}
+          emptyValue={
+            assetValues === undefined || assetValues.length === 0 ? 'All Assets' : 'Assets'
+          }
           placeholder="Search for token"
           options={assetOptions}
           value={assetValues ?? []}
@@ -59,7 +69,7 @@ export function VaultFilters({ chainOptions, assetOptions, curatorOptions, tagOp
       )}
       {tagOptions.length > 0 && (
         <MultiSelect
-          emptyValue={tagValues === undefined || tagValues.length === 0 ? "Type" : "Type"}
+          emptyValue={tagValues === undefined || tagValues.length === 0 ? 'Type' : 'Type'}
           options={tagOptions}
           value={tagValues ?? []}
           onSelect={(values) => onSelect(FilterKey.VaultTags, tagValues ?? [], values)}
@@ -68,7 +78,9 @@ export function VaultFilters({ chainOptions, assetOptions, curatorOptions, tagOp
       )}
       {!APP_CONFIG.featureFlags.hideCurator && curatorOptions.length > 1 && (
         <MultiSelect
-          emptyValue={curatorValues === undefined || curatorValues.length === 0 ? "All Curators" : "Curators"}
+          emptyValue={
+            curatorValues === undefined || curatorValues.length === 0 ? 'All Curators' : 'Curators'
+          }
           options={curatorOptions}
           value={curatorValues ?? []}
           onSelect={(values) => onSelect(FilterKey.Curators, curatorValues ?? [], values)}

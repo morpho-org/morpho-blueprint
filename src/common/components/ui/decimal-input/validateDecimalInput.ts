@@ -5,10 +5,10 @@ export function validateDecimalInput(value: string, decimals = 6) {
 }
 
 function isValidDecimalInput(value: string, decimals = 6): boolean {
-  if (value === "") return true;
+  if (value === '') return true;
   return new RegExp(`^0*(\\d+)?(\\.\\d{0,${decimals}})?$`).test(value);
 }
 
 function normalizeDecimalInput(value: string): string {
-  return value === "." ? "0." : value;
+  return value === '.' ? '0.' : value;
 }

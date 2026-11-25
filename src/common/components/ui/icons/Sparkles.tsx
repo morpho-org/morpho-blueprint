@@ -1,6 +1,6 @@
-import clsx from "clsx";
+import clsx from 'clsx';
 
-export function Sparkles({ className, ...props }: React.ComponentProps<"svg">) {
+export function Sparkles({ className, ...props }: React.ComponentProps<'svg'>) {
   return (
     <svg
       width="16"
@@ -8,7 +8,7 @@ export function Sparkles({ className, ...props }: React.ComponentProps<"svg">) {
       viewBox="0 0 16 16"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={clsx(["fill-current"], className)}
+      className={clsx(['fill-current'], className)}
       {...props}
     >
       <title>Sparkles</title>

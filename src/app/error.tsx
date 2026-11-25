@@ -1,13 +1,19 @@
-"use client";
-import Link from "next/link";
-import { useEffect } from "react";
+'use client';
+import Link from 'next/link';
+import { useEffect } from 'react';
 
-import { Button } from "@/common/components/ui/button";
-import { trackEvent } from "@/common/utils/trackEvent";
+import { Button } from '@/common/components/ui/button';
+import { trackEvent } from '@/common/utils/trackEvent';
 
-export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function ErrorPage({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   useEffect(() => {
-    void trackEvent("app-error", { message: error.message });
+    void trackEvent('app-error', { message: error.message });
   }, [error]);
 
   return (

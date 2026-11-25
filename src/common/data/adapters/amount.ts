@@ -1,6 +1,7 @@
-import { formatUnits } from "viem";
-import type { Amount, Ratio } from "@/common/data/types";
-import type { BigIntish } from "@/morpho-types";
+import { formatUnits } from 'viem';
+
+import type { Amount, Ratio } from '@/common/data/types';
+import type { BigIntish } from '@/morpho-types';
 
 /**
  * The API serializes `BigInt` scalars as a JSON number when the value fits in a safe integer, and
@@ -8,8 +9,8 @@ import type { BigIntish } from "@/morpho-types";
  */
 export function toBigInt(value: BigIntish | null | undefined): bigint {
   if (value == null) return 0n;
-  if (typeof value === "bigint") return value;
-  if (typeof value === "number") return BigInt(Math.trunc(value));
+  if (typeof value === 'bigint') return value;
+  if (typeof value === 'number') return BigInt(Math.trunc(value));
   return BigInt(value);
 }
 
@@ -26,7 +27,11 @@ export function descale(value: BigIntish | null | undefined, decimals: number): 
  * Whisk served money as a `{raw, formatted, usd}` triple; Morpho serves a raw `BigInt` plus a
  * parallel `...Usd: Float`. This rebuilds the triple, deriving `formatted` from raw + decimals.
  */
-export function toAmount(raw: BigIntish | null | undefined, decimals: number, usd?: number | null): Amount {
+export function toAmount(
+  raw: BigIntish | null | undefined,
+  decimals: number,
+  usd?: number | null,
+): Amount {
   const rawBigInt = toBigInt(raw);
   return {
     raw: rawBigInt.toString(),

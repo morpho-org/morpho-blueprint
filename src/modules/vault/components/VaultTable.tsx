@@ -1,24 +1,30 @@
-"use client";
+'use client';
 
-import type { ColumnDef } from "@tanstack/react-table";
-import { ApyTooltip } from "@/common/components/ApyToolip";
-import { Avatar } from "@/common/components/ui/avatar";
-import { Badge } from "@/common/components/ui/badge";
-import { Separator } from "@/common/components/ui/seperator";
-import { Table } from "@/common/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/common/components/ui/tooltip";
-import { formatNumber } from "@/common/utils/format";
-import { sortTableAssetAmount } from "@/common/utils/sort";
-import { rateLabel } from "@/common/utils/timeframe";
-import { APP_CONFIG } from "@/config";
-import type { SupportedChainId } from "@/config/types";
-import { TableAssetAmount } from "@/modules/token/components/TableAssetAmount";
-import type { VaultSummary } from "@/modules/vault/data/getVaultSummaries";
-import { useVaultTableData, type VaultTableDataEntry } from "@/modules/vault/hooks/useVaultTableData";
-import { extractVaultCurator } from "@/modules/vault/utils/extractVaultCurator";
-import { getVaultTagData } from "@/modules/vault/utils/getVaultTagData";
-import { VaultCollateralTooltip } from "./VaultCollateralTooltip";
-import { VaultName } from "./VaultName";
+import type { ColumnDef } from '@tanstack/react-table';
+
+import type { SupportedChainId } from '@/config/types';
+import type { VaultSummary } from '@/modules/vault/data/getVaultSummaries';
+
+import { ApyTooltip } from '@/common/components/ApyToolip';
+import { Avatar } from '@/common/components/ui/avatar';
+import { Badge } from '@/common/components/ui/badge';
+import { Separator } from '@/common/components/ui/seperator';
+import { Table } from '@/common/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/common/components/ui/tooltip';
+import { formatNumber } from '@/common/utils/format';
+import { sortTableAssetAmount } from '@/common/utils/sort';
+import { rateLabel } from '@/common/utils/timeframe';
+import { APP_CONFIG } from '@/config';
+import { TableAssetAmount } from '@/modules/token/components/TableAssetAmount';
+import {
+  useVaultTableData,
+  type VaultTableDataEntry,
+} from '@/modules/vault/hooks/useVaultTableData';
+import { extractVaultCurator } from '@/modules/vault/utils/extractVaultCurator';
+import { getVaultTagData } from '@/modules/vault/utils/getVaultTagData';
+
+import { VaultCollateralTooltip } from './VaultCollateralTooltip';
+import { VaultName } from './VaultName';
 
 interface VaultTableProps {
   vaultSummaries: VaultSummary[];
@@ -41,8 +47,8 @@ export function getColumns(isPositionLoading: boolean, showCuratorAum: boolean):
 
   return [
     {
-      accessorKey: "vaultSummary.name",
-      header: "Vault Name",
+      accessorKey: 'vaultSummary.name',
+      header: 'Vault Name',
       cell: ({ row }) => {
         const { vaultSummary } = row.original;
         return (
@@ -57,9 +63,9 @@ export function getColumns(isPositionLoading: boolean, showCuratorAum: boolean):
       minSize: 220,
     },
     {
-      id: "yourDeposits",
+      id: 'yourDeposits',
       accessorFn: (row) => row.position?.assets.usd ?? 0,
-      header: "Your Deposits",
+      header: 'Your Deposits',
       cell: ({ row }) => {
         const { vaultSummary, position } = row.original;
         return (
@@ -73,17 +79,17 @@ export function getColumns(isPositionLoading: boolean, showCuratorAum: boolean):
       },
       sortingFn: (a, b) =>
         sortTableAssetAmount(
-          Number(a.original.position?.assets.formatted ?? "0"),
+          Number(a.original.position?.assets.formatted ?? '0'),
           a.original.position?.assets.usd,
-          Number(b.original.position?.assets.formatted ?? "0"),
+          Number(b.original.position?.assets.formatted ?? '0'),
           b.original.position?.assets.usd,
         ),
       minSize: 130,
     },
     {
-      id: "inWallet",
+      id: 'inWallet',
       accessorFn: (row) => row.position?.walletAssetHolding?.balance.usd ?? 0,
-      header: "In Wallet",
+      header: 'In Wallet',
       cell: ({ row }) => {
         const { vaultSummary, position } = row.original;
         return (
@@ -97,17 +103,17 @@ export function getColumns(isPositionLoading: boolean, showCuratorAum: boolean):
       },
       sortingFn: (a, b) =>
         sortTableAssetAmount(
-          Number(a.original.position?.walletAssetHolding?.balance.formatted ?? "0"),
+          Number(a.original.position?.walletAssetHolding?.balance.formatted ?? '0'),
           a.original.position?.walletAssetHolding?.balance.usd,
-          Number(b.original.position?.walletAssetHolding?.balance.formatted ?? "0"),
+          Number(b.original.position?.walletAssetHolding?.balance.formatted ?? '0'),
           b.original.position?.walletAssetHolding?.balance.usd,
         ),
       minSize: 130,
     },
     {
-      id: "totalDeposits",
+      id: 'totalDeposits',
       accessorFn: (row) => row.vaultSummary.totalAssets.usd ?? 0,
-      header: "Total Deposits",
+      header: 'Total Deposits',
       cell: ({ row }) => {
         const { vaultSummary } = row.original;
         return (
@@ -121,9 +127,9 @@ export function getColumns(isPositionLoading: boolean, showCuratorAum: boolean):
       },
       sortingFn: (a, b) =>
         sortTableAssetAmount(
-          Number(a.original.vaultSummary.totalAssets.formatted ?? "0"),
+          Number(a.original.vaultSummary.totalAssets.formatted ?? '0'),
           a.original.vaultSummary.totalAssets.usd,
-          Number(b.original.vaultSummary.totalAssets.formatted ?? "0"),
+          Number(b.original.vaultSummary.totalAssets.formatted ?? '0'),
           b.original.vaultSummary.totalAssets.usd,
         ),
       minSize: 130,
@@ -131,19 +137,25 @@ export function getColumns(isPositionLoading: boolean, showCuratorAum: boolean):
     ...(includeTypeColumn
       ? ([
           {
-            id: "type",
+            id: 'type',
             accessorFn: (row) =>
-              getVaultTagData(row.vaultSummary.chain.id as SupportedChainId, row.vaultSummary.vaultAddress)?.tag ?? "",
-            header: "Type",
+              getVaultTagData(
+                row.vaultSummary.chain.id as SupportedChainId,
+                row.vaultSummary.vaultAddress,
+              )?.tag ?? '',
+            header: 'Type',
             cell: ({ row }) => {
               const { vaultSummary } = row.original;
-              const tagData = getVaultTagData(vaultSummary.chain.id as SupportedChainId, vaultSummary.vaultAddress);
+              const tagData = getVaultTagData(
+                vaultSummary.chain.id as SupportedChainId,
+                vaultSummary.vaultAddress,
+              );
               return tagData ? (
                 <Badge variant="small" style={{ backgroundColor: tagData.color }}>
                   {tagData.tag}
                 </Badge>
               ) : (
-                "—"
+                '—'
               );
             },
             minSize: 100,
@@ -153,23 +165,28 @@ export function getColumns(isPositionLoading: boolean, showCuratorAum: boolean):
     ...(!APP_CONFIG.featureFlags.hideCurator
       ? [
           {
-            id: "curator",
+            id: 'curator',
             accessorFn: (row) => row.vaultSummary.curatorAum,
             // A curator the AUM route does not know sorts last either way.
-            sortUndefined: "last",
-            header: showCuratorAum ? "Curator AUC" : "Curator",
+            sortUndefined: 'last',
+            header: showCuratorAum ? 'Curator AUC' : 'Curator',
             enableSorting: showCuratorAum,
             cell: ({ row }) => {
               const curator = extractVaultCurator(row.original.vaultSummary);
               if (!curator) return null;
 
               const avatar = (
-                <Avatar src={curator.image} alt={curator.name} size="sm" className="rounded-full border" />
+                <Avatar
+                  src={curator.image}
+                  alt={curator.name}
+                  size="sm"
+                  className="rounded-full border"
+                />
               );
               const aumComponent =
                 row.original.vaultSummary.curatorAum !== undefined ? (
                   <span className="body-medium-plus">
-                    {formatNumber(row.original.vaultSummary.curatorAum, { currency: "USD" })}
+                    {formatNumber(row.original.vaultSummary.curatorAum, { currency: 'USD' })}
                   </span>
                 ) : null;
               return (
@@ -188,7 +205,11 @@ export function getColumns(isPositionLoading: boolean, showCuratorAum: boolean):
                         <Separator />
                         <div className="body-small flex items-center justify-between">
                           <span>Assets Under Curation</span>
-                          <span>{formatNumber(row.original.vaultSummary.curatorAum ?? 0, { currency: "USD" })}</span>
+                          <span>
+                            {formatNumber(row.original.vaultSummary.curatorAum ?? 0, {
+                              currency: 'USD',
+                            })}
+                          </span>
                         </div>
                       </>
                     )}
@@ -201,15 +222,15 @@ export function getColumns(isPositionLoading: boolean, showCuratorAum: boolean):
         ]
       : []),
     {
-      id: "exposure",
-      header: "Exposure",
+      id: 'exposure',
+      header: 'Exposure',
       cell: ({ row }) => <VaultCollateralTooltip vaultSummary={row.original.vaultSummary} />,
       minSize: 140,
     },
     {
-      id: "supplyApy",
+      id: 'supplyApy',
       accessorFn: (row) => row.vaultSummary.apy.total,
-      header: rateLabel("Net APY"),
+      header: rateLabel('Net APY'),
       cell: ({ row }) => {
         const { apy } = row.original.vaultSummary;
         return (
@@ -234,11 +255,11 @@ export function VaultTable({ vaultSummaries }: VaultTableProps) {
       columns={getColumns(isPositionsLoading, hasCuratorAum(vaultSummaries))}
       data={data}
       initialSort={[
-        { id: "yourDeposits", desc: true },
-        { id: "totalDeposits", desc: true },
+        { id: 'yourDeposits', desc: true },
+        { id: 'totalDeposits', desc: true },
       ]}
       rowAction={(row) => ({
-        type: "link",
+        type: 'link',
         href: `/earn/${row.vaultSummary.chain.id}/${row.vaultSummary.vaultAddress}`,
       })}
     />

@@ -1,14 +1,16 @@
-import Image from "next/image";
-import { defaultUrlTransform } from "react-markdown";
-import LinkExternal from "@/common/components/LinkExternal";
-import { Badge } from "@/common/components/ui/badge";
-import type { CuratorInfo } from "@/common/data/types";
-import { APP_CONFIG } from "@/config";
-import { TokenIcon } from "@/modules/token/components/TokenIcon";
-import { VaultPositionHighlight } from "@/modules/vault/components/VaultPositionHighlight";
-import type { Vault } from "@/modules/vault/data/getVault";
-import { extractVaultCurator } from "@/modules/vault/utils/extractVaultCurator";
-import { getVaultTagData } from "@/modules/vault/utils/getVaultTagData";
+import Image from 'next/image';
+import { defaultUrlTransform } from 'react-markdown';
+
+import type { CuratorInfo } from '@/common/data/types';
+import type { Vault } from '@/modules/vault/data/getVault';
+
+import LinkExternal from '@/common/components/LinkExternal';
+import { Badge } from '@/common/components/ui/badge';
+import { APP_CONFIG } from '@/config';
+import { TokenIcon } from '@/modules/token/components/TokenIcon';
+import { VaultPositionHighlight } from '@/modules/vault/components/VaultPositionHighlight';
+import { extractVaultCurator } from '@/modules/vault/utils/extractVaultCurator';
+import { getVaultTagData } from '@/modules/vault/utils/getVaultTagData';
 
 interface VaultHeaderProps {
   vaultPromise: Promise<Vault>;

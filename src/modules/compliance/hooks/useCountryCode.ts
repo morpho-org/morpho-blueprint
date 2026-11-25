@@ -1,12 +1,13 @@
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
-import { fetchJsonResponse } from "@/common/utils/fetch";
+import { useQuery } from '@tanstack/react-query';
+
+import { fetchJsonResponse } from '@/common/utils/fetch';
 
 // Fetches the ISO 3166-2 country code for the current user
 export function useCountryCode() {
   return useQuery({
-    queryKey: ["country"],
+    queryKey: ['country'],
     queryFn: async () => fetchJsonResponse<string>(`/api/country`),
   });
 }

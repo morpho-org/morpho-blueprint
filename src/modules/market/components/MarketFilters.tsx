@@ -1,9 +1,10 @@
-"use client";
-import { useCallback } from "react";
-import { MultiSelect, type MultiSelectOption } from "@/common/components/MultiSelect/MultiSelect";
-import { ResetFiltersButton } from "@/common/components/ResetFiltersButton";
-import { useShallowSearchParams } from "@/common/hooks/useShallowSearchParams";
-import { FilterKey } from "@/common/utils/constants";
+'use client';
+import { useCallback } from 'react';
+
+import { MultiSelect, type MultiSelectOption } from '@/common/components/MultiSelect/MultiSelect';
+import { ResetFiltersButton } from '@/common/components/ResetFiltersButton';
+import { useShallowSearchParams } from '@/common/hooks/useShallowSearchParams';
+import { FilterKey } from '@/common/utils/constants';
 
 interface MarketFiltersProps {
   chainOptions: MultiSelectOption[];
@@ -11,7 +12,11 @@ interface MarketFiltersProps {
   loanAssetOptions: MultiSelectOption[];
 }
 
-export function MarketFilters({ chainOptions, collateralAssetOptions, loanAssetOptions }: MarketFiltersProps) {
+export function MarketFilters({
+  chainOptions,
+  collateralAssetOptions,
+  loanAssetOptions,
+}: MarketFiltersProps) {
   const {
     values: [chainValues, collateralAssetValues, loanAssetValues],
     addShallowSearchParams,
@@ -38,7 +43,9 @@ export function MarketFilters({ chainOptions, collateralAssetOptions, loanAssetO
     <div className="flex gap-4 overflow-x-auto pb-0.5">
       {chainOptions.length > 1 && (
         <MultiSelect
-          emptyValue={chainValues === undefined || chainValues.length === 0 ? "All Chains" : "Chains"}
+          emptyValue={
+            chainValues === undefined || chainValues.length === 0 ? 'All Chains' : 'Chains'
+          }
           options={chainOptions}
           value={chainValues ?? []}
           onSelect={(values) => onSelect(FilterKey.Chains, chainValues ?? [], values)}
@@ -49,19 +56,25 @@ export function MarketFilters({ chainOptions, collateralAssetOptions, loanAssetO
         <MultiSelect
           emptyValue={
             collateralAssetValues === undefined || collateralAssetValues.length === 0
-              ? "All Collateral Assets"
-              : "Collateral Assets"
+              ? 'All Collateral Assets'
+              : 'Collateral Assets'
           }
           placeholder="Search for token"
           options={collateralAssetOptions}
           value={collateralAssetValues ?? []}
-          onSelect={(values) => onSelect(FilterKey.CollateralAssets, collateralAssetValues ?? [], values)}
+          onSelect={(values) =>
+            onSelect(FilterKey.CollateralAssets, collateralAssetValues ?? [], values)
+          }
           onReset={() => removeShallowSearchParams([FilterKey.CollateralAssets])}
         />
       )}
       {loanAssetOptions.length > 1 && (
         <MultiSelect
-          emptyValue={loanAssetValues === undefined || loanAssetValues.length === 0 ? "All Loan Assets" : "Loan Assets"}
+          emptyValue={
+            loanAssetValues === undefined || loanAssetValues.length === 0
+              ? 'All Loan Assets'
+              : 'Loan Assets'
+          }
           placeholder="Search for token"
           options={loanAssetOptions}
           value={loanAssetValues ?? []}

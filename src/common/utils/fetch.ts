@@ -1,5 +1,6 @@
-import pRetry, { type Options } from "p-retry";
-import { trackEvent } from "@/common/utils/trackEvent";
+import pRetry, { type Options } from 'p-retry';
+
+import { trackEvent } from '@/common/utils/trackEvent';
 
 // 8s default timeout (just sanity timeout)
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
@@ -14,7 +15,10 @@ export async function promiseWithRetry<T>(
     factor: 2, // Exponential backoff factor
     randomize: true, // Avoid thundering herd effect
     onFailedAttempt: (e) => {
-      console.warn(`pRetry attempt failed, trying again: attempt: ${e.attemptNumber}, message: ${e.message}`, e);
+      console.warn(
+        `pRetry attempt failed, trying again: attempt: ${e.attemptNumber}, message: ${e.message}`,
+        e,
+      );
     },
   };
 
@@ -24,7 +28,7 @@ export async function promiseWithRetry<T>(
   });
 }
 
-export type RetryOptions = Partial<Options> | "disabled";
+export type RetryOptions = Partial<Options> | 'disabled';
 export interface FetchJsonResponseOptions {
   requestOptions?: RequestInit;
   retryOptionOverrides?: RetryOptions;
@@ -35,12 +39,15 @@ export interface FetchJsonResponseOptions {
   suppressFailureEvent?: boolean;
 }
 
-export async function fetchJsonResponse<T>(url: string | URL, options?: FetchJsonResponseOptions): Promise<T> {
+export async function fetchJsonResponse<T>(
+  url: string | URL,
+  options?: FetchJsonResponseOptions,
+): Promise<T> {
   async function fetchJsonResponse() {
     const response = await fetch(url, {
       ...(options?.requestOptions ?? {}),
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         ...(options?.requestOptions?.headers ?? {}),
       },
       signal: options?.requestOptions?.signal ?? AbortSignal.timeout(DEFAULT_REQUEST_TIMEOUT_MS), // By default we have a timeout on every request
@@ -54,7 +61,7 @@ export async function fetchJsonResponse<T>(url: string | URL, options?: FetchJso
   }
 
   try {
-    return options?.retryOptionOverrides === "disabled"
+    return options?.retryOptionOverrides === 'disabled'
       ? await fetchJsonResponse() // Bypass retries
       : await promiseWithRetry(fetchJsonResponse, options?.retryOptionOverrides);
   } catch (e) {
@@ -62,11 +69,11 @@ export async function fetchJsonResponse<T>(url: string | URL, options?: FetchJso
     const log = options?.suppressFailureEvent ? console.warn : console.error;
     log(`Fetch failed for ${url} - ${e}`);
     if (!options?.suppressFailureEvent) {
-      trackEvent("data-fetch-error", {
+      void trackEvent('data-fetch-error', {
         url: url.toString(),
         error: `${e}`,
       });
     }
-    throw new Error("Fetch failed");
+    throw new Error('Fetch failed');
   }
 }

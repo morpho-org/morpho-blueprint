@@ -1,12 +1,15 @@
-import { Suspense } from "react";
-import { DataChart } from "@/common/components/DataChart/DataChart";
-import { Card, CardHeader } from "@/common/components/ui/card";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import type { MorphoVaultV1 } from "@/modules/vault/vault.types";
-import { VaultHistoricalApyChart } from "../VaultHistoricalApyChart";
-import { VaultInfoSkeleton } from "../VaultInfo";
-import { MorphoV1MarketAllocationTable } from "./MorphoV1MarketAllocationTable";
-import { MorphoV1VaultInfo, MorphoV1VaultMetrics } from "./MorphoV1VaultInfo";
+import { Suspense } from 'react';
+
+import type { MorphoVaultV1 } from '@/modules/vault/vault.types';
+
+import { DataChart } from '@/common/components/DataChart/DataChart';
+import { Card, CardHeader } from '@/common/components/ui/card';
+import { Skeleton } from '@/common/components/ui/skeleton';
+
+import { VaultHistoricalApyChart } from '../VaultHistoricalApyChart';
+import { VaultInfoSkeleton } from '../VaultInfo';
+import { MorphoV1MarketAllocationTable } from './MorphoV1MarketAllocationTable';
+import { MorphoV1VaultInfo, MorphoV1VaultMetrics } from './MorphoV1VaultInfo';
 
 interface Props {
   vaultPromise: Promise<MorphoVaultV1>;
@@ -46,7 +49,9 @@ async function MorphoV1MarketAllocationTableWrapper({ vaultPromise }: Props) {
   const vault = await vaultPromise;
   if (!vault) return null;
 
-  return <MorphoV1MarketAllocationTable allocations={vault.marketAllocations} chainId={vault.chain.id} />;
+  return (
+    <MorphoV1MarketAllocationTable allocations={vault.marketAllocations} chainId={vault.chain.id} />
+  );
 }
 
 async function VaultHistoricalDepositsChart({ vaultPromise }: Props) {
@@ -60,10 +65,10 @@ async function VaultHistoricalDepositsChart({ vaultPromise }: Props) {
       defaultTab="totalSupplied"
       tabOptions={[
         {
-          type: "tokenAmount",
-          key: "totalSupplied",
-          title: "Total Deposits",
-          description: "Total amount of assets deposited into the vault",
+          type: 'tokenAmount',
+          key: 'totalSupplied',
+          title: 'Total Deposits',
+          description: 'Total amount of assets deposited into the vault',
           underlyingAssetSymbol: vault.asset.symbol,
           underlyingAssetValue: Number(vault.totalAssets.formatted),
           usdValue: vault.totalAssets.usd ?? 0,

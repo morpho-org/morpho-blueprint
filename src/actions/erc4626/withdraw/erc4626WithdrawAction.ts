@@ -1,7 +1,9 @@
-import type { Erc4626WithdrawActionParameters, VaultAction } from "@/actions/types";
-import { APP_CONFIG } from "@/config";
-import { erc4626WithdrawActionDirect } from "./erc4626WithdrawActionDirect";
-import { erc4626WithdrawViaMorphoSdkAction } from "./erc4626WithdrawViaMorphoSdkAction";
+import type { Erc4626WithdrawActionParameters, VaultAction } from '@/actions/types';
+
+import { APP_CONFIG } from '@/config';
+
+import { erc4626WithdrawActionDirect } from './erc4626WithdrawActionDirect';
+import { erc4626WithdrawViaMorphoSdkAction } from './erc4626WithdrawViaMorphoSdkAction';
 
 /**
  * Action to withdraw from an ERC4626 vault.
@@ -9,7 +11,9 @@ import { erc4626WithdrawViaMorphoSdkAction } from "./erc4626WithdrawViaMorphoSdk
  *
  * See the docstring for each action for more details.
  */
-export async function erc4626WithdrawAction(params: Erc4626WithdrawActionParameters): Promise<VaultAction> {
+export async function erc4626WithdrawAction(
+  params: Erc4626WithdrawActionParameters,
+): Promise<VaultAction> {
   if (APP_CONFIG.actionParameters.bundler3Config.enabled) {
     return erc4626WithdrawViaMorphoSdkAction(params);
   }

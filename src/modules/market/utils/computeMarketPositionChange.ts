@@ -1,8 +1,10 @@
-import { MarketUtils, MathLib } from "@morpho-org/blue-sdk";
-import type { MarketPositionChange } from "@/actions";
-import type { MarketNonIdle } from "@/modules/market/data/getMarket";
-import type { MarketPosition } from "@/modules/market/data/getMarketPositions";
-import { computeMaxBorrow } from "./computeMaxBorrow";
+import { MarketUtils, MathLib } from '@morpho-org/blue-sdk';
+
+import type { MarketPositionChange } from '@/actions';
+import type { MarketNonIdle } from '@/modules/market/data/getMarket';
+import type { MarketPosition } from '@/modules/market/data/getMarketPositions';
+
+import { computeMaxBorrow } from './computeMaxBorrow';
 
 export function computeMarketPositonChange({
   market,

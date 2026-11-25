@@ -1,35 +1,45 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { Suspense } from "react";
-import { isHex } from "viem";
-import { DataChart } from "@/common/components/DataChart/DataChart";
-import { BreakcrumbBack } from "@/common/components/ui/breakcrumb-back";
-import { Button } from "@/common/components/ui/button";
-import { Card, CardHeader } from "@/common/components/ui/card";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import { DATA_RANGES, type DataRange } from "@/common/utils/chart-ranges";
-import { marketHistoryApyWindow, rateLabel } from "@/common/utils/timeframe";
-import { APP_CONFIG } from "@/config";
-import type { SupportedChainId } from "@/config/types";
-import { IrmChart } from "@/modules/market/components/IrmChart";
-import { IrmMetrics, IrmMetricsSkeleton } from "@/modules/market/components/IrmMetrics";
-import MarketActions from "@/modules/market/components/MarketActions/MarketActions";
-import { MarketInfo, MarketInfoSkeleton } from "@/modules/market/components/MarketInfo";
-import { MarketKeyMetrics, MarketKeyMetricsSkeleton } from "@/modules/market/components/MarketKeyMetrics";
-import { MarketName } from "@/modules/market/components/MarketName";
-import { MarketPositionHighlight } from "@/modules/market/components/MarketPositionHighlight";
-import { VaultAllocationTable } from "@/modules/market/components/VaultAllocationTable";
-import { getMarket, isNonIdleMarket } from "@/modules/market/data/getMarket";
-import { getSupportedMarketIds } from "@/modules/market/data/getSupportedMarketIds";
-import type { MarketIdentifier } from "@/modules/market/market.types";
-import { extractMarketBorrowApy } from "@/modules/market/utils/extractMarketBorrowApy";
+import type { Metadata } from 'next';
+
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
+import { isHex } from 'viem';
+
+import type { SupportedChainId } from '@/config/types';
+import type { MarketIdentifier } from '@/modules/market/market.types';
+
+import { DataChart } from '@/common/components/DataChart/DataChart';
+import { BreakcrumbBack } from '@/common/components/ui/breakcrumb-back';
+import { Button } from '@/common/components/ui/button';
+import { Card, CardHeader } from '@/common/components/ui/card';
+import { Skeleton } from '@/common/components/ui/skeleton';
+import { DATA_RANGES, type DataRange } from '@/common/utils/chart-ranges';
+import { marketHistoryApyWindow, rateLabel } from '@/common/utils/timeframe';
+import { APP_CONFIG } from '@/config';
+import { IrmChart } from '@/modules/market/components/IrmChart';
+import { IrmMetrics, IrmMetricsSkeleton } from '@/modules/market/components/IrmMetrics';
+import MarketActions from '@/modules/market/components/MarketActions/MarketActions';
+import { MarketInfo, MarketInfoSkeleton } from '@/modules/market/components/MarketInfo';
+import {
+  MarketKeyMetrics,
+  MarketKeyMetricsSkeleton,
+} from '@/modules/market/components/MarketKeyMetrics';
+import { MarketName } from '@/modules/market/components/MarketName';
+import { MarketPositionHighlight } from '@/modules/market/components/MarketPositionHighlight';
+import { VaultAllocationTable } from '@/modules/market/components/VaultAllocationTable';
+import { getMarket, isNonIdleMarket } from '@/modules/market/data/getMarket';
+import { getSupportedMarketIds } from '@/modules/market/data/getSupportedMarketIds';
+import { extractMarketBorrowApy } from '@/modules/market/utils/extractMarketBorrowApy';
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.metadata.name} | Market`,
 };
 
-export default async function MarketPage({ params }: { params: Promise<{ chainId: string; marketId: string }> }) {
+export default async function MarketPage({
+  params,
+}: {
+  params: Promise<{ chainId: string; marketId: string }>;
+}) {
   const { chainId: chainIdString, marketId } = await params;
   let chainId: SupportedChainId;
   try {
@@ -141,7 +151,9 @@ async function WhitelistCheck({ chainId, marketId }: MarketIdentifier) {
   return (
     <div className="-inset-1 absolute z-10 flex grow flex-col items-center justify-center gap-6 bg-background text-center">
       <h1>Unsupported Market</h1>
-      <p className="text-content-secondary">This market is not currently supported on this interface.</p>
+      <p className="text-content-secondary">
+        This market is not currently supported on this interface.
+      </p>
       <Link href="/earn">
         <Button>Return Home</Button>
       </Link>
@@ -160,7 +172,11 @@ async function MarketHeader({ chainId, marketId }: MarketIdentifier) {
     <div className="flex flex-col justify-between gap-4 md:flex-row">
       <div className="flex flex-col">
         <div className="flex h-[64px] items-center gap-3">
-          <MarketName variant="default" {...market} lltv={Number.parseFloat(market.lltv.formatted)} />
+          <MarketName
+            variant="default"
+            {...market}
+            lltv={Number.parseFloat(market.lltv.formatted)}
+          />
         </div>
         <div className="text-muted-foreground">
           Chain: <span className="text-foreground">{market.chain.name}</span>
@@ -199,33 +215,35 @@ async function MarketHistoricalLiquidityChartWrapper({ chainId, marketId }: Mark
       defaultTab="totalBorrowed"
       tabOptions={[
         {
-          type: "tokenAmount",
-          key: "totalBorrowed",
-          title: "Borrow",
-          description: "Total amount of assets borrowed from the market",
+          type: 'tokenAmount',
+          key: 'totalBorrowed',
+          title: 'Borrow',
+          description: 'Total amount of assets borrowed from the market',
           underlyingAssetSymbol: market.loanAsset.symbol,
           underlyingAssetValue: Number(market.totalBorrowed.formatted),
           usdValue: market.totalBorrowed.usd ?? 0,
         },
         {
-          type: "tokenAmount",
-          key: "totalSupplied",
-          title: "Supply",
-          description: "Total amount of assets supplied to the market",
+          type: 'tokenAmount',
+          key: 'totalSupplied',
+          title: 'Supply',
+          description: 'Total amount of assets supplied to the market',
           underlyingAssetSymbol: market.loanAsset.symbol,
           underlyingAssetValue: Number(market.totalSupplied.formatted),
           usdValue: market.totalSupplied.usd ?? 0,
         },
         {
-          type: "tokenAmount",
-          key: "totalCollateral",
-          title: "Collateral",
-          description: "Total amount of collateral supplied to the market",
+          type: 'tokenAmount',
+          key: 'totalCollateral',
+          title: 'Collateral',
+          description: 'Total amount of collateral supplied to the market',
           underlyingAssetSymbol: market.collateralAsset.symbol,
           underlyingAssetValue: Number(market.totalBorrowed.formatted),
           usdValue:
-            Number(market.historical.daily[market.historical.daily.length - 1]?.totalCollateral.formatted) *
-            collateralPrice,
+            Number(
+              market.historical.daily[market.historical.daily.length - 1]?.totalCollateral
+                .formatted,
+            ) * collateralPrice,
         },
       ]}
     />
@@ -248,7 +266,7 @@ async function MarketHistoricalApyChartWrapper({ chainId, marketId }: MarketIden
   const key = `borrowApy${marketHistoryApyWindow}` as const;
   const totalApy = extractMarketBorrowApy(market).total;
   // The API serves no reward history: the plotted line is the native rate, the headline is net.
-  const rewardsNote = "The headline is net of rewards; the plotted history excludes them.";
+  const rewardsNote = 'The headline is net of rewards; the plotted history excludes them.';
   const description =
     marketHistoryApyWindow === APP_CONFIG.apyWindow
       ? `Borrow APY. ${rewardsNote}`
@@ -256,7 +274,10 @@ async function MarketHistoricalApyChartWrapper({ chainId, marketId }: MarketIden
 
   // The API serves no realized borrow-APY averages (those are a vault concept), so no reference
   // line is drawn for any range.
-  const averageApy = Object.fromEntries(DATA_RANGES.map((range) => [range, null])) as Record<DataRange, null>;
+  const averageApy = Object.fromEntries(DATA_RANGES.map((range) => [range, null])) as Record<
+    DataRange,
+    null
+  >;
 
   return (
     <DataChart
@@ -265,10 +286,10 @@ async function MarketHistoricalApyChartWrapper({ chainId, marketId }: MarketIden
       defaultTab={key}
       tabOptions={[
         {
-          type: "apy",
+          type: 'apy',
           key,
           description,
-          title: rateLabel("Net Borrow APY"),
+          title: rateLabel('Net Borrow APY'),
           totalApy,
           averageApy,
         },

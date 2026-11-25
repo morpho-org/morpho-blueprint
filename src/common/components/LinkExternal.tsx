@@ -1,11 +1,13 @@
-"use client";
-import { ArrowUpRight } from "lucide-react";
-import Image from "next/image";
-import type { AnchorHTMLAttributes, ComponentProps } from "react";
-import type { Address } from "viem";
-import { usePublicClient } from "wagmi";
-import { formatAddress, formatTxHash, getKnownAddressMeta } from "@/common/utils/format";
-import { cn } from "@/common/utils/shadcn";
+'use client';
+import type { AnchorHTMLAttributes, ComponentProps } from 'react';
+import type { Address } from 'viem';
+
+import { ArrowUpRight } from 'lucide-react';
+import Image from 'next/image';
+import { usePublicClient } from 'wagmi';
+
+import { formatAddress, formatTxHash, getKnownAddressMeta } from '@/common/utils/format';
+import { cn } from '@/common/utils/shadcn';
 
 interface LinkExternalProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
   keepReferrer?: boolean; // Allow sending our site as referrer
@@ -25,8 +27,8 @@ export function LinkExternalUnstyled({
     <a
       href={href}
       target="_blank"
-      rel={`noopener ${keepReferrer ? "" : "noreferrer"} ${noFollow ? "nofollow" : ""}`}
-      className={cn("text-inherit no-underline", className)}
+      rel={`noopener ${keepReferrer ? '' : 'noreferrer'} ${noFollow ? 'nofollow' : ''}`}
+      className={cn('text-inherit no-underline', className)}
       {...props}
     >
       {children}
@@ -34,11 +36,16 @@ export function LinkExternalUnstyled({
   );
 }
 
-export default function LinkExternal({ className, children, showArrow = false, ...props }: LinkExternalProps) {
+export default function LinkExternal({
+  className,
+  children,
+  showArrow = false,
+  ...props
+}: LinkExternalProps) {
   return (
     <LinkExternalUnstyled
       className={cn(
-        "flex items-center gap-1 text-primary underline-offset-2 transition-all hover:underline active:scale-98 active:opacity-50",
+        'flex items-center gap-1 text-primary underline-offset-2 transition-all hover:underline active:scale-98 active:opacity-50',
         className,
       )}
       {...props}
@@ -49,20 +56,25 @@ export default function LinkExternal({ className, children, showArrow = false, .
   );
 }
 
-type LinkExternalBlockExplorerProps = Omit<ComponentProps<typeof LinkExternal>, "href"> & {
+type LinkExternalBlockExplorerProps = Omit<ComponentProps<typeof LinkExternal>, 'href'> & {
   chainId: number;
 } & (
     | {
-        type: "address";
+        type: 'address';
         address?: Address;
       }
     | {
-        type: "tx";
+        type: 'tx';
         txHash: Address;
       }
   );
 
-export function LinkExternalBlockExplorer({ chainId, children, className, ...props }: LinkExternalBlockExplorerProps) {
+export function LinkExternalBlockExplorer({
+  chainId,
+  children,
+  className,
+  ...props
+}: LinkExternalBlockExplorerProps) {
   const { type } = props;
   const publicClient = usePublicClient({ chainId });
 
@@ -70,9 +82,9 @@ export function LinkExternalBlockExplorer({ chainId, children, className, ...pro
   let displayName: string;
   let iconUrl: string | undefined;
   switch (type) {
-    case "address": {
+    case 'address': {
       if (!props.address) {
-        return <div className={cn("text-muted-foreground", className)}>None</div>;
+        return <div className={cn('text-muted-foreground', className)}>None</div>;
       }
       path = `/address/${props.address}`;
       displayName = formatAddress(props.address);
@@ -80,7 +92,7 @@ export function LinkExternalBlockExplorer({ chainId, children, className, ...pro
       iconUrl = meta?.iconUrl;
       break;
     }
-    case "tx":
+    case 'tx':
       path = `/tx/${props.txHash}`;
       displayName = formatTxHash(props.txHash);
       break;
@@ -90,7 +102,7 @@ export function LinkExternalBlockExplorer({ chainId, children, className, ...pro
     <LinkExternal
       href={`${publicClient?.chain.blockExplorers?.default.url}${path}`}
       showArrow={true}
-      className={cn("text-foreground hover:no-underline hover:brightness-90", className)}
+      className={cn('text-foreground hover:no-underline hover:brightness-90', className)}
       {...props}
     >
       {children ?? (

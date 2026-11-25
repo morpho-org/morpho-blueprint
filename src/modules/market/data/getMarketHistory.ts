@@ -1,15 +1,17 @@
-import "server-only";
+import 'server-only';
+import type { Address, Hex } from 'viem';
 
-import type { Address, Hex } from "viem";
-import { HISTORY_RANGE_KEYS } from "@/common/data/adapters/timeseries";
-import { isPlausibleApy, resolutionLookback } from "@/common/data/rest/historyWindow";
-import { fetchUsdSeries } from "@/common/data/rest/priceHistory";
-import type { ChartResolution } from "@/common/utils/chart-ranges";
-import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
-import { marketHistoryApyWindow } from "@/common/utils/timeframe";
-import type { SupportedChainId } from "@/config/types";
-import type { Market, MarketHistoricalEntry } from "@/modules/market/market.types";
-import { toMarketHistoricalEntries } from "./adapters";
+import type { ChartResolution } from '@/common/utils/chart-ranges';
+import type { SupportedChainId } from '@/config/types';
+import type { Market, MarketHistoricalEntry } from '@/modules/market/market.types';
+
+import { HISTORY_RANGE_KEYS } from '@/common/data/adapters/timeseries';
+import { isPlausibleApy, resolutionLookback } from '@/common/data/rest/historyWindow';
+import { fetchUsdSeries } from '@/common/data/rest/priceHistory';
+import { fetchMorphoRestResource, restSelector } from '@/common/utils/fetchMorphoRest';
+import { marketHistoryApyWindow } from '@/common/utils/timeframe';
+
+import { toMarketHistoricalEntries } from './adapters';
 
 interface RestHistory<T> {
   data: ({ timestamp: number } & T)[];
@@ -44,7 +46,10 @@ async function fetchMarketHistory(
   const lookback = resolutionLookback(resolution);
   const query = { lookback };
   const [state, apy] = await Promise.all([
-    fetchMorphoRestResource<RestHistory<RestMarketStateRow>>(`/v0/blue/markets/${selector}/state/history`, query),
+    fetchMorphoRestResource<RestHistory<RestMarketStateRow>>(
+      `/v0/blue/markets/${selector}/state/history`,
+      query,
+    ),
     fetchMorphoRestResource<RestHistory<{ borrow_apy: number | null }>>(
       `/v0/blue/markets/${selector}/apy/history`,
       query,
@@ -54,12 +59,18 @@ async function fetchMarketHistory(
 
   const supply = state.data.map((row) => ({ x: row.timestamp, y: row.total_supply_assets }));
   const borrow = state.data.map((row) => ({ x: row.timestamp, y: row.total_borrow_assets }));
-  const collateralAssets = state.data.map((row) => ({ x: row.timestamp, y: row.total_collateral_assets }));
+  const collateralAssets = state.data.map((row) => ({
+    x: row.timestamp,
+    y: row.total_collateral_assets,
+  }));
   // State rows before the first APY sample keep a null APY, or the zip would trim them.
   const firstApyAt = apy.data[0]?.timestamp ?? Number.POSITIVE_INFINITY;
   const borrowApy = [
     ...supply.filter((point) => point.x < firstApyAt).map((point) => ({ x: point.x, y: null })),
-    ...apy.data.map((row) => ({ x: row.timestamp, y: isPlausibleApy(row.borrow_apy) ? row.borrow_apy : null })),
+    ...apy.data.map((row) => ({
+      x: row.timestamp,
+      y: isPlausibleApy(row.borrow_apy) ? row.borrow_apy : null,
+    })),
   ];
 
   const [supplyUsd, borrowUsd, collateralUsd] = await Promise.all([
@@ -70,7 +81,7 @@ async function fetchMarketHistory(
 
   // Core serves one native borrow APY per point, smoothed over a window set by the lookback, and
   // no rewards history: it is filed under the window the chart reads, as base and total.
-  const apySeries: Pick<Series, `${"borrowApy" | "netBorrowApy"}${"1d" | "7d" | "30d"}`> = {
+  const apySeries: Pick<Series, `${'borrowApy' | 'netBorrowApy'}${'1d' | '7d' | '30d'}`> = {
     borrowApy1d: [],
     netBorrowApy1d: [],
     borrowApy7d: [],
@@ -102,9 +113,11 @@ export async function getMarketHistory(
   marketId: Hex,
   loan: HistoryToken,
   collateral: HistoryToken | null,
-): Promise<Market["historical"]> {
+): Promise<Market['historical']> {
   const [hourly, daily, weekly] = await Promise.all(
-    HISTORY_RANGE_KEYS.map((resolution) => fetchMarketHistory(chainId, marketId, resolution, loan, collateral)),
+    HISTORY_RANGE_KEYS.map((resolution) =>
+      fetchMarketHistory(chainId, marketId, resolution, loan, collateral),
+    ),
   );
   if (!hourly || !daily || !weekly) return null;
   return { hourly, daily, weekly };

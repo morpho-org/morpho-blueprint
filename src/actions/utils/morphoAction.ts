@@ -3,10 +3,18 @@ import {
   isRequirementApproval,
   isRequirementBlueAuthorization,
   isRequirementSignature,
-} from "@morpho-org/morpho-sdk";
-import { type Address, type Hex, isAddress, isHex, type TransactionRequest as ViemTransactionRequest } from "viem";
-import type { TransactionRequest } from "@/actions/types";
-import { UserFacingError } from "@/actions/types";
+} from '@morpho-org/morpho-sdk';
+import {
+  type Address,
+  type Hex,
+  isAddress,
+  isHex,
+  type TransactionRequest as ViemTransactionRequest,
+} from 'viem';
+
+import type { TransactionRequest } from '@/actions/types';
+
+import { UserFacingError } from '@/actions/types';
 
 type MorphoActionOutput = {
   getRequirements: () => Promise<readonly ActionRequirement[]>;
@@ -14,25 +22,25 @@ type MorphoActionOutput = {
 };
 
 function requirementName(requirement: ActionRequirement) {
-  if (requirement.action.type === "blueAuthorization") return "Authorize Morpho";
-  if (requirement.action.type === "erc20Approval") return "Approve supply amount";
-  return "Confirm requirement";
+  if (requirement.action.type === 'blueAuthorization') return 'Authorize Morpho';
+  if (requirement.action.type === 'erc20Approval') return 'Approve supply amount';
+  return 'Confirm requirement';
 }
 
 function toTransactionRequest(name: string, tx: unknown): TransactionRequest {
   if (
     tx == null ||
-    typeof tx !== "object" ||
-    !("to" in tx) ||
-    typeof tx.to !== "string" ||
+    typeof tx !== 'object' ||
+    !('to' in tx) ||
+    typeof tx.to !== 'string' ||
     !isAddress(tx.to) ||
-    !("data" in tx) ||
+    !('data' in tx) ||
     !isHex(tx.data) ||
-    !("value" in tx) ||
-    typeof tx.value !== "bigint" ||
+    !('value' in tx) ||
+    typeof tx.value !== 'bigint' ||
     tx.value < 0n
   ) {
-    throw new UserFacingError("Unable to prepare transaction requirement.");
+    throw new UserFacingError('Unable to prepare transaction requirement.');
   }
   return {
     name,
@@ -50,7 +58,7 @@ export async function transactionRequestsFromMorphoAction(
       isRequirementSignature(requirement) ||
       (!isRequirementApproval(requirement) && !isRequirementBlueAuthorization(requirement))
     ) {
-      throw new UserFacingError("Unexpected transaction requirement.");
+      throw new UserFacingError('Unexpected transaction requirement.');
     }
     return toTransactionRequest(requirementName(requirement), requirement);
   });

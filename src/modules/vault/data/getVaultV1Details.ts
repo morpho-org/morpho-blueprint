@@ -1,26 +1,32 @@
-import "server-only";
+import 'server-only';
+import { type Address, formatUnits, getAddress, zeroAddress } from 'viem';
 
-import { type Address, formatUnits, getAddress, zeroAddress } from "viem";
-import { toBigInt } from "@/common/data/adapters/amount";
-import { toRoleAddress } from "@/common/data/adapters/entity";
-import type { ChainInfo } from "@/common/data/types";
-import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
-import { getMarketInfos } from "@/modules/market/data/getMarketInfos";
-import type { MerklRewardIndex } from "@/modules/reward/data/merklRewardApys";
-import type { MorphoVaultV1 } from "@/modules/vault/vault.types";
-import { type RestVaultV1Allocation, toRestVaultMarketAllocations, withdrawQueueAllocations } from "./adapters";
-import { fetchVaultApyAverages } from "./fetchVaultApyAverages";
+import type { ChainInfo } from '@/common/data/types';
+import type { MerklRewardIndex } from '@/modules/reward/data/merklRewardApys';
+import type { MorphoVaultV1 } from '@/modules/vault/vault.types';
+
+import { toBigInt } from '@/common/data/adapters/amount';
+import { toRoleAddress } from '@/common/data/adapters/entity';
+import { fetchMorphoRestResource, restSelector } from '@/common/utils/fetchMorphoRest';
+import { getMarketInfos } from '@/modules/market/data/getMarketInfos';
+
+import {
+  type RestVaultV1Allocation,
+  toRestVaultMarketAllocations,
+  withdrawQueueAllocations,
+} from './adapters';
+import { fetchVaultApyAverages } from './fetchVaultApyAverages';
 
 export type VaultV1Details = Pick<
   MorphoVaultV1,
-  | "marketAllocations"
-  | "totalLiquidity"
-  | "apyAverages"
-  | "performanceFeeRaw"
-  | "feeRecipientAddress"
-  | "ownerAddress"
-  | "curatorAddress"
-  | "guardianAddress"
+  | 'marketAllocations'
+  | 'totalLiquidity'
+  | 'apyAverages'
+  | 'performanceFeeRaw'
+  | 'feeRecipientAddress'
+  | 'ownerAddress'
+  | 'curatorAddress'
+  | 'guardianAddress'
 >;
 
 /** What the caller's summary read already holds, so the details do not read it again. */
@@ -77,7 +83,13 @@ export async function getVaultV1Details(
   const liquidity = Number(formatUnits(toBigInt(state.withdrawable_assets), decimals));
 
   return {
-    marketAllocations: toRestVaultMarketAllocations(rows, markets, decimals, priceUsd, toBigInt(state.total_assets)),
+    marketAllocations: toRestVaultMarketAllocations(
+      rows,
+      markets,
+      decimals,
+      priceUsd,
+      toBigInt(state.total_assets),
+    ),
     totalLiquidity: { usd: priceUsd == null ? null : liquidity * priceUsd },
     apyAverages,
     // REST serves null for a fee never set: 0, as GraphQL did.

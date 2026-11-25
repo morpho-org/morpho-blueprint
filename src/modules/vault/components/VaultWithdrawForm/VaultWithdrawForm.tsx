@@ -1,18 +1,24 @@
-"use client";
+'use client';
 
-import { forwardRef, useImperativeHandle } from "react";
+import { forwardRef, useImperativeHandle } from 'react';
 
-import type { VaultAction } from "@/actions";
-import SwitchFormField from "@/common/components/SwitchFormField";
-import { Button } from "@/common/components/ui/button";
-import { ErrorMessage } from "@/common/components/ui/error-message";
-import { Form } from "@/common/components/ui/form";
-import { TooltipPopover, TooltipPopoverContent, TooltipPopoverTrigger } from "@/common/components/ui/tooltip-popover";
-import { VaultActionSimulationMetrics } from "@/modules/action-flow/components/VaultActionFlow";
-import { AssetInputFormField } from "@/modules/token/components/AssetInputFormField";
-import { isVaultUnderlyingAssetWrappedNativeAsset } from "@/modules/vault/components/VaultSupplyForm/utils";
-import type { Vault } from "@/modules/vault/data/getVault";
-import { useVaultWithdrawForm } from "./useVaultWithdrawForm";
+import type { VaultAction } from '@/actions';
+import type { Vault } from '@/modules/vault/data/getVault';
+
+import SwitchFormField from '@/common/components/SwitchFormField';
+import { Button } from '@/common/components/ui/button';
+import { ErrorMessage } from '@/common/components/ui/error-message';
+import { Form } from '@/common/components/ui/form';
+import {
+  TooltipPopover,
+  TooltipPopoverContent,
+  TooltipPopoverTrigger,
+} from '@/common/components/ui/tooltip-popover';
+import { VaultActionSimulationMetrics } from '@/modules/action-flow/components/VaultActionFlow';
+import { AssetInputFormField } from '@/modules/token/components/AssetInputFormField';
+import { isVaultUnderlyingAssetWrappedNativeAsset } from '@/modules/vault/components/VaultSupplyForm/utils';
+
+import { useVaultWithdrawForm } from './useVaultWithdrawForm';
 
 interface VaultWithdrawFormProps {
   vault: Vault;
@@ -21,11 +27,18 @@ interface VaultWithdrawFormProps {
 
 export const VaultWithdrawForm = forwardRef<{ reset: () => void }, VaultWithdrawFormProps>(
   ({ vault, onSuccessfulActionSimulation }, ref) => {
-    const { form, handleSubmit, position, isPositionLoading, derivedFormValues, submitErrorMsg, nativeAssetSymbol } =
-      useVaultWithdrawForm({
-        vault,
-        onSuccessfulActionSimulation,
-      });
+    const {
+      form,
+      handleSubmit,
+      position,
+      isPositionLoading,
+      derivedFormValues,
+      submitErrorMsg,
+      nativeAssetSymbol,
+    } = useVaultWithdrawForm({
+      vault,
+      onSuccessfulActionSimulation,
+    });
 
     // Expose reset method to parent
     useImperativeHandle(ref, () => ({
@@ -37,7 +50,7 @@ export const VaultWithdrawForm = forwardRef<{ reset: () => void }, VaultWithdraw
     return (
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)}>
-          <fieldset disabled={form.formState.isSubmitting} style={{ all: "unset", width: "100%" }}>
+          <fieldset disabled={form.formState.isSubmitting} style={{ all: 'unset', width: '100%' }}>
             <div className="flex flex-col gap-6">
               <div className="space-y-2">
                 <AssetInputFormField
@@ -48,7 +61,7 @@ export const VaultWithdrawForm = forwardRef<{ reset: () => void }, VaultWithdraw
                   asset={vault.asset}
                   maxValue={position ? BigInt(position.assets.raw) : undefined}
                   setIsMax={(isMax) => {
-                    form.setValue("isMaxWithdraw", isMax);
+                    form.setValue('isMaxWithdraw', isMax);
                   }}
                 />
                 {isVaultUnderlyingAssetWrappedNativeAsset(vault) && (
@@ -61,7 +74,8 @@ export const VaultWithdrawForm = forwardRef<{ reset: () => void }, VaultWithdraw
                           Unwrap
                         </TooltipPopoverTrigger>
                         <TooltipPopoverContent>
-                          Automatically unwrap your withdrawn {vault.asset.symbol} into {nativeAssetSymbol}.
+                          Automatically unwrap your withdrawn {vault.asset.symbol} into{' '}
+                          {nativeAssetSymbol}.
                         </TooltipPopoverContent>
                       </TooltipPopover>
                     }
@@ -85,7 +99,7 @@ export const VaultWithdrawForm = forwardRef<{ reset: () => void }, VaultWithdraw
                   size="lg"
                   type="submit"
                 >
-                  {derivedFormValues.missingAmount ? "Enter an amount" : "Review"}
+                  {derivedFormValues.missingAmount ? 'Enter an amount' : 'Review'}
                 </Button>
                 <ErrorMessage message={submitErrorMsg} />
               </div>
@@ -96,4 +110,4 @@ export const VaultWithdrawForm = forwardRef<{ reset: () => void }, VaultWithdraw
     );
   },
 );
-VaultWithdrawForm.displayName = "VaultWithdrawForm";
+VaultWithdrawForm.displayName = 'VaultWithdrawForm';

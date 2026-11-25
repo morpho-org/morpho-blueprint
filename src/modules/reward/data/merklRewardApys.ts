@@ -1,13 +1,14 @@
-import { type Address, getAddress, isAddress } from "viem";
-import { z } from "zod";
-import type { RewardApy, TokenInfo } from "@/common/data/types";
+import { type Address, getAddress, isAddress } from 'viem';
+import { z } from 'zod';
+
+import type { RewardApy, TokenInfo } from '@/common/data/types';
 
 // The Morpho rewards backend's filters, copied so REST pages show the rewards GraphQL showed:
 // hook 27 (blacklist) is ignored, hook 23 scoped to MorphoVaultV2 makes a campaign vault-V2-only,
 // and any other hook skips the campaign (its APR depends on per-user state the API cannot know).
 const BLACKLIST_HOOK_TYPE = 27;
 const VAULT_V2_HOOK_TYPE = 23;
-const VAULT_V2_PROTOCOL = "MorphoVaultV2";
+const VAULT_V2_PROTOCOL = 'MorphoVaultV2';
 
 // The backend's default minimum (`isCampaignDurationEligible`): shorter campaigns are not shown.
 const MIN_CAMPAIGN_DURATION_SECONDS = 86_400;
@@ -19,14 +20,17 @@ const REWARD_CHAIN_IDS = new Set([
 // A per-campaign sanity cap (1000%), so one bad Merkl row cannot show a huge APY.
 const MAX_CAMPAIGN_APR = 10;
 
-const VAULT_CAMPAIGN_TYPES = new Set(["MORPHOVAULT", "ERC20LOGPROCESSOR"]);
+const VAULT_CAMPAIGN_TYPES = new Set(['MORPHOVAULT', 'ERC20LOGPROCESSOR']);
 const MULTILEND_LEND_CAMPAIGN_TYPE = 24;
 const MULTILEND_BORROW_CAMPAIGN_TYPE = 45;
 
 // Merkl may serve lowercase or checksummed addresses; only the hex shape matters here.
 const isAnyCaseAddress = (value: string) => isAddress(value, { strict: false });
 
-const hookSchema = z.looseObject({ hookType: z.number(), protocols: z.array(z.string()).nullish() });
+const hookSchema = z.looseObject({
+  hookType: z.number(),
+  protocols: z.array(z.string()).nullish(),
+});
 
 const campaignSchema = z.looseObject({
   id: z.string(),
@@ -106,7 +110,7 @@ export const emptyMerklRewardIndex = (): MerklRewardIndex => ({
 });
 
 /** `{ skip }` for a hook the backend does not handle, else whether the campaign is vault-V2-only. */
-function analyzeHooks(hooks: Campaign["params"]["hooks"]): { skip: boolean; vaultV2Only: boolean } {
+function analyzeHooks(hooks: Campaign['params']['hooks']): { skip: boolean; vaultV2Only: boolean } {
   let vaultV2Only = false;
   for (const hook of hooks ?? []) {
     if (hook.hookType === BLACKLIST_HOOK_TYPE) continue;
@@ -119,16 +123,17 @@ function analyzeHooks(hooks: Campaign["params"]["hooks"]): { skip: boolean; vaul
   return { skip: false, vaultV2Only };
 }
 
-const isPublic = (campaign: Campaign) => campaign.isPrivate !== true && (campaign.params.whitelist ?? []).length === 0;
+const isPublic = (campaign: Campaign) =>
+  campaign.isPrivate !== true && (campaign.params.whitelist ?? []).length === 0;
 
 const isVaultCampaign = (campaign: Campaign) =>
-  VAULT_CAMPAIGN_TYPES.has(campaign.type) || (campaign.type === "MORPHO" && campaign.subType === 0);
+  VAULT_CAMPAIGN_TYPES.has(campaign.type) || (campaign.type === 'MORPHO' && campaign.subType === 0);
 
 const isDirectMarketSupplyCampaign = (campaign: Campaign) =>
-  campaign.type === "MORPHOSUPPLY" || (campaign.type === "MORPHO" && campaign.subType === 1);
+  campaign.type === 'MORPHOSUPPLY' || (campaign.type === 'MORPHO' && campaign.subType === 1);
 
 const isDirectMarketBorrowCampaign = (campaign: Campaign) =>
-  campaign.type === "MORPHOBORROW" || (campaign.type === "MORPHO" && campaign.subType === 2);
+  campaign.type === 'MORPHOBORROW' || (campaign.type === 'MORPHO' && campaign.subType === 2);
 
 function push(map: Map<string, IndexedReward[]>, key: string, reward: IndexedReward) {
   const existing = map.get(key.toLowerCase());
@@ -140,7 +145,10 @@ function push(map: Map<string, IndexedReward[]>, key: string, reward: IndexedRew
  * Indexes the live, public, token-paying campaigns of the opportunity pages, as of `nowSeconds`.
  * A malformed campaign is dropped alone, with a warning.
  */
-export function indexMerklRewards(opportunities: readonly unknown[], nowSeconds: number): MerklRewardIndex {
+export function indexMerklRewards(
+  opportunities: readonly unknown[],
+  nowSeconds: number,
+): MerklRewardIndex {
   const index = emptyMerklRewardIndex();
   // A campaign listed under more than one opportunity counts once.
   const seen = new Set<string>();
@@ -163,7 +171,7 @@ export function indexMerklRewards(opportunities: readonly unknown[], nowSeconds:
       if (campaign.endTimestamp - campaign.startTimestamp < MIN_CAMPAIGN_DURATION_SECONDS) continue;
       if (!isPublic(campaign)) continue;
       const { rewardToken } = campaign;
-      if (rewardToken.type !== "TOKEN" || rewardToken.isTest) continue;
+      if (rewardToken.type !== 'TOKEN' || rewardToken.isTest) continue;
       const rewardChainId = rewardToken.chainId ?? campaign.computeChainId;
       if (rewardChainId == null || !REWARD_CHAIN_IDS.has(rewardChainId)) continue;
       const apr = campaign.apr / 100;
@@ -171,7 +179,9 @@ export function indexMerklRewards(opportunities: readonly unknown[], nowSeconds:
       if (hooks.skip) continue;
       // The schema already rejects non-finite APRs.
       if (apr > MAX_CAMPAIGN_APR) {
-        console.warn(`Dropping Merkl campaign ${campaign.id}: APR ${campaign.apr}% is above the sanity cap`);
+        console.warn(
+          `Dropping Merkl campaign ${campaign.id}: APR ${campaign.apr}% is above the sanity cap`,
+        );
         continue;
       }
       if (!(apr > 0)) continue;
@@ -197,13 +207,16 @@ export function indexMerklRewards(opportunities: readonly unknown[], nowSeconds:
       );
 
       if (isVaultCampaign(campaign)) {
-        if (params.targetToken && isAnyCaseAddress(params.targetToken)) push(index.vaults, params.targetToken, reward);
+        if (params.targetToken && isAnyCaseAddress(params.targetToken))
+          push(index.vaults, params.targetToken, reward);
       } else if (isDirectMarketSupplyCampaign(campaign) || isDirectMarketBorrowCampaign(campaign)) {
         // The full id from the params: the opportunity identifier is truncated to 20 bytes.
         const marketId = params.marketId ?? params.market;
-        const target = isDirectMarketSupplyCampaign(campaign) ? index.marketSupply : index.marketBorrow;
+        const target = isDirectMarketSupplyCampaign(campaign)
+          ? index.marketSupply
+          : index.marketBorrow;
         if (marketId) push(target, marketId, reward);
-      } else if (campaign.type === "MULTILENDBORROW") {
+      } else if (campaign.type === 'MULTILENDBORROW') {
         for (const entry of params.markets ?? []) {
           const market = multilendMarketSchema.safeParse(entry);
           if (!market.success) continue;
@@ -213,9 +226,16 @@ export function indexMerklRewards(opportunities: readonly unknown[], nowSeconds:
             push(index.marketBorrow, market.data.campaignParameters.market, reward);
           }
         }
-      } else if (campaign.type === "MORPHOSUPPLY_SINGLETOKEN" || campaign.type === "MORPHOBORROW_SINGLETOKEN") {
-        const target = campaign.type === "MORPHOSUPPLY_SINGLETOKEN" ? index.loanTokenSupply : index.loanTokenBorrow;
-        if (params.targetToken && isAnyCaseAddress(params.targetToken)) push(target, params.targetToken, reward);
+      } else if (
+        campaign.type === 'MORPHOSUPPLY_SINGLETOKEN' ||
+        campaign.type === 'MORPHOBORROW_SINGLETOKEN'
+      ) {
+        const target =
+          campaign.type === 'MORPHOSUPPLY_SINGLETOKEN'
+            ? index.loanTokenSupply
+            : index.loanTokenBorrow;
+        if (params.targetToken && isAnyCaseAddress(params.targetToken))
+          push(target, params.targetToken, reward);
       }
     }
   }
@@ -243,13 +263,21 @@ function byToken(rewards: readonly IndexedReward[]): RewardApy[] {
  * The current reward APRs a vault pays its depositors. Rewards forwarded from the markets and
  * vaults it supplies come from Merkl's child campaigns, which target the vault itself.
  */
-export function vaultRewardApys(index: MerklRewardIndex, vaultAddress: Address, kind: "v1" | "v2"): RewardApy[] {
+export function vaultRewardApys(
+  index: MerklRewardIndex,
+  vaultAddress: Address,
+  kind: 'v1' | 'v2',
+): RewardApy[] {
   const rewards = index.vaults.get(vaultAddress.toLowerCase()) ?? [];
-  return byToken(kind === "v2" ? rewards : rewards.filter((reward) => !reward.vaultV2Only));
+  return byToken(kind === 'v2' ? rewards : rewards.filter((reward) => !reward.vaultV2Only));
 }
 
 /** The current reward APRs for supplying to a market. Vault-V2-only campaigns pay vaults, not suppliers. */
-export function marketSupplyRewardApys(index: MerklRewardIndex, marketId: string, loanToken: Address): RewardApy[] {
+export function marketSupplyRewardApys(
+  index: MerklRewardIndex,
+  marketId: string,
+  loanToken: Address,
+): RewardApy[] {
   const rewards = [
     ...(index.marketSupply.get(marketId.toLowerCase()) ?? []),
     ...(index.loanTokenSupply.get(loanToken.toLowerCase()) ?? []),
@@ -261,7 +289,11 @@ export function marketSupplyRewardApys(index: MerklRewardIndex, marketId: string
  * The current reward APRs for borrowing from a market, as positive APRs: the borrow rate net of
  * rewards is the native rate minus their sum.
  */
-export function marketBorrowRewardApys(index: MerklRewardIndex, marketId: string, loanToken: Address): RewardApy[] {
+export function marketBorrowRewardApys(
+  index: MerklRewardIndex,
+  marketId: string,
+  loanToken: Address,
+): RewardApy[] {
   const rewards = [
     ...(index.marketBorrow.get(marketId.toLowerCase()) ?? []),
     ...(index.loanTokenBorrow.get(loanToken.toLowerCase()) ?? []),

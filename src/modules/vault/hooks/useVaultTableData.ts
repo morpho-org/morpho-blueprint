@@ -1,15 +1,17 @@
-"use client";
-import { useMemo } from "react";
-import { getAddress } from "viem";
-import { useAccount } from "wagmi";
-import { useShallowSearchParams } from "@/common/hooks/useShallowSearchParams";
-import { FilterKey } from "@/common/utils/constants";
-import type { SupportedChainId } from "@/config/types";
-import type { VaultPosition } from "@/modules/vault/data/getVaultPositions";
-import type { VaultSummary } from "@/modules/vault/data/getVaultSummaries";
-import { useVaultPositions } from "@/modules/vault/hooks/useVaultPositions";
-import { extractVaultCurator } from "@/modules/vault/utils/extractVaultCurator";
-import { getVaultTagData } from "@/modules/vault/utils/getVaultTagData";
+'use client';
+import { useMemo } from 'react';
+import { getAddress } from 'viem';
+import { useAccount } from 'wagmi';
+
+import type { SupportedChainId } from '@/config/types';
+import type { VaultPosition } from '@/modules/vault/data/getVaultPositions';
+import type { VaultSummary } from '@/modules/vault/data/getVaultSummaries';
+
+import { useShallowSearchParams } from '@/common/hooks/useShallowSearchParams';
+import { FilterKey } from '@/common/utils/constants';
+import { useVaultPositions } from '@/modules/vault/hooks/useVaultPositions';
+import { extractVaultCurator } from '@/modules/vault/utils/extractVaultCurator';
+import { getVaultTagData } from '@/modules/vault/utils/getVaultTagData';
 
 export interface VaultTableDataEntry {
   vaultSummary: VaultSummary;
@@ -25,16 +27,31 @@ export function useVaultTableData({ vaultSummaries }: { vaultSummaries: VaultSum
   const { isConnected } = useAccount();
 
   const {
-    values: [chainsFilterValues, assetsFilterValues, curatorsFilterValues, tagFilterValues, accountFilterValues],
+    values: [
+      chainsFilterValues,
+      assetsFilterValues,
+      curatorsFilterValues,
+      tagFilterValues,
+      accountFilterValues,
+    ],
   } = useShallowSearchParams({
-    keys: [FilterKey.Chains, FilterKey.SupplyAssets, FilterKey.Curators, FilterKey.VaultTags, FilterKey.Account],
+    keys: [
+      FilterKey.Chains,
+      FilterKey.SupplyAssets,
+      FilterKey.Curators,
+      FilterKey.VaultTags,
+      FilterKey.Account,
+    ],
   });
 
   const data = useMemo(() => {
     const dataEntries: VaultTableDataEntry[] = [];
 
     for (const vaultSummary of vaultSummaries) {
-      const position = positions?.[vaultSummary.chain.id as SupportedChainId]?.[getAddress(vaultSummary.vaultAddress)];
+      const position =
+        positions?.[vaultSummary.chain.id as SupportedChainId]?.[
+          getAddress(vaultSummary.vaultAddress)
+        ];
       dataEntries.push({ vaultSummary, position });
     }
 
@@ -54,7 +71,7 @@ export function useVaultTableData({ vaultSummaries }: { vaultSummaries: VaultSum
       const curatorsFilterMatch =
         curatorsFilterValues === undefined ||
         curatorsFilterValues.length === 0 ||
-        curatorsFilterValues.includes(extractVaultCurator(dataEntry.vaultSummary)?.name ?? "N/A");
+        curatorsFilterValues.includes(extractVaultCurator(dataEntry.vaultSummary)?.name ?? 'N/A');
 
       // Tags filter: match against optional supportedVaults
       let tagFilterMatch = true;
@@ -63,17 +80,18 @@ export function useVaultTableData({ vaultSummaries }: { vaultSummaries: VaultSum
           dataEntry.vaultSummary.chain.id as SupportedChainId,
           dataEntry.vaultSummary.vaultAddress,
         );
-        tagFilterMatch = thisVaultTagData !== undefined && tagFilterValues.includes(thisVaultTagData.tag);
+        tagFilterMatch =
+          thisVaultTagData !== undefined && tagFilterValues.includes(thisVaultTagData.tag);
       }
 
       let accountFilterMatch = true;
       const accountFilterValue = accountFilterValues?.[0];
       if (dataEntry.position !== undefined && accountFilterValue && isConnected) {
         switch (accountFilterValue) {
-          case "positions":
+          case 'positions':
             accountFilterMatch = BigInt(dataEntry.position.assets.raw ?? 0n) > 0n;
             break;
-          case "wallet":
+          case 'wallet':
             accountFilterMatch = (dataEntry.position.walletAssetHolding?.balance.usd ?? 1) > 0;
             break;
           default:
@@ -82,7 +100,13 @@ export function useVaultTableData({ vaultSummaries }: { vaultSummaries: VaultSum
         }
       }
 
-      return chainsFilterMatch && assetsFilterMatch && curatorsFilterMatch && tagFilterMatch && accountFilterMatch;
+      return (
+        chainsFilterMatch &&
+        assetsFilterMatch &&
+        curatorsFilterMatch &&
+        tagFilterMatch &&
+        accountFilterMatch
+      );
     });
 
     return filteredData;

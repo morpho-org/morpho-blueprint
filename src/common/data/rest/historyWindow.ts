@@ -1,15 +1,20 @@
-import { CHART_RANGES, type ChartResolution, DATA_RANGES, type DataRange } from "@/common/utils/chart-ranges";
+import {
+  CHART_RANGES,
+  type ChartResolution,
+  DATA_RANGES,
+  type DataRange,
+} from '@/common/utils/chart-ranges';
 
 /** The lookbacks Core's history routes accept for a chart range. */
-export type HistoryLookback = "seven_days" | "thirty_days" | "ninety_days" | "inception";
+export type HistoryLookback = 'seven_days' | 'thirty_days' | 'ninety_days' | 'inception';
 
 // Copied from the Vaults app (`apps/vaults-app/src/lib/transforms/history/window.ts`): Core picks
 // the row spacing from the lookback, hourly for `seven_days`, daily for 30 and 90 days.
 const RANGE_LOOKBACK: Record<DataRange, HistoryLookback> = {
-  "1W": "seven_days",
-  "1M": "thirty_days",
-  "3M": "ninety_days",
-  All: "inception",
+  '1W': 'seven_days',
+  '1M': 'thirty_days',
+  '3M': 'ninety_days',
+  All: 'inception',
 };
 
 export function rangeLookback(range: DataRange): HistoryLookback {

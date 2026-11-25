@@ -1,13 +1,17 @@
-"use client";
-import { useMemo } from "react";
-import type { Hex } from "viem";
-import { useAccount } from "wagmi";
-import { useShallowSearchParams } from "@/common/hooks/useShallowSearchParams";
-import { FilterKey } from "@/common/utils/constants";
-import type { SupportedChainId } from "@/config/types";
-import type { MarketPosition } from "@/modules/market/data/getMarketPositions";
-import type { MarketSummary } from "@/modules/market/data/getMarketSummaries";
-import { useMarketPositions } from "./useMarketPositions";
+'use client';
+import type { Hex } from 'viem';
+
+import { useMemo } from 'react';
+import { useAccount } from 'wagmi';
+
+import type { SupportedChainId } from '@/config/types';
+import type { MarketPosition } from '@/modules/market/data/getMarketPositions';
+import type { MarketSummary } from '@/modules/market/data/getMarketSummaries';
+
+import { useShallowSearchParams } from '@/common/hooks/useShallowSearchParams';
+import { FilterKey } from '@/common/utils/constants';
+
+import { useMarketPositions } from './useMarketPositions';
 
 export interface MarketTableDataEntry {
   marketSummary: MarketSummary;
@@ -23,7 +27,12 @@ export function useMarketTableData({ marketSummaries }: { marketSummaries: Marke
   const { isConnected } = useAccount();
 
   const {
-    values: [chainsFilterValues, collateralAssetFilterValues, loanAssetFilterValues, accountFilterValues],
+    values: [
+      chainsFilterValues,
+      collateralAssetFilterValues,
+      loanAssetFilterValues,
+      accountFilterValues,
+    ],
   } = useShallowSearchParams({
     keys: [FilterKey.Chains, FilterKey.CollateralAssets, FilterKey.LoanAssets, FilterKey.Account],
   });
@@ -32,7 +41,8 @@ export function useMarketTableData({ marketSummaries }: { marketSummaries: Marke
     let dataEntries: MarketTableDataEntry[] = [];
 
     for (const marketSummary of marketSummaries) {
-      const position = positions?.[marketSummary.chain.id as SupportedChainId]?.[marketSummary.marketId as Hex];
+      const position =
+        positions?.[marketSummary.chain.id as SupportedChainId]?.[marketSummary.marketId as Hex];
       dataEntries.push({ marketSummary, position });
     }
 
@@ -51,7 +61,9 @@ export function useMarketTableData({ marketSummaries }: { marketSummaries: Marke
       const collateralAssetFilterMatch =
         collateralAssetFilterValues === undefined ||
         collateralAssetFilterValues.length === 0 ||
-        collateralAssetFilterValues.includes(dataEntry.marketSummary.collateralAsset?.symbol?.toString() ?? "N/A");
+        collateralAssetFilterValues.includes(
+          dataEntry.marketSummary.collateralAsset?.symbol?.toString() ?? 'N/A',
+        );
       const loanAssetFilterMatch =
         loanAssetFilterValues === undefined ||
         loanAssetFilterValues.length === 0 ||
@@ -61,11 +73,12 @@ export function useMarketTableData({ marketSummaries }: { marketSummaries: Marke
       const accountFilterValue = accountFilterValues?.[0];
       if (dataEntry.position !== undefined && accountFilterValue && isConnected) {
         switch (accountFilterValue) {
-          case "positions":
+          case 'positions':
             accountFilterMatch = BigInt(dataEntry.position.collateralAmount?.raw ?? 0n) > 0n;
             break;
-          case "wallet":
-            accountFilterMatch = (dataEntry.position.walletCollateralAssetHolding?.balance.usd ?? 1) > 0;
+          case 'wallet':
+            accountFilterMatch =
+              (dataEntry.position.walletCollateralAssetHolding?.balance.usd ?? 1) > 0;
             break;
           default:
             // Do nothing
@@ -73,11 +86,23 @@ export function useMarketTableData({ marketSummaries }: { marketSummaries: Marke
         }
       }
 
-      return chainsFilterMatch && collateralAssetFilterMatch && loanAssetFilterMatch && accountFilterMatch;
+      return (
+        chainsFilterMatch &&
+        collateralAssetFilterMatch &&
+        loanAssetFilterMatch &&
+        accountFilterMatch
+      );
     });
 
     return filteredData;
-  }, [data, chainsFilterValues, collateralAssetFilterValues, loanAssetFilterValues, accountFilterValues, isConnected]);
+  }, [
+    data,
+    chainsFilterValues,
+    collateralAssetFilterValues,
+    loanAssetFilterValues,
+    accountFilterValues,
+    isConnected,
+  ]);
 
   return { data: filteredData, isPositionsLoading: isLoading };
 }

@@ -1,14 +1,16 @@
-"use client";
+'use client';
 
-import type { ColumnDef } from "@tanstack/react-table";
-import { ApyTooltip } from "@/common/components/ApyToolip";
-import NumberFlow from "@/common/components/ui/number-flow";
-import { Table } from "@/common/components/ui/table";
-import { rateLabel } from "@/common/utils/timeframe";
-import { MarketName } from "@/modules/market/components/MarketName";
-import { extractMarketSupplyApy } from "@/modules/market/utils/extractMarketSupplyApy";
-import { TotalSupplyTooltip } from "@/modules/vault/components/TotalSupplyTooltip";
-import type { VaultMarketAllocation } from "@/modules/vault/vault.types";
+import type { ColumnDef } from '@tanstack/react-table';
+
+import type { VaultMarketAllocation } from '@/modules/vault/vault.types';
+
+import { ApyTooltip } from '@/common/components/ApyToolip';
+import NumberFlow from '@/common/components/ui/number-flow';
+import { Table } from '@/common/components/ui/table';
+import { rateLabel } from '@/common/utils/timeframe';
+import { MarketName } from '@/modules/market/components/MarketName';
+import { extractMarketSupplyApy } from '@/modules/market/utils/extractMarketSupplyApy';
+import { TotalSupplyTooltip } from '@/modules/vault/components/TotalSupplyTooltip';
 
 type MorphoV1MarketAllocation = VaultMarketAllocation;
 
@@ -19,9 +21,9 @@ interface Props {
 
 const columns: ColumnDef<MorphoV1MarketAllocation>[] = [
   {
-    id: "market",
+    id: 'market',
     accessorFn: (row) => row.market.name,
-    header: "Market",
+    header: 'Market',
     cell: ({ row }) => {
       const { market } = row.original;
       return (
@@ -31,26 +33,26 @@ const columns: ColumnDef<MorphoV1MarketAllocation>[] = [
           collateralAssetClassName="border-[var(--row-color)]"
           loanAssetClassName="border-[var(--row-color)]"
           loanAssetChainClassName="border-[var(--row-color)] bg-[var(--row-color)]"
-          lltv={Number(market.lltv?.formatted ?? "0")}
+          lltv={Number(market.lltv?.formatted ?? '0')}
         />
       );
     },
     minSize: 260,
   },
   {
-    id: "allocation",
-    accessorKey: "vaultSupplyShare",
-    header: "Allocation",
+    id: 'allocation',
+    accessorKey: 'vaultSupplyShare',
+    header: 'Allocation',
     cell: ({ row }) => {
       const { vaultSupplyShare } = row.original;
-      return <NumberFlow value={vaultSupplyShare} format={{ style: "percent" }} />;
+      return <NumberFlow value={vaultSupplyShare} format={{ style: 'percent' }} />;
     },
     minSize: 100,
   },
   {
-    id: "totalSupply",
-    accessorKey: "position.supplyAmount.usd",
-    header: "Total Supply",
+    id: 'totalSupply',
+    accessorKey: 'position.supplyAmount.usd',
+    header: 'Total Supply',
     cell: ({ row }) => {
       const { position, supplyCap } = row.original;
       return (
@@ -64,9 +66,9 @@ const columns: ColumnDef<MorphoV1MarketAllocation>[] = [
     minSize: 130,
   },
   {
-    id: "supplyApy",
+    id: 'supplyApy',
     accessorFn: (row) => extractMarketSupplyApy(row.market).total,
-    header: rateLabel("Net APY"),
+    header: rateLabel('Net APY'),
     cell: ({ row }) => {
       const { market } = row.original;
       const supplyApy = extractMarketSupplyApy(market);
@@ -89,12 +91,12 @@ export function MorphoV1MarketAllocationTable({ allocations, chainId }: Props) {
     <Table
       columns={columns}
       data={allocations.filter(({ enabled }) => enabled)}
-      initialSort={[{ id: "allocation", desc: true }]}
+      initialSort={[{ id: 'allocation', desc: true }]}
       rowAction={(row) =>
         row.market.isIdle
           ? null
           : {
-              type: "link",
+              type: 'link',
               href: `/borrow/${chainId}/${row.market.marketId}`,
             }
       }

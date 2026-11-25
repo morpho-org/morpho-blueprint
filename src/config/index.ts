@@ -1,14 +1,16 @@
-import { Inter } from "next/font/google";
-import { getAddress, parseUnits } from "viem";
-import { arbitrum, base, mainnet, polygon, unichain, worldchain } from "viem/chains";
-import { eventCb } from "./callbacks";
-import { Analytics } from "./components/Analytics";
-import { LogoDesktop, LogoMobile } from "./components/Logo";
-import { PrivacyPolicy } from "./components/PrivacyPolicy";
-import { TermsOfUse } from "./components/TermsOfUse";
-import { hyperevm, katana } from "./custom-chains";
-import type { AppConfig } from "./types";
-import { Erc4626VaultProtocol } from "./vault-protocol";
+import { Inter } from 'next/font/google';
+import { getAddress, parseUnits } from 'viem';
+import { arbitrum, base, mainnet, polygon, unichain, worldchain } from 'viem/chains';
+
+import type { AppConfig } from './types';
+
+import { eventCb } from './callbacks';
+import { Analytics } from './components/Analytics';
+import { LogoDesktop, LogoMobile } from './components/Logo';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
+import { TermsOfUse } from './components/TermsOfUse';
+import { hyperevm, katana } from './custom-chains';
+import { Erc4626VaultProtocol } from './vault-protocol';
 
 // Specify all chains your app supports.
 // Every chain here must be indexed by the configured Morpho API instance.
@@ -28,24 +30,25 @@ export const SUPPORTED_CHAIN_IDS = [
 export const VAULT_TAG_OPTIONS = [] as const;
 
 const inter = Inter({
-  variable: "--font-main",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  variable: '--font-main',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
 });
 
 export const APP_CONFIG: AppConfig = {
   metadata: {
     url: process.env.NEXT_PUBLIC_URL!,
-    name: "Morpho Blueprint",
-    description: "An open source fully customizable whitelabeled frontend template for Morpho apps.",
+    name: 'Morpho Blueprint',
+    description:
+      'An open source fully customizable whitelabeled frontend template for Morpho apps.',
     images: {
-      opengraph: "/opengraph-image.png",
+      opengraph: '/opengraph-image.png',
       icons: {
-        ico: "/icon.ico",
-        "png-64x64": "/icon-64x64.png",
-        "png-192x192": "/icon-192x192.png",
-        "png-512x512": "/icon-512x512.png",
-        svg: "/icon.svg",
+        ico: '/icon.ico',
+        'png-64x64': '/icon-64x64.png',
+        'png-192x192': '/icon-192x192.png',
+        'png-512x512': '/icon-512x512.png',
+        svg: '/icon.svg',
       },
     },
   },
@@ -59,20 +62,20 @@ export const APP_CONFIG: AppConfig = {
       main: inter,
     },
     infoBanner: {
-      text: "Morpho Blueprint Demo. Build custom interfaces in days, not weeks.",
+      text: 'Morpho Blueprint Demo. Build custom interfaces in days, not weeks.',
       link: {
         text: "Let's chat!",
-        href: "https://paperclip.xyz/contact",
+        href: 'https://paperclip.xyz/contact',
       },
     },
     footerLinks: [
       {
-        text: "Github",
-        href: "https://github.com/papercliplabs/morpho-blueprint",
+        text: 'Github',
+        href: 'https://github.com/papercliplabs/morpho-blueprint',
       },
       {
-        text: "Contact",
-        href: "https://paperclip.xyz/contact",
+        text: 'Contact',
+        href: 'https://paperclip.xyz/contact',
       },
     ],
   },
@@ -124,185 +127,195 @@ export const APP_CONFIG: AppConfig = {
   supportedVaults: {
     [mainnet.id]: [
       {
-        address: getAddress("0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB"),
+        address: getAddress('0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The Steakhouse USDC vault aims to optimize yields by lending USDC against blue chip crypto and real world asset (RWA) collateral markets, depending on market conditions. We call this the “dual engine.”",
+          'The Steakhouse USDC vault aims to optimize yields by lending USDC against blue chip crypto and real world asset (RWA) collateral markets, depending on market conditions. We call this the “dual engine.”',
       }, // Steakhouse USDC
       {
-        address: getAddress("0xbEef047a543E45807105E51A8BBEFCc5950fcfBa"),
+        address: getAddress('0xbEef047a543E45807105E51A8BBEFCc5950fcfBa'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The Steakhouse USDT vault aims to optimize yields by lending USDT against blue chip crypto and real world asset (RWA) collateral markets, depending on market conditions. We call this the “dual engine.”",
+          'The Steakhouse USDT vault aims to optimize yields by lending USDT against blue chip crypto and real world asset (RWA) collateral markets, depending on market conditions. We call this the “dual engine.”',
       }, // Steakhouse USDT
       {
-        address: getAddress("0xBeEf11eCb698f4B5378685C05A210bdF71093521"),
+        address: getAddress('0xBeEf11eCb698f4B5378685C05A210bdF71093521'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The Steakhouse rUSD vault allows Reservoir Protocol to deploy rUSD against bluechip crypto and RWA collaterals.",
+          'The Steakhouse rUSD vault allows Reservoir Protocol to deploy rUSD against bluechip crypto and RWA collaterals.',
       }, // Steakhouse RUSD
       {
-        address: getAddress("0xBEeFFF209270748ddd194831b3fa287a5386f5bC"),
+        address: getAddress('0xBEeFFF209270748ddd194831b3fa287a5386f5bC'),
         protocol: Erc4626VaultProtocol.MorphoV1,
-        description: "The Smokehouse USDC vault aims to optimize for yield on a wide range of collaterals.",
+        description:
+          'The Smokehouse USDC vault aims to optimize for yield on a wide range of collaterals.',
       }, // Smokehouse USDC
       {
-        address: getAddress("0xbeeff2C5bF38f90e3482a8b19F12E5a6D2FCa757"),
+        address: getAddress('0xbeeff2C5bF38f90e3482a8b19F12E5a6D2FCa757'),
         protocol: Erc4626VaultProtocol.MorphoV2,
         // Vault descriptions come from the Blueprint API only when MORPHO_INTERNAL_API_KEY is set.
         description:
-          "The Steakhouse High Yield Instant vault aims to optimize yields by lending USDC against a wide range of collaterals.",
+          'The Steakhouse High Yield Instant vault aims to optimize yields by lending USDC against a wide range of collaterals.',
       }, // Steakhouse High Yield Instant
     ],
     [base.id]: [
       {
-        address: getAddress("0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A"),
+        address: getAddress('0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "Spark blue-chip USDC vault. Lending against the lowest risk crypto and real-world assets (RWAs). Curated by SparkDAO which allocates billions in assets across all of DeFi. See: https://data.spark.fi/spark-liquidity-layer",
+          'Spark blue-chip USDC vault. Lending against the lowest risk crypto and real-world assets (RWAs). Curated by SparkDAO which allocates billions in assets across all of DeFi. See: https://data.spark.fi/spark-liquidity-layer',
       }, // Spark USDC
       {
-        address: getAddress("0xa0E430870c4604CcfC7B38Ca7845B1FF653D0ff1"),
+        address: getAddress('0xa0E430870c4604CcfC7B38Ca7845B1FF653D0ff1'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The Moonwell Flagship ETH Morpho vault curated by Anthias Labs is intended to optimize risk-adjusted interest earned from blue-chip collateral markets.",
+          'The Moonwell Flagship ETH Morpho vault curated by Anthias Labs is intended to optimize risk-adjusted interest earned from blue-chip collateral markets.',
       }, // Moonwell Flagship ETH
       {
-        address: getAddress("0x543257eF2161176D7C8cD90BA65C2d4CaEF5a796"),
+        address: getAddress('0x543257eF2161176D7C8cD90BA65C2d4CaEF5a796'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The Moonwell Frontier cbBTC Morpho vault curated by Anthias Labs is intended to optimize risk-adjusted interest earned from BTC liquid restaking tokens as collateral.",
+          'The Moonwell Frontier cbBTC Morpho vault curated by Anthias Labs is intended to optimize risk-adjusted interest earned from BTC liquid restaking tokens as collateral.',
       }, // Moonwell Frontier cbBTC
       {
-        address: getAddress("0x236919F11ff9eA9550A4287696C2FC9e18E6e890"),
+        address: getAddress('0x236919F11ff9eA9550A4287696C2FC9e18E6e890'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The Gauntlet USDC Frontier Vault targets maximum yield by allocating to potentially higher volatility markets that may face liquidity risks in exchange for greater supplier returns.",
+          'The Gauntlet USDC Frontier Vault targets maximum yield by allocating to potentially higher volatility markets that may face liquidity risks in exchange for greater supplier returns.',
       }, // Gauntler USDC Frontier v1
       {
-        address: getAddress("0x1deEfABEe758AAbdC29a542B24ca3b75aFD56765"),
+        address: getAddress('0x1deEfABEe758AAbdC29a542B24ca3b75aFD56765'),
         protocol: Erc4626VaultProtocol.MorphoV2,
         description:
-          "The Gauntlet USDC Frontier Vault targets maximum yield by allocating to potentially higher volatility yield sources that may face liquidity risks in exchange for greater returns. The vaults risk strategy follows Gauntlets Frontier framework whereby we curate supply to aggressively target higher yields while managing security to provide an aggressive risk profile at competitive APYs.",
+          'The Gauntlet USDC Frontier Vault targets maximum yield by allocating to potentially higher volatility yield sources that may face liquidity risks in exchange for greater returns. The vaults risk strategy follows Gauntlets Frontier framework whereby we curate supply to aggressively target higher yields while managing security to provide an aggressive risk profile at competitive APYs.',
       }, // Gauntlet USDC Frontier v2
     ],
     [polygon.id]: [
       {
-        address: getAddress("0xF5C81d25ee174d83f1FD202cA94AE6070d073cCF"),
+        address: getAddress('0xF5C81d25ee174d83f1FD202cA94AE6070d073cCF'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
           "The Compound WETH Vault will list a selection of liquid collateral markets and allocate across them to optimize risk-adjusted yield. The Vault's risk strategy will follow the CORE framework, where the curator balances security and yield to provide a moderate risk profile and competitive APY for WETH suppliers.",
       }, // Compound WETH
       {
-        address: getAddress("0x781FB7F6d845E3bE129289833b04d43Aa8558c42"),
+        address: getAddress('0x781FB7F6d845E3bE129289833b04d43Aa8558c42'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
           "The Compound USDC Vault will list a selection of liquid collateral markets and allocate across them to optimize risk-adjusted yield. The Vault's risk strategy will follow the CORE framework, where the curator balances security and yield to provide a moderate risk profile and competitive APY for USDC suppliers.",
       }, // Compound USDC
       {
-        address: getAddress("0xfD06859A671C21497a2EB8C5E3fEA48De924D6c8"),
+        address: getAddress('0xfD06859A671C21497a2EB8C5E3fEA48De924D6c8'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
           "The Compound USDT Vault will list a selection of liquid collateral markets and allocate across them to optimize risk-adjusted yield. The Vault's risk strategy will follow the CORE framework, where the curator balances security and yield to provide a moderate risk profile and competitive APY for USDT suppliers.",
       }, // Compound USDT
       {
-        address: getAddress("0x3F33F9f7e2D7cfBCBDf8ea8b870a6E3d449664c2"),
+        address: getAddress('0x3F33F9f7e2D7cfBCBDf8ea8b870a6E3d449664c2'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The Compound POL Vault will list a selection of liquid collateral markets and allocate across them to optimize risk-adjusted yield.",
+          'The Compound POL Vault will list a selection of liquid collateral markets and allocate across them to optimize risk-adjusted yield.',
       }, // Compound POL
     ],
     [unichain.id]: [
       {
-        address: getAddress("0xfA355999c12C63c465c591daf9C462e14ACf470b"),
+        address: getAddress('0xfA355999c12C63c465c591daf9C462e14ACf470b'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The K3 Capital ETH Maxi enables rehypothecation and just-in-time liquidity to AMMs through capital efficient ETH lending against the most liquid, battle-tested Liquid Staking and Restaking tokens.",
+          'The K3 Capital ETH Maxi enables rehypothecation and just-in-time liquidity to AMMs through capital efficient ETH lending against the most liquid, battle-tested Liquid Staking and Restaking tokens.',
       }, // K3 Capital ETH Maxi
       {
-        address: getAddress("0x38f4f3B6533de0023b9DCd04b02F93d36ad1F9f9"),
+        address: getAddress('0x38f4f3B6533de0023b9DCd04b02F93d36ad1F9f9'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The Gauntlet USDC vault optimizes for maximum yield within an aggressive risk framework. The Vault follows Gauntlet’s Frontier Strategy, actively managing allocations to potentially higher volatility yield sources that may face liquidity risks in exchange for greater returns, providing enhanced APY for USDC suppliers.",
+          'The Gauntlet USDC vault optimizes for maximum yield within an aggressive risk framework. The Vault follows Gauntlet’s Frontier Strategy, actively managing allocations to potentially higher volatility yield sources that may face liquidity risks in exchange for greater returns, providing enhanced APY for USDC suppliers.',
       }, // Gauntlet USDC
       {
-        address: getAddress("0x2c0F7e917257926BA6233B20DE19d7fe3210858C"),
+        address: getAddress('0x2c0F7e917257926BA6233B20DE19d7fe3210858C'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The Re7 USDT0 vault curated by Re7 Labs is intended to seamlessly allocate USDT0 liquidity to various Morpho markets.",
+          'The Re7 USDT0 vault curated by Re7 Labs is intended to seamlessly allocate USDT0 liquidity to various Morpho markets.',
       }, // Re7 USDT0
     ],
     [katana.id]: [
       {
-        address: getAddress("0xC5e7AB07030305fc925175b25B93b285d40dCdFf"),
+        address: getAddress('0xC5e7AB07030305fc925175b25B93b285d40dCdFf'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
           "The Gauntlet WETH Vault will list a selection of liquid collateral markets and allocate across them to optimize risk-adjusted yield. The Vault's risk strategy will follow the CORE framework, where Gauntlet curates deposits to balance security and yield to provide a moderate risk profile and competitive APY for WETH suppliers.",
       }, // Gauntlet WETH
       {
-        address: getAddress("0xE4248e2105508FcBad3fe95691551d1AF14015f7"),
+        address: getAddress('0xE4248e2105508FcBad3fe95691551d1AF14015f7'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
           "The Gauntlet USDC Vault will list a selection of liquid collateral markets and allocate across them to optimize risk-adjusted yield. The Vault's risk strategy will follow the CORE framework, where Gauntlet curates deposits to balance security and yield to provide a moderate risk profile and competitive APY for USDC suppliers.",
       }, // Gauntlet USDC
       {
-        address: getAddress("0x5BD1D75d45EdB622d0ea50946F2f741CE8dC5b75"),
+        address: getAddress('0x5BD1D75d45EdB622d0ea50946F2f741CE8dC5b75'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The Gauntlet BTCK Vault will list a selection of liquid collateral markets and allocate across them to optimize risk-adjusted yield. The Vaults risk strategy will follow the CORE framework where Gauntlet curates deposits to balance security and yield to provide a moderate risk profile and competitive APY for BTCK suppliers.",
+          'The Gauntlet BTCK Vault will list a selection of liquid collateral markets and allocate across them to optimize risk-adjusted yield. The Vaults risk strategy will follow the CORE framework where Gauntlet curates deposits to balance security and yield to provide a moderate risk profile and competitive APY for BTCK suppliers.',
       }, // Gauntlet BTCK
     ],
     [arbitrum.id]: [
       {
-        address: getAddress("0x4B6F1C9E5d470b97181786b26da0d0945A7cf027"),
+        address: getAddress('0x4B6F1C9E5d470b97181786b26da0d0945A7cf027'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "Hyperithm USDC Apex vault maximizes yield by swiftly integrating unique collaterals providing borrowers with high-return opportunities through active optimization while ensuring effective risk management.",
+          'Hyperithm USDC Apex vault maximizes yield by swiftly integrating unique collaterals providing borrowers with high-return opportunities through active optimization while ensuring effective risk management.',
       }, // Hyperithm USDC
       {
-        address: getAddress("0x2281961480216653529A03D6CE03Ee6B8cdF564E"),
+        address: getAddress('0x2281961480216653529A03D6CE03Ee6B8cdF564E'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The Steakhouse Prime USDT0 vault aims to optimize yields by lending USDT0 against blue chip crypto assets.",
+          'The Steakhouse Prime USDT0 vault aims to optimize yields by lending USDT0 against blue chip crypto assets.',
       }, // Steakhouse Prime USDT0
     ],
     [worldchain.id]: [
-      { address: getAddress("0x0db7e405278c2674f462ac9d9eb8b8346d1c1571"), protocol: Erc4626VaultProtocol.MorphoV1 }, // WETH
-      { address: getAddress("0x348831b46876d3df2db98bdec5e3b4083329ab9f"), protocol: Erc4626VaultProtocol.MorphoV1 }, // WLD
-      { address: getAddress("0xb1e80387ebe53ff75a89736097d34dc8d9e9045b"), protocol: Erc4626VaultProtocol.MorphoV1 }, // USDC
+      {
+        address: getAddress('0x0db7e405278c2674f462ac9d9eb8b8346d1c1571'),
+        protocol: Erc4626VaultProtocol.MorphoV1,
+      }, // WETH
+      {
+        address: getAddress('0x348831b46876d3df2db98bdec5e3b4083329ab9f'),
+        protocol: Erc4626VaultProtocol.MorphoV1,
+      }, // WLD
+      {
+        address: getAddress('0xb1e80387ebe53ff75a89736097d34dc8d9e9045b'),
+        protocol: Erc4626VaultProtocol.MorphoV1,
+      }, // USDC
     ],
     [hyperevm.id]: [
       {
-        address: getAddress("0x4346C98E690c17eFbB999aE8e1dA96B089bE320b"),
+        address: getAddress('0x4346C98E690c17eFbB999aE8e1dA96B089bE320b'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The Relend Network Vault on HyperEVM enables users to supply rUSDC to a diversified set of blue chip lending markets. rUSDC is a stablecoin that can be minted by depositing USDC on Ethereum via app.relend.network and then bridged to HyperEVM. This cross-chain mechanism allows Relend Network to supply stablecoin liquidity across ecosystems. Learn more about rUSDC and associated risks in docs.relend.network",
+          'The Relend Network Vault on HyperEVM enables users to supply rUSDC to a diversified set of blue chip lending markets. rUSDC is a stablecoin that can be minted by depositing USDC on Ethereum via app.relend.network and then bridged to HyperEVM. This cross-chain mechanism allows Relend Network to supply stablecoin liquidity across ecosystems. Learn more about rUSDC and associated risks in docs.relend.network',
       }, // Relend rUSDC
       {
-        address: getAddress("0x92B518e1cD76dD70D3E20624AEdd7D107F332Cff"),
+        address: getAddress('0x92B518e1cD76dD70D3E20624AEdd7D107F332Cff'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "Hyperithm HYPE vault maximizes yield by actively integrating unique collaterals offering borrowers high-return opportunities through dynamic optimization all while maintaining strong risk management.",
+          'Hyperithm HYPE vault maximizes yield by actively integrating unique collaterals offering borrowers high-return opportunities through dynamic optimization all while maintaining strong risk management.',
       }, // Hyperithm HYPE
       {
-        address: getAddress("0xe5ADd96840F0B908ddeB3Bd144C0283Ac5ca7cA0"),
+        address: getAddress('0xe5ADd96840F0B908ddeB3Bd144C0283Ac5ca7cA0'),
         protocol: Erc4626VaultProtocol.MorphoV1,
         description:
-          "The Hyperithm USDT0 Vault quickly integrates unique secure collateral assets to maximize yield offering borrowers high-return opportunities through proactive optimization while maintaining robust risk management.",
+          'The Hyperithm USDT0 Vault quickly integrates unique secure collateral assets to maximize yield offering borrowers high-return opportunities through proactive optimization while maintaining robust risk management.',
       }, // Hyperithm USDT
     ],
   },
 
   actionParameters: {
-    maxBorrowLtvMarginWad: parseUnits("0.05", 18), // 5% below LLTV
+    maxBorrowLtvMarginWad: parseUnits('0.05', 18), // 5% below LLTV
     publicAllocatorSupplyTargetUtilizationWad: BigInt(90_0000000000000000),
     bundler3Config: {
       enabled: true,
-      slippageToleranceWad: parseUnits("0.0003", 18), // 0.03% slippage
+      slippageToleranceWad: parseUnits('0.0003', 18), // 0.03% slippage
     },
   },
 
-  apyWindow: "1d",
+  apyWindow: '1d',
 
   // Reads the public API (set MORPHO_API_KEY) unless MORPHO_INTERNAL_API_URL/KEY are set.
   morphoApi: { requireInternal: false },
@@ -318,9 +331,9 @@ export const APP_CONFIG: AppConfig = {
   },
 
   knownAddresses: {
-    [getAddress("0xCC3E7c85Bb0EE4f09380e041fee95a0caeDD4a02")]: {
-      name: "Compound DAO",
-      iconUrl: "/compound.png",
+    [getAddress('0xCC3E7c85Bb0EE4f09380e041fee95a0caeDD4a02')]: {
+      name: 'Compound DAO',
+      iconUrl: '/compound.png',
     },
   },
 };

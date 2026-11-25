@@ -1,27 +1,34 @@
-"use client";
+'use client';
 
-import clsx from "clsx";
-import { useEffect, useMemo, useState } from "react";
-import type { Hex } from "viem";
-import { PoweredByMorpho } from "@/common/components/PoweredByMorpho";
-import { Button } from "@/common/components/ui/button";
-import { Card } from "@/common/components/ui/card";
-import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from "@/common/components/ui/drawer";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/common/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/common/components/ui/tooltip";
-import { useResponsiveContext } from "@/common/providers/ResponsiveProvider";
-import type { SupportedChainId } from "@/config/types";
-import type { MarketNonIdle } from "@/modules/market/data/getMarket";
-import { useMarketPosition } from "@/modules/market/hooks/useMarketPositions";
-import MarketRepayAndWithdrawCollateral from "./MarketRepayAndWithdrawCollateral";
-import MarketSupplyCollateralAndBorrow from "./MarketSupplyCollateralAndBorrow";
+import type { Hex } from 'viem';
+
+import clsx from 'clsx';
+import { useEffect, useMemo, useState } from 'react';
+
+import type { SupportedChainId } from '@/config/types';
+import type { MarketNonIdle } from '@/modules/market/data/getMarket';
+
+import { PoweredByMorpho } from '@/common/components/PoweredByMorpho';
+import { Button } from '@/common/components/ui/button';
+import { Card } from '@/common/components/ui/card';
+import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from '@/common/components/ui/drawer';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/common/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/common/components/ui/tooltip';
+import { useResponsiveContext } from '@/common/providers/ResponsiveProvider';
+import { useMarketPosition } from '@/modules/market/hooks/useMarketPositions';
+
+import MarketRepayAndWithdrawCollateral from './MarketRepayAndWithdrawCollateral';
+import MarketSupplyCollateralAndBorrow from './MarketSupplyCollateralAndBorrow';
 
 export interface MarketActionsProps {
   market: MarketNonIdle;
 }
 
 export default function MarketActions({ market }: MarketActionsProps) {
-  const { data: userMarketPosition } = useMarketPosition(market.chain.id as SupportedChainId, market.marketId as Hex);
+  const { data: userMarketPosition } = useMarketPosition(
+    market.chain.id as SupportedChainId,
+    market.marketId as Hex,
+  );
   const { isDesktop } = useResponsiveContext();
 
   const hasBorrowPosition = useMemo(() => {
@@ -42,7 +49,10 @@ export default function MarketActions({ market }: MarketActionsProps) {
   );
 }
 
-function MarketActionsDesktop({ market, hasBorrowPosition }: { hasBorrowPosition: boolean } & MarketActionsProps) {
+function MarketActionsDesktop({
+  market,
+  hasBorrowPosition,
+}: { hasBorrowPosition: boolean } & MarketActionsProps) {
   // Latch if we had a supply position
   const [hadBorrowPosition, setHadBorrowPosition] = useState(false);
   useEffect(() => {
@@ -63,7 +73,7 @@ function MarketActionsDesktop({ market, hasBorrowPosition }: { hasBorrowPosition
               <TabsTrigger
                 value="repay"
                 disabled={disableRepayTab}
-                className={clsx(disableRepayTab && "!cursor-not-allowed")}
+                className={clsx(disableRepayTab && '!cursor-not-allowed')}
                 asChild
               >
                 <TooltipTrigger>Repay</TooltipTrigger>
@@ -89,7 +99,10 @@ function MarketActionsDesktop({ market, hasBorrowPosition }: { hasBorrowPosition
   );
 }
 
-function MarketActionsMobile({ market, hasBorrowPosition }: { hasBorrowPosition: boolean } & MarketActionsProps) {
+function MarketActionsMobile({
+  market,
+  hasBorrowPosition,
+}: { hasBorrowPosition: boolean } & MarketActionsProps) {
   const [supplyCollateralAndBorrowOpen, setSupplyCollateralAndBorrowOpen] = useState(false);
   const [repayAndWithdrawCollateralOpen, setRepayAndWithdrawCollateralOpen] = useState(false);
 
@@ -115,7 +128,10 @@ function MarketActionsMobile({ market, hasBorrowPosition }: { hasBorrowPosition:
         </DrawerContent>
       </Drawer>
 
-      <Drawer open={repayAndWithdrawCollateralOpen} onOpenChange={setRepayAndWithdrawCollateralOpen}>
+      <Drawer
+        open={repayAndWithdrawCollateralOpen}
+        onOpenChange={setRepayAndWithdrawCollateralOpen}
+      >
         <DrawerTrigger asChild>
           <Button className="flex-1" variant="secondary" size="lg" disabled={!hasBorrowPosition}>
             Repay

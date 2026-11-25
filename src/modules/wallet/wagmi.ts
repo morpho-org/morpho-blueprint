@@ -1,8 +1,8 @@
-import { getDefaultConfig } from "connectkit";
-import { type Chain, http } from "viem";
-import { createConfig, type Transport } from "wagmi";
+import { getDefaultConfig } from 'connectkit';
+import { type Chain, http } from 'viem';
+import { createConfig, type Transport } from 'wagmi';
 
-import { APP_CONFIG } from "@/config";
+import { APP_CONFIG } from '@/config';
 
 export const wagmiConfig = createConfig(
   getDefaultConfig({
@@ -11,7 +11,7 @@ export const wagmiConfig = createConfig(
     transports: Object.values(APP_CONFIG.chainConfig).reduce(
       (acc, { chain }) => {
         // RPCs use proxy route - use absolute URL for WalletConnect compatibility
-        const rpcUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/api/rpc/${chain.id}`;
+        const rpcUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/api/rpc/${chain.id}`;
         acc[chain.id] = http(rpcUrl, {
           batch: {
             batchSize: APP_CONFIG.maxRpcBatchSize,
@@ -34,7 +34,7 @@ export const wagmiConfig = createConfig(
     // Supress wallet connect SSR error: "indexedDB is not defined".
     // https://github.com/WalletConnect/walletconnect-monorepo/issues/6841
     // This works becuase connectkit will use it's default when connectors is undefined.
-    connectors: typeof indexedDB === "undefined" ? [] : undefined,
+    connectors: typeof indexedDB === 'undefined' ? [] : undefined,
 
     ssr: true,
   }),

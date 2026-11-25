@@ -13,7 +13,7 @@ class ErrorWithShortMessage extends Error {
 export function ensureError(value: unknown): Error & { shortMessage?: string } {
   if (value instanceof Error) return value;
 
-  let stringified = "[Unable to stringify thrown value]";
+  let stringified = '[Unable to stringify thrown value]';
   try {
     stringified = JSON.stringify(value);
   } catch {

@@ -1,8 +1,10 @@
-import { Input } from "../input";
-import { validateDecimalInput } from "./validateDecimalInput";
+import { Input } from '../input';
+import { validateDecimalInput } from './validateDecimalInput';
 
-interface DecimalInputProps
-  extends Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "type" | "inputMode"> {
+interface DecimalInputProps extends Omit<
+  React.ComponentProps<typeof Input>,
+  'value' | 'onChange' | 'type' | 'inputMode'
+> {
   value: string;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   decimals?: number;

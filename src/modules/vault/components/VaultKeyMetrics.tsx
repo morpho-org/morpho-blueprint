@@ -1,13 +1,15 @@
-import "server-only";
-import type { ReactNode } from "react";
-import { ApyTooltipContent, ApyTooltipTrigger } from "@/common/components/ApyToolip";
-import { MetricWithTooltip } from "@/common/components/Metric";
-import NumberFlow from "@/common/components/ui/number-flow";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import { cn } from "@/common/utils/shadcn";
-import { rateLabel } from "@/common/utils/timeframe";
-import type { Vault } from "@/modules/vault/data/getVault";
-import { extractVaultLiquidity } from "@/modules/vault/utils/extractVaultLiquidity";
+import 'server-only';
+import type { ReactNode } from 'react';
+
+import type { Vault } from '@/modules/vault/data/getVault';
+
+import { ApyTooltipContent, ApyTooltipTrigger } from '@/common/components/ApyToolip';
+import { MetricWithTooltip } from '@/common/components/Metric';
+import NumberFlow from '@/common/components/ui/number-flow';
+import { Skeleton } from '@/common/components/ui/skeleton';
+import { cn } from '@/common/utils/shadcn';
+import { rateLabel } from '@/common/utils/timeframe';
+import { extractVaultLiquidity } from '@/modules/vault/utils/extractVaultLiquidity';
 
 interface VaultKeyMetricsProps {
   vaultPromise: Promise<Vault>;
@@ -19,9 +21,15 @@ export async function VaultKeyMetrics({ vaultPromise }: VaultKeyMetricsProps) {
 
   return (
     <VaultKeyMetricsLayout
-      totalDepositsValue={<NumberFlow value={vault.totalAssets.usd ?? 0} format={{ currency: "USD" }} />}
-      availableLiquidityValue={<NumberFlow value={extractVaultLiquidity(vault)} format={{ currency: "USD" }} />}
-      supplyApyValue={<ApyTooltipTrigger totalApy={vault.apy.total} showSparkle={vault.apy.rewards.length > 0} />}
+      totalDepositsValue={
+        <NumberFlow value={vault.totalAssets.usd ?? 0} format={{ currency: 'USD' }} />
+      }
+      availableLiquidityValue={
+        <NumberFlow value={extractVaultLiquidity(vault)} format={{ currency: 'USD' }} />
+      }
+      supplyApyValue={
+        <ApyTooltipTrigger totalApy={vault.apy.total} showSparkle={vault.apy.rewards.length > 0} />
+      }
       supplyApyTooltip={
         <ApyTooltipContent
           type="earn"
@@ -32,7 +40,7 @@ export async function VaultKeyMetrics({ vaultPromise }: VaultKeyMetricsProps) {
       }
       curatorAumValue={
         vault.curatorAum === undefined ? undefined : (
-          <NumberFlow value={vault.curatorAum} format={{ currency: "USD" }} />
+          <NumberFlow value={vault.curatorAum} format={{ currency: 'USD' }} />
         )
       }
     />
@@ -68,7 +76,12 @@ function VaultKeyMetricsLayout({
   curatorAumValue,
 }: VaultKeyMetricsLayoutProps) {
   return (
-    <div className={cn("grid grid-cols-2 gap-6", curatorAumValue === undefined ? "md:grid-cols-3" : "md:grid-cols-4")}>
+    <div
+      className={cn(
+        'grid grid-cols-2 gap-6',
+        curatorAumValue === undefined ? 'md:grid-cols-3' : 'md:grid-cols-4',
+      )}
+    >
       <MetricWithTooltip
         label="Total deposits"
         className="heading-4"
@@ -83,7 +96,11 @@ function VaultKeyMetricsLayout({
       >
         {availableLiquidityValue}
       </MetricWithTooltip>
-      <MetricWithTooltip label={rateLabel("Net APY")} className="heading-4" tooltip={supplyApyTooltip}>
+      <MetricWithTooltip
+        label={rateLabel('Net APY')}
+        className="heading-4"
+        tooltip={supplyApyTooltip}
+      >
         {supplyApyValue}
       </MetricWithTooltip>
       {curatorAumValue !== undefined && (

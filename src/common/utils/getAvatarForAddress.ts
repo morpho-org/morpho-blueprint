@@ -1,5 +1,6 @@
-import { blo } from "blo";
-import { formatAddress, getKnownAddressMeta } from "./format";
+import { blo } from 'blo';
+
+import { formatAddress, getKnownAddressMeta } from './format';
 
 export function getAvatarForAddress(address: `0x${string}`) {
   const meta = getKnownAddressMeta(address);

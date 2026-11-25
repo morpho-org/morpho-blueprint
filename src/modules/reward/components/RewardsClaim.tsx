@@ -1,8 +1,9 @@
-import type { Action } from "@/actions";
-import type { SupportedChainId } from "@/config/types";
-import { ActionFlow } from "@/modules/action-flow/components/ActionFlow";
-import { RewardTokenRow } from "@/modules/reward/components/RewardTokenRow";
-import type { MerklAccountReward } from "@/modules/reward/data/getAccountRewards";
+import type { Action } from '@/actions';
+import type { SupportedChainId } from '@/config/types';
+import type { MerklAccountReward } from '@/modules/reward/data/getAccountRewards';
+
+import { ActionFlow } from '@/modules/action-flow/components/ActionFlow';
+import { RewardTokenRow } from '@/modules/reward/components/RewardTokenRow';
 
 interface RewardsClaimProps {
   action?: Action;
@@ -14,11 +15,11 @@ interface RewardsClaimProps {
 export function RewardsClaim({ action, rewards, clearAction, onClaimSuccess }: RewardsClaimProps) {
   return (
     <ActionFlow
-      trackingPayload={{ tag: "rewards-claim" }}
+      trackingPayload={{ tag: 'rewards-claim' }}
       action={action ?? null}
       summary={action && <RewardsClaimSummary rewards={rewards ?? []} />}
       metrics={null}
-      actionName={"Claim rewards"}
+      actionName={'Claim rewards'}
       open={action != null}
       onOpenChange={(open) => !open && clearAction()}
       flowCompletionCb={() => {

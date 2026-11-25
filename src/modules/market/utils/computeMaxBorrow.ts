@@ -1,14 +1,19 @@
-import { MarketUtils, MathLib } from "@morpho-org/blue-sdk";
-import { APP_CONFIG } from "@/config";
-import type { MarketNonIdle } from "@/modules/market/data/getMarket";
-import type { MarketPosition } from "@/modules/market/data/getMarketPositions";
+import { MarketUtils, MathLib } from '@morpho-org/blue-sdk';
+
+import type { MarketNonIdle } from '@/modules/market/data/getMarket';
+import type { MarketPosition } from '@/modules/market/data/getMarketPositions';
+
+import { APP_CONFIG } from '@/config';
 
 export function computeMaxBorrow(
   market: MarketNonIdle,
   collateralAmountChange: bigint,
   position?: MarketPosition,
 ): bigint {
-  const totalCollateral = MathLib.max(BigInt(position?.collateralAmount?.raw ?? 0) + collateralAmountChange, 0n);
+  const totalCollateral = MathLib.max(
+    BigInt(position?.collateralAmount?.raw ?? 0) + collateralAmountChange,
+    0n,
+  );
   const price = BigInt(market.collateralPriceInLoanAsset?.raw ?? 0);
   const lltv = BigInt(market.lltv.raw);
 

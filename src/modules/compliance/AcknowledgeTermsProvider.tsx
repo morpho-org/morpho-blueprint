@@ -1,8 +1,15 @@
-"use client";
+'use client';
 
-import { createContext, type PropsWithChildren, useCallback, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  type PropsWithChildren,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 
-const ACKNOWLEDGEMENT_LOCAL_STORAGE_KEY = "acknowledge-terms";
+const ACKNOWLEDGEMENT_LOCAL_STORAGE_KEY = 'acknowledge-terms';
 
 type AcknowledgeTermsContextType = {
   acknowledgedTerms: boolean;
@@ -17,11 +24,11 @@ export function AcknowledgeTermsProvider({ children }: PropsWithChildren) {
   // On load, check if we already accepted the terms before
   useEffect(() => {
     const storedAcknoledgement = localStorage.getItem(ACKNOWLEDGEMENT_LOCAL_STORAGE_KEY);
-    setAcknowledgedTerms(storedAcknoledgement === "true");
+    setAcknowledgedTerms(storedAcknoledgement === 'true');
   }, []);
 
   const setAcknowledgement = useCallback(() => {
-    localStorage.setItem(ACKNOWLEDGEMENT_LOCAL_STORAGE_KEY, "true");
+    localStorage.setItem(ACKNOWLEDGEMENT_LOCAL_STORAGE_KEY, 'true');
     setAcknowledgedTerms(true);
   }, []);
 
@@ -35,7 +42,7 @@ export function AcknowledgeTermsProvider({ children }: PropsWithChildren) {
 export function useAcknowledgeTermsContext() {
   const context = useContext(AcknowledgeTermsContext);
   if (!context) {
-    throw new Error("useAcknowledgeTermsContext must be used within an AcknowledgeTermsProvider");
+    throw new Error('useAcknowledgeTermsContext must be used within an AcknowledgeTermsProvider');
   }
   return context;
 }

@@ -1,6 +1,6 @@
-import { cn } from "@/common/utils/shadcn";
+import { cn } from '@/common/utils/shadcn';
 
-export function PoweredByMerkl({ className, ...props }: React.ComponentProps<"svg">) {
+export function PoweredByMerkl({ className, ...props }: React.ComponentProps<'svg'>) {
   return (
     <svg
       width="453"
@@ -8,7 +8,7 @@ export function PoweredByMerkl({ className, ...props }: React.ComponentProps<"sv
       viewBox="0 0 453 102"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={cn("fill-[#191F36] dark:fill-[#FBFCFF]", className)}
+      className={cn('fill-[#191F36] dark:fill-[#FBFCFF]', className)}
       {...props}
     >
       <title>Powered by Merkl</title>

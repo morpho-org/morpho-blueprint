@@ -1,30 +1,40 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { Suspense } from "react";
-import { type Address, getAddress } from "viem";
-import { BreakcrumbBack } from "@/common/components/ui/breakcrumb-back";
-import { Button } from "@/common/components/ui/button";
-import { Card, CardHeader } from "@/common/components/ui/card";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import { APP_CONFIG } from "@/config";
-import type { SupportedChainId } from "@/config/types";
-import { Erc4626VaultProtocol } from "@/config/vault-protocol";
-import { MorphoV1VaultPageContent } from "@/modules/vault/components/morpho-v1/MorphoV1VaultPageContent";
-import { MorphoV2VaultPageContent } from "@/modules/vault/components/morpho-v2/MorphoV2VaultPageContent";
-import { VaultAboutCard } from "@/modules/vault/components/VaultAboutCard";
-import { VaultActions } from "@/modules/vault/components/VaultActions/VaultActions";
-import { VaultHeader } from "@/modules/vault/components/VaultHeader";
-import { VaultKeyMetrics, VaultKeyMetricsSkeleton } from "@/modules/vault/components/VaultKeyMetrics";
-import { getVault, type Vault } from "@/modules/vault/data/getVault";
-import { getVaultConfig } from "@/modules/vault/utils/getVaultConfig";
-import type { MorphoVaultV1, MorphoVaultV2 } from "@/modules/vault/vault.types";
+import type { Metadata } from 'next';
+
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
+import { type Address, getAddress } from 'viem';
+
+import type { SupportedChainId } from '@/config/types';
+import type { MorphoVaultV1, MorphoVaultV2 } from '@/modules/vault/vault.types';
+
+import { BreakcrumbBack } from '@/common/components/ui/breakcrumb-back';
+import { Button } from '@/common/components/ui/button';
+import { Card, CardHeader } from '@/common/components/ui/card';
+import { Skeleton } from '@/common/components/ui/skeleton';
+import { APP_CONFIG } from '@/config';
+import { Erc4626VaultProtocol } from '@/config/vault-protocol';
+import { MorphoV1VaultPageContent } from '@/modules/vault/components/morpho-v1/MorphoV1VaultPageContent';
+import { MorphoV2VaultPageContent } from '@/modules/vault/components/morpho-v2/MorphoV2VaultPageContent';
+import { VaultAboutCard } from '@/modules/vault/components/VaultAboutCard';
+import { VaultActions } from '@/modules/vault/components/VaultActions/VaultActions';
+import { VaultHeader } from '@/modules/vault/components/VaultHeader';
+import {
+  VaultKeyMetrics,
+  VaultKeyMetricsSkeleton,
+} from '@/modules/vault/components/VaultKeyMetrics';
+import { getVault, type Vault } from '@/modules/vault/data/getVault';
+import { getVaultConfig } from '@/modules/vault/utils/getVaultConfig';
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.metadata.name} | Vault`,
 };
 
-export default async function VaultPage({ params }: { params: Promise<{ chainId: string; vaultAddress: string }> }) {
+export default async function VaultPage({
+  params,
+}: {
+  params: Promise<{ chainId: string; vaultAddress: string }>;
+}) {
   const { chainId: chainIdString, vaultAddress: vaultAddressString } = await params;
   let vaultAddress: Address;
   let chainId: SupportedChainId;
@@ -99,7 +109,9 @@ function UnsupportedVault() {
   return (
     <div className="flex w-full grow flex-col items-center justify-center gap-6 text-center">
       <h1>Unsupported Vault</h1>
-      <p className="text-content-secondary">This selected vault is not currently supported on this interface.</p>
+      <p className="text-content-secondary">
+        This selected vault is not currently supported on this interface.
+      </p>
       <Link href="/earn">
         <Button>Return Home</Button>
       </Link>

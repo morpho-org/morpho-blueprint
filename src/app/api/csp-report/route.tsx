@@ -1,19 +1,19 @@
-import { trackEvent } from "@/common/utils/trackEvent";
+import { trackEvent } from '@/common/utils/trackEvent';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const cspReport = body["csp-report"] || body;
+    const cspReport = body['csp-report'] || body;
 
-    trackEvent("csp-violation", {
+    void trackEvent('csp-violation', {
       type: cspReport.type,
       url: cspReport.url,
       body: cspReport.body,
     });
 
-    return Response.json({ message: "CSP Report received" });
+    return Response.json({ message: 'CSP Report received' });
   } catch (error) {
-    console.error("CSP Report Error:", error);
-    return Response.json({ message: "Error processing CSP report" }, { status: 500 });
+    console.error('CSP Report Error:', error);
+    return Response.json({ message: 'Error processing CSP report' }, { status: 500 });
   }
 }

@@ -1,12 +1,14 @@
-import type { ReactNode } from "react";
-import { ApyTooltipContent, ApyTooltipTrigger } from "@/common/components/ApyToolip";
-import { MetricWithTooltip } from "@/common/components/Metric";
-import NumberFlow from "@/common/components/ui/number-flow";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import { rateLabel } from "@/common/utils/timeframe";
-import { AvailableLiquidityTooltipContent } from "@/modules/market/components/AvailableLiquidityTooltip";
-import type { Market } from "@/modules/market/data/getMarket";
-import { extractMarketBorrowApy } from "@/modules/market/utils/extractMarketBorrowApy";
+import type { ReactNode } from 'react';
+
+import type { Market } from '@/modules/market/data/getMarket';
+
+import { ApyTooltipContent, ApyTooltipTrigger } from '@/common/components/ApyToolip';
+import { MetricWithTooltip } from '@/common/components/Metric';
+import NumberFlow from '@/common/components/ui/number-flow';
+import { Skeleton } from '@/common/components/ui/skeleton';
+import { rateLabel } from '@/common/utils/timeframe';
+import { AvailableLiquidityTooltipContent } from '@/modules/market/components/AvailableLiquidityTooltip';
+import { extractMarketBorrowApy } from '@/modules/market/utils/extractMarketBorrowApy';
 
 interface MarketKeyMetricsProps {
   market: Market;
@@ -17,15 +19,21 @@ export function MarketKeyMetrics({ market }: MarketKeyMetricsProps) {
 
   return (
     <MarketKeyMetricsLayout
-      totalSupplyValue={<NumberFlow value={market.totalSupplied.usd ?? 0} format={{ currency: "USD" }} />}
-      availableToBorrowValue={<NumberFlow value={market.availableToBorrow.usd ?? 0} format={{ currency: "USD" }} />}
+      totalSupplyValue={
+        <NumberFlow value={market.totalSupplied.usd ?? 0} format={{ currency: 'USD' }} />
+      }
+      availableToBorrowValue={
+        <NumberFlow value={market.availableToBorrow.usd ?? 0} format={{ currency: 'USD' }} />
+      }
       availableToBorrowTooltip={
         <AvailableLiquidityTooltipContent
           marketLiquidity={market.liquidityInMarket.usd ?? 0}
           publicAllocatorLiquidity={market.publicAllocatorLiquidity.usd ?? 0}
         />
       }
-      borrowApyValue={<ApyTooltipTrigger totalApy={borrowApy.total} showSparkle={borrowApy.rewards.length > 0} />}
+      borrowApyValue={
+        <ApyTooltipTrigger totalApy={borrowApy.total} showSparkle={borrowApy.rewards.length > 0} />
+      }
       borrowApyTooltip={
         <ApyTooltipContent
           type="borrow"
@@ -75,10 +83,18 @@ function MarketKeyMetricsLayout({
       >
         {totalSupplyValue}
       </MetricWithTooltip>
-      <MetricWithTooltip label="Available to Borrow" className="heading-4" tooltip={availableToBorrowTooltip}>
+      <MetricWithTooltip
+        label="Available to Borrow"
+        className="heading-4"
+        tooltip={availableToBorrowTooltip}
+      >
         {availableToBorrowValue}
       </MetricWithTooltip>
-      <MetricWithTooltip label={rateLabel("Net Rate")} className="heading-4" tooltip={borrowApyTooltip}>
+      <MetricWithTooltip
+        label={rateLabel('Net Rate')}
+        className="heading-4"
+        tooltip={borrowApyTooltip}
+      >
         {borrowApyValue}
       </MetricWithTooltip>
     </div>

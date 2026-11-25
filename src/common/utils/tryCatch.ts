@@ -1,4 +1,4 @@
-import { ensureError } from "./error";
+import { ensureError } from './error';
 
 export type Result<T, E = Error> = { data: T; error: null } | { data: null; error: E };
 

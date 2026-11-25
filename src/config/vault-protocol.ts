@@ -6,8 +6,8 @@
  * page content is rendered.
  */
 export const Erc4626VaultProtocol = {
-  MorphoV1: "MorphoV1",
-  MorphoV2: "MorphoV2",
+  MorphoV1: 'MorphoV1',
+  MorphoV2: 'MorphoV2',
 } as const;
 
 export type Erc4626VaultProtocol = (typeof Erc4626VaultProtocol)[keyof typeof Erc4626VaultProtocol];

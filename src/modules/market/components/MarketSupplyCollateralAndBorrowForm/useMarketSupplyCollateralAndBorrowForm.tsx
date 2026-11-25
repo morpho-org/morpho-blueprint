@@ -1,27 +1,34 @@
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { type MarketId, MathLib } from "@morpho-org/blue-sdk";
-import { useModal } from "connectkit";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { type UseFormReturn, useForm } from "react-hook-form";
-import { useDebounce } from "use-debounce";
-import { type Hex, maxUint256 } from "viem";
-import { useAccount, usePublicClient } from "wagmi";
-import { type MarketAction, marketSupplyCollateralAndBorrowAction, UserFacingError } from "@/actions";
-import { DEBOUNCE_TIME_MS } from "@/common/utils/constants";
-import { parseOnchainAmount } from "@/common/utils/schemas";
-import { tryCatch } from "@/common/utils/tryCatch";
-import type { SupportedChainId } from "@/config/types";
-import type { MarketNonIdle } from "@/modules/market/data/getMarket";
-import type { MarketPosition } from "@/modules/market/data/getMarketPositions";
-import { useMarketPosition } from "@/modules/market/hooks/useMarketPositions";
-import { capAvailableToBorrowByLiquidity } from "@/modules/market/utils/capAvailableToBorrowByLiquidity";
-import { computeMarketPositonChange } from "@/modules/market/utils/computeMarketPositionChange";
-import { computeMaxBorrow } from "@/modules/market/utils/computeMaxBorrow";
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
+import { type MarketId, MathLib } from '@morpho-org/blue-sdk';
+import { useModal } from 'connectkit';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type UseFormReturn, useForm } from 'react-hook-form';
+import { useDebounce } from 'use-debounce';
+import { type Hex, maxUint256 } from 'viem';
+import { useAccount, usePublicClient } from 'wagmi';
+
+import type { SupportedChainId } from '@/config/types';
+import type { MarketNonIdle } from '@/modules/market/data/getMarket';
+import type { MarketPosition } from '@/modules/market/data/getMarketPositions';
+
+import {
+  type MarketAction,
+  marketSupplyCollateralAndBorrowAction,
+  UserFacingError,
+} from '@/actions';
+import { DEBOUNCE_TIME_MS } from '@/common/utils/constants';
+import { parseOnchainAmount } from '@/common/utils/schemas';
+import { tryCatch } from '@/common/utils/tryCatch';
+import { useMarketPosition } from '@/modules/market/hooks/useMarketPositions';
+import { capAvailableToBorrowByLiquidity } from '@/modules/market/utils/capAvailableToBorrowByLiquidity';
+import { computeMarketPositonChange } from '@/modules/market/utils/computeMarketPositionChange';
+import { computeMaxBorrow } from '@/modules/market/utils/computeMaxBorrow';
+
 import {
   createMarketSupplyCollateralAndBorrowFormSchema,
   type MarketSupplyCollateralAndBorrowFormSchemaInput,
   type MarketSupplyCollateralAndBorrowFormSchemaOutput,
-} from "./schema";
+} from './schema';
 
 interface UseMarketSupplyCollateralAndBorrowFormParams {
   market: MarketNonIdle;
@@ -51,12 +58,12 @@ export function useMarketSupplyCollateralAndBorrowForm({
     undefined,
     MarketSupplyCollateralAndBorrowFormSchemaOutput
   >({
-    mode: "onChange",
+    mode: 'onChange',
     resolver: standardSchemaResolver(formSchema),
     defaultValues: {
-      supplyCollateralAmount: "",
+      supplyCollateralAmount: '',
       isMaxSupplyCollateral: false,
-      borrowAmount: "",
+      borrowAmount: '',
     },
   });
 
@@ -93,7 +100,9 @@ export function useMarketSupplyCollateralAndBorrowForm({
       );
 
       if (error) {
-        setSubmitErrorMsg(error instanceof UserFacingError ? error.message : "An unknown error occurred");
+        setSubmitErrorMsg(
+          error instanceof UserFacingError ? error.message : 'An unknown error occurred',
+        );
       } else {
         // The review dialog's "Available to borrow" uses the same liquidity cap as the form summary.
         onSuccessfulActionSimulation({
@@ -117,8 +126,8 @@ export function useMarketSupplyCollateralAndBorrowForm({
   // Trigger dependent field validation
   useEffect(() => {
     const subscription = form.watch((_value, { name }) => {
-      if (name === "supplyCollateralAmount") {
-        void form.trigger(["borrowAmount"]);
+      if (name === 'supplyCollateralAmount') {
+        void form.trigger(['borrowAmount']);
       }
     });
 
@@ -126,19 +135,20 @@ export function useMarketSupplyCollateralAndBorrowForm({
   }, [form]);
 
   // Trigger revalidation on position change
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Allow position to trigger reval
   useEffect(() => {
     if (form.formState.isDirty) {
-      form.trigger();
+      void form.trigger();
     }
+    // oxlint-disable-next-line react/exhaustive-deps -- Revalidate on position changes, not when the form becomes dirty.
   }, [position, form.trigger]);
 
   // Reset isMax when a new account connects
+  const { setValue } = form;
   useEffect(() => {
     if (address) {
-      form.setValue("isMaxSupplyCollateral", false);
+      setValue('isMaxSupplyCollateral', false);
     }
-  }, [address, form.setValue]);
+  }, [address, setValue]);
 
   return {
     form,
@@ -163,19 +173,26 @@ function useDerivedFormValues({
     MarketSupplyCollateralAndBorrowFormSchemaOutput
   >;
 }) {
-  const [formInputSupplyCollateralAmount, formInputIsMaxSupplyCollateral, formInputBorrowAmount] = form.watch([
-    "supplyCollateralAmount",
-    "isMaxSupplyCollateral",
-    "borrowAmount",
-  ]);
+  const [formInputSupplyCollateralAmount, formInputIsMaxSupplyCollateral, formInputBorrowAmount] =
+    form.watch(['supplyCollateralAmount', 'isMaxSupplyCollateral', 'borrowAmount']);
 
-  const [debouncedFormInputSupplyCollateralAmount] = useDebounce(formInputSupplyCollateralAmount, DEBOUNCE_TIME_MS);
+  const [debouncedFormInputSupplyCollateralAmount] = useDebounce(
+    formInputSupplyCollateralAmount,
+    DEBOUNCE_TIME_MS,
+  );
   const [debouncedFormInputBorrowAmount] = useDebounce(formInputBorrowAmount, DEBOUNCE_TIME_MS);
 
   const supplyCollateralAmount = useMemo(() => {
     const parsedAmount =
-      parseOnchainAmount(debouncedFormInputSupplyCollateralAmount, market.collateralAsset.decimals) ?? 0n;
-    if (parsedAmount > 0n && formInputIsMaxSupplyCollateral && position?.walletCollateralAssetHolding != null) {
+      parseOnchainAmount(
+        debouncedFormInputSupplyCollateralAmount,
+        market.collateralAsset.decimals,
+      ) ?? 0n;
+    if (
+      parsedAmount > 0n &&
+      formInputIsMaxSupplyCollateral &&
+      position?.walletCollateralAssetHolding != null
+    ) {
       return BigInt(position.walletCollateralAssetHolding.balance.raw);
     }
     return parsedAmount;

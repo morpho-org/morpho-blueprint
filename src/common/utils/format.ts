@@ -1,37 +1,41 @@
-import { type Address, formatUnits, getAddress, type Hex } from "viem";
-import { APP_CONFIG } from "@/config";
+import { type Address, formatUnits, getAddress, type Hex } from 'viem';
+
+import { APP_CONFIG } from '@/config';
 
 const MAX_USD_VALUE = 1e12;
 
 export function formatNumber(
   value: number,
   options: Intl.NumberFormatOptions & {
-    currency?: "USD" | "ETH";
+    currency?: 'USD' | 'ETH';
   } = {},
 ) {
   const currency = options.currency;
-  const isPercent = options.style === "percent";
+  const isPercent = options.style === 'percent';
   const {
-    notation = "compact",
+    notation = 'compact',
     minimumFractionDigits = 2,
-    maximumFractionDigits = value < 1 && currency !== "USD" && !isPercent ? 3 : 2,
+    maximumFractionDigits = value < 1 && currency !== 'USD' && !isPercent ? 3 : 2,
     style,
     ...restOptions
   } = options;
 
-  const displayValue = style === "percent" ? value * 100 : value;
+  const displayValue = style === 'percent' ? value * 100 : value;
   const formatOptions: Intl.NumberFormatOptions = {
-    notation: notation === "compact" && (displayValue > 9999 || displayValue < -9999) ? "compact" : "standard",
+    notation:
+      notation === 'compact' && (displayValue > 9999 || displayValue < -9999)
+        ? 'compact'
+        : 'standard',
     minimumFractionDigits,
     maximumFractionDigits,
     style,
     ...restOptions,
   };
 
-  let prefix = currency === "USD" ? "$" : currency === "ETH" ? "Ξ" : "";
+  let prefix = currency === 'USD' ? '$' : currency === 'ETH' ? 'Ξ' : '';
 
   // Clamp to max USD value
-  if (currency === "USD" && value > MAX_USD_VALUE) {
+  if (currency === 'USD' && value > MAX_USD_VALUE) {
     value = MAX_USD_VALUE;
     prefix = `>${prefix}`;
   }
@@ -39,11 +43,11 @@ export function formatNumber(
   const minValue = 10 ** -maximumFractionDigits;
   if (value !== 0 && Math.abs(displayValue) < minValue) {
     const neg = value < 0;
-    prefix = neg ? ">" : `<${prefix}`;
-    value = minValue * 10 ** (style === "percent" ? -2 : 0) * (neg ? -1 : 1);
+    prefix = neg ? '>' : `<${prefix}`;
+    value = minValue * 10 ** (style === 'percent' ? -2 : 0) * (neg ? -1 : 1);
   }
 
-  const formatted = new Intl.NumberFormat("en-US", formatOptions).format(value);
+  const formatted = new Intl.NumberFormat('en-US', formatOptions).format(value);
 
   return `${prefix}${formatted}`;
 }
@@ -54,7 +58,7 @@ export function capitalizeFirstLetter(str: string) {
 
 // Avoid scientific notation for large or small entries
 export function numberToString(value: number) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat('en-US', {
     useGrouping: false,
     maximumFractionDigits: 20,
     minimumFractionDigits: 0,

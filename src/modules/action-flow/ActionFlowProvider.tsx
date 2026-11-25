@@ -1,22 +1,23 @@
-"use client";
-import { useQueryClient } from "@tanstack/react-query";
-import { useModal } from "connectkit";
-import { createContext, type ReactNode, useCallback, useContext, useState } from "react";
-import { BaseError, type Hex, RpcError } from "viem";
-import { estimateGas, sendTransaction, waitForTransactionReceipt } from "viem/actions";
-import { useAccount, useClient, useConnectorClient, useSwitchChain } from "wagmi";
+'use client';
+import { useQueryClient } from '@tanstack/react-query';
+import { useModal } from 'connectkit';
+import { createContext, type ReactNode, useCallback, useContext, useState } from 'react';
+import { BaseError, type Hex, RpcError } from 'viem';
+import { estimateGas, sendTransaction, waitForTransactionReceipt } from 'viem/actions';
+import { useAccount, useClient, useConnectorClient, useSwitchChain } from 'wagmi';
 
-import type { Action } from "@/actions";
-import { fetchJsonResponse } from "@/common/utils/fetch";
-import { trackEvent } from "@/common/utils/trackEvent";
+import type { Action } from '@/actions';
 
-export type ActionFlowState = "review" | "active" | "success" | "failed";
-export type ActionState = "pending-wallet" | "pending-transaction";
+import { fetchJsonResponse } from '@/common/utils/fetch';
+import { trackEvent } from '@/common/utils/trackEvent';
+
+export type ActionFlowState = 'review' | 'active' | 'success' | 'failed';
+export type ActionState = 'pending-wallet' | 'pending-transaction';
 
 // Gives buffer on gas estimate to help prevent out of gas error
 // For wallets that decide to respect this...
 const GAS_BUFFER = 0.3;
-const USER_REJECT_MSG = "Transaction cancelled.";
+const USER_REJECT_MSG = 'Transaction cancelled.';
 
 type ActionFlowContextType = {
   chainId: number;
@@ -45,10 +46,15 @@ interface ActionFlowProviderProps {
   } & Record<string, string | number>;
 }
 
-export function ActionFlowProvider({ flowCompletionCb, action, trackingPayload, children }: ActionFlowProviderProps) {
-  const [flowState, setFlowState] = useState<ActionFlowState>("review");
+export function ActionFlowProvider({
+  flowCompletionCb,
+  action,
+  trackingPayload,
+  children,
+}: ActionFlowProviderProps) {
+  const [flowState, setFlowState] = useState<ActionFlowState>('review');
   const [activeStep, setActiveStep] = useState<number>(0);
-  const [actionState, setActionState] = useState<ActionState>("pending-wallet");
+  const [actionState, setActionState] = useState<ActionState>('pending-wallet');
   const [lastTransactionHash, setLastTransactionHash] = useState<Hex | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,26 +78,28 @@ export function ActionFlowProvider({ flowCompletionCb, action, trackingPayload, 
     if (accountChainId !== action.chainId) {
       const { id } = await switchChainAsync({ chainId: action.chainId });
       if (id !== action.chainId) {
-        throw new Error("Unable to automaitcally switch chains.");
+        throw new Error('Unable to automaitcally switch chains.');
       }
     }
 
-    if (flowState === "review") {
+    if (flowState === 'review') {
       // For tracking purposes to determine if we are seeing issues with a specific connector
-      const connectorName = connector?.name ?? "unknown";
+      const connectorName = connector?.name ?? 'unknown';
       const accountAddress = client.account.address;
 
       // Reset state
-      setFlowState("active");
+      setFlowState('active');
       //   setActiveStep(0); // Don't reset step, let's pick up where we left off.
-      setActionState("pending-wallet");
+      setActionState('pending-wallet');
       setLastTransactionHash(null);
       setError(null);
 
-      const isOfacSanctioned = await fetchJsonResponse<boolean>(`/api/account/${accountAddress}/is-ofac-sanctioned`);
+      const isOfacSanctioned = await fetchJsonResponse<boolean>(
+        `/api/account/${accountAddress}/is-ofac-sanctioned`,
+      );
       if (isOfacSanctioned) {
-        setError("This action is not available to OFAC sanctioned accounts.");
-        setFlowState("review");
+        setError('This action is not available to OFAC sanctioned accounts.');
+        setFlowState('review');
         return;
       }
 
@@ -107,20 +115,24 @@ export function ActionFlowProvider({ flowCompletionCb, action, trackingPayload, 
         }
 
         for (const step of remainingTransactionRequests) {
-          setActionState("pending-wallet");
+          setActionState('pending-wallet');
 
           const txReq = step.tx();
 
           // Uses public client instead so estimate happens throught our reliable RPC provider
-          const gasEstimate = await estimateGas(publicClient, { ...txReq, account: client.account });
-          const gasEstimateWithBuffer = (gasEstimate * BigInt((1 + GAS_BUFFER) * 1000)) / BigInt(1000);
+          const gasEstimate = await estimateGas(publicClient, {
+            ...txReq,
+            account: client.account,
+          });
+          const gasEstimateWithBuffer =
+            (gasEstimate * BigInt((1 + GAS_BUFFER) * 1000)) / BigInt(1000);
 
           const hash = await sendTransaction(client, { ...txReq, gas: gasEstimateWithBuffer });
           setLastTransactionHash(hash);
-          void trackEvent("tx-pending", {
+          void trackEvent('tx-pending', {
             accountAddress,
             hash,
-            status: "pending",
+            status: 'pending',
             connector: connectorName,
             stepName: step.name,
             ...trackingPayload,
@@ -128,18 +140,18 @@ export function ActionFlowProvider({ flowCompletionCb, action, trackingPayload, 
 
           // Uses public client instead so polling happens through our RPC provider
           // Not the users wallet provider, which may be unreliable
-          setActionState("pending-transaction");
+          setActionState('pending-transaction');
           const receipt = await waitForTransactionReceipt(publicClient, {
             hash,
             pollingInterval: 1000,
             retryCount: 20,
           });
 
-          if (receipt.status === "success") {
-            void trackEvent("tx-success", {
+          if (receipt.status === 'success') {
+            void trackEvent('tx-success', {
               accountAddress,
               hash,
-              status: "success",
+              status: 'success',
               connector: connectorName,
               stepName: step.name,
               ...trackingPayload,
@@ -147,26 +159,28 @@ export function ActionFlowProvider({ flowCompletionCb, action, trackingPayload, 
             await new Promise((resolve) => setTimeout(resolve, 2000)); // Delay to let rpc data propogate (ex approval on prev tx)
             setActiveStep((prev) => prev + 1);
           } else {
-            void trackEvent("tx-revert", {
+            void trackEvent('tx-revert', {
               accountAddress,
               hash,
-              status: "failed",
+              status: 'failed',
               connector: connectorName,
               stepName: step.name,
               ...trackingPayload,
             });
-            setFlowState("failed");
+            setFlowState('failed');
             return;
           }
         }
       } catch (error) {
         const errorMessage =
-          error instanceof BaseError ? parseViemError(error) : (error as Error).message || String(error);
+          error instanceof BaseError
+            ? parseViemError(error)
+            : (error as Error).message || String(error);
 
         setError(errorMessage);
-        setFlowState("review");
+        setFlowState('review');
 
-        void trackEvent("tx-flow-error", {
+        void trackEvent('tx-flow-error', {
           accountAddress,
           connector: connectorName,
           error: errorMessage,
@@ -177,17 +191,16 @@ export function ActionFlowProvider({ flowCompletionCb, action, trackingPayload, 
 
       // Trigger data revalidation
       // void revalidatePages();
-      void queryClient.invalidateQueries({ type: "all" });
-      void queryClient.refetchQueries({ type: "all" });
+      void queryClient.invalidateQueries({ type: 'all' });
+      void queryClient.refetchQueries({ type: 'all' });
 
-      setFlowState("success");
+      setFlowState('success');
       flowCompletionCb?.();
     }
   }, [
     flowState,
     client,
     publicClient,
-    action.chainId,
     action,
     flowCompletionCb,
     switchChainAsync,
@@ -220,7 +233,7 @@ export function ActionFlowProvider({ flowCompletionCb, action, trackingPayload, 
 export function useActionFlowContext() {
   const context = useContext(ActionFlowContext);
   if (!context) {
-    throw new Error("useActionFlow must be used within an ActionFlow provider");
+    throw new Error('useActionFlow must be used within an ActionFlow provider');
   }
   return context;
 }
@@ -241,7 +254,8 @@ function parseViemError(error: BaseError): string {
 
   // Wallets that don't conform to EIP-1193 but have "user reject" or "user cancel" in the details (Rainbow)
   const detailsIncludesReject =
-    error.details.toLowerCase().includes("user reject") || error.details.toLowerCase().includes("user cancel");
+    error.details.toLowerCase().includes('user reject') ||
+    error.details.toLowerCase().includes('user cancel');
 
   const userReject = Boolean(eip1193UserReject) || detailsIncludesReject;
 

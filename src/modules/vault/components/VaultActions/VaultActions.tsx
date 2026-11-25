@@ -1,19 +1,22 @@
-"use client";
+'use client';
 
-import clsx from "clsx";
-import { use, useEffect, useMemo, useState } from "react";
-import { getAddress } from "viem";
-import { PoweredByMorpho } from "@/common/components/PoweredByMorpho";
-import { Button } from "@/common/components/ui/button";
-import { Card } from "@/common/components/ui/card";
-import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from "@/common/components/ui/drawer";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/common/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/common/components/ui/tooltip";
-import { useResponsiveContext } from "@/common/providers/ResponsiveProvider";
-import type { Vault } from "@/modules/vault/data/getVault";
-import { useVaultPosition } from "@/modules/vault/hooks/useVaultPositions";
-import VaultSupply from "./VaultSupply";
-import VaultWithdraw from "./VaultWithdraw";
+import clsx from 'clsx';
+import { use, useEffect, useMemo, useState } from 'react';
+import { getAddress } from 'viem';
+
+import type { Vault } from '@/modules/vault/data/getVault';
+
+import { PoweredByMorpho } from '@/common/components/PoweredByMorpho';
+import { Button } from '@/common/components/ui/button';
+import { Card } from '@/common/components/ui/card';
+import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from '@/common/components/ui/drawer';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/common/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/common/components/ui/tooltip';
+import { useResponsiveContext } from '@/common/providers/ResponsiveProvider';
+import { useVaultPosition } from '@/modules/vault/hooks/useVaultPositions';
+
+import VaultSupply from './VaultSupply';
+import VaultWithdraw from './VaultWithdraw';
 
 export interface VaultActionsProps {
   vaultPromise: Promise<Vault>;
@@ -23,7 +26,10 @@ export function VaultActions({ vaultPromise }: VaultActionsProps) {
   const vault = use(vaultPromise);
 
   const { isDesktop } = useResponsiveContext();
-  const { data: userVaultPosition } = useVaultPosition(vault.chain.id, getAddress(vault.vaultAddress));
+  const { data: userVaultPosition } = useVaultPosition(
+    vault.chain.id,
+    getAddress(vault.vaultAddress),
+  );
 
   const hasSupplyPosition = useMemo(() => {
     return BigInt(userVaultPosition?.assets.raw ?? 0n) > BigInt(0);
@@ -40,7 +46,13 @@ export function VaultActions({ vaultPromise }: VaultActionsProps) {
   );
 }
 
-function VaultActionsDesktop({ vault, hasSupplyPosition }: { hasSupplyPosition: boolean; vault: Vault }) {
+function VaultActionsDesktop({
+  vault,
+  hasSupplyPosition,
+}: {
+  hasSupplyPosition: boolean;
+  vault: Vault;
+}) {
   // Latch if we had a supply position
   const [hadSupplyPosition, setHadSupplyPosition] = useState(false);
   useEffect(() => {
@@ -63,7 +75,7 @@ function VaultActionsDesktop({ vault, hasSupplyPosition }: { hasSupplyPosition: 
                   <TabsTrigger
                     value="withdraw"
                     disabled={disableWithdrawTab}
-                    className={clsx(disableWithdrawTab && "!cursor-not-allowed")}
+                    className={clsx(disableWithdrawTab && '!cursor-not-allowed')}
                   >
                     Withdraw
                   </TabsTrigger>
@@ -90,7 +102,13 @@ function VaultActionsDesktop({ vault, hasSupplyPosition }: { hasSupplyPosition: 
   );
 }
 
-function VaultActionsMobile({ vault, hasSupplyPosition }: { hasSupplyPosition: boolean; vault: Vault }) {
+function VaultActionsMobile({
+  vault,
+  hasSupplyPosition,
+}: {
+  hasSupplyPosition: boolean;
+  vault: Vault;
+}) {
   const [supplyOpen, setSupplyOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 

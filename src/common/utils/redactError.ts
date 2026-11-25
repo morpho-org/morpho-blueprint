@@ -4,5 +4,5 @@
  */
 export function redactError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
-  return message.replace(/https?:\/\/\S+/g, "<rpc-url>");
+  return message.replace(/https?:\/\/\S+/g, '<rpc-url>');
 }

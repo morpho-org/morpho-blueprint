@@ -1,23 +1,23 @@
-import "server-only";
+import 'server-only';
+import { cache } from 'react';
+import { createPublicClient, getAddress, http } from 'viem';
+import { mainnet } from 'viem/chains';
 
-import { cache } from "react";
-import { createPublicClient, getAddress, http } from "viem";
-import { mainnet } from "viem/chains";
-import { redactError } from "@/common/utils/redactError";
+import { redactError } from '@/common/utils/redactError';
 
 // Chainalysis's public sanctions oracle, which screens against the OFAC SDN list.
 // Pinned to mainnet: the screening result is chain independent, so it is read here regardless of
 // which chain the action being gated targets.
 // https://go.chainalysis.com/chainalysis-oracle-docs.html
-const SANCTIONS_ORACLE_ADDRESS = getAddress("0x40C57923924B5c5c5455c48D93317139ADDaC8fb");
+const SANCTIONS_ORACLE_ADDRESS = getAddress('0x40C57923924B5c5c5455c48D93317139ADDaC8fb');
 
 const SANCTIONS_ORACLE_ABI = [
   {
-    type: "function",
-    name: "isSanctioned",
-    stateMutability: "view",
-    inputs: [{ name: "addr", type: "address" }],
-    outputs: [{ name: "", type: "bool" }],
+    type: 'function',
+    name: 'isSanctioned',
+    stateMutability: 'view',
+    inputs: [{ name: 'addr', type: 'address' }],
+    outputs: [{ name: '', type: 'bool' }],
   },
 ] as const;
 
@@ -31,7 +31,7 @@ const RPC_TIMEOUT_MS = 4_000;
 function getMainnetTransport() {
   const rpcUrl = process.env.MAINNET_RPC_URL_1;
   if (!rpcUrl) {
-    throw new Error("No mainnet RPC URL configured");
+    throw new Error('No mainnet RPC URL configured');
   }
   // One retry: this read fails closed, so without it any transient blip would block a transaction.
   return http(rpcUrl, { timeout: RPC_TIMEOUT_MS, retryCount: 1 });
@@ -50,12 +50,14 @@ export const getWalletIsSanctioned = cache(async (address: string): Promise<bool
     return await client.readContract({
       address: SANCTIONS_ORACLE_ADDRESS,
       abi: SANCTIONS_ORACLE_ABI,
-      functionName: "isSanctioned",
+      functionName: 'isSanctioned',
       args: [getAddress(address)],
     });
   } catch (error) {
     // Logged without the raw error object, which would embed the (possibly credential-bearing) RPC URL.
-    console.error(`Unable to screen ${address} against the sanctions oracle, failing closed: ${redactError(error)}`);
+    console.error(
+      `Unable to screen ${address} against the sanctions oracle, failing closed: ${redactError(error)}`,
+    );
     return true;
   }
 });

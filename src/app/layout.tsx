@@ -1,13 +1,15 @@
-import clsx from "clsx";
-import type { Metadata } from "next";
-import { InfoBanner } from "@/common/components/Banner";
-import { Footer } from "@/common/components/Footer/Footer";
-import { Header } from "@/common/components/Header/Header";
-import { APP_CONFIG } from "@/config";
-import { CountrySpecificDisclaimer } from "@/modules/compliance/components/CountrySpecificDisclaimer";
-import Providers from "./Providers";
+import type { Metadata } from 'next';
 
-import "./globals.css";
+import clsx from 'clsx';
+
+import { InfoBanner } from '@/common/components/Banner';
+import { Footer } from '@/common/components/Footer/Footer';
+import { Header } from '@/common/components/Header/Header';
+import { APP_CONFIG } from '@/config';
+import { CountrySpecificDisclaimer } from '@/modules/compliance/components/CountrySpecificDisclaimer';
+
+import Providers from './Providers';
+import './globals.css';
 
 export const metadata: Metadata = {
   title: APP_CONFIG.metadata.name,
@@ -20,7 +22,7 @@ export const metadata: Metadata = {
         url: APP_CONFIG.metadata.images.opengraph,
         width: 1200,
         height: 630,
-        type: "image/png",
+        type: 'image/png',
       },
     ],
   },
@@ -30,20 +32,22 @@ export const metadata: Metadata = {
         url: APP_CONFIG.metadata.images.opengraph,
         width: 1200,
         height: 630,
-        type: "image/png",
+        type: 'image/png',
       },
     ],
   },
   alternates: {
-    canonical: "./",
+    canonical: './',
   },
   icons: {
     icon: [
-      { url: APP_CONFIG.metadata.images.icons.ico, type: "image/x-icon" },
-      { url: APP_CONFIG.metadata.images.icons["png-64x64"], sizes: "64x64", type: "image/png" },
-      { url: APP_CONFIG.metadata.images.icons.svg, type: "image/svg+xml" },
+      { url: APP_CONFIG.metadata.images.icons.ico, type: 'image/x-icon' },
+      { url: APP_CONFIG.metadata.images.icons['png-64x64'], sizes: '64x64', type: 'image/png' },
+      { url: APP_CONFIG.metadata.images.icons.svg, type: 'image/svg+xml' },
     ],
-    apple: [{ url: APP_CONFIG.metadata.images.icons["png-192x192"], sizes: "192x192", type: "image/png" }],
+    apple: [
+      { url: APP_CONFIG.metadata.images.icons['png-192x192'], sizes: '192x192', type: 'image/png' },
+    ],
   },
 };
 
@@ -58,7 +62,7 @@ export default async function RootLayout({
         className={clsx(
           APP_CONFIG.ui.fonts.main.variable,
           APP_CONFIG.ui.fonts.others?.map((f) => f.variable),
-          "antialiased",
+          'antialiased',
         )}
       >
         <Providers>
@@ -78,5 +82,5 @@ export default async function RootLayout({
   );
 }
 
-export const dynamic = "force-static";
+export const dynamic = 'force-static';
 export const revalidate = 300; // 5min

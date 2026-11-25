@@ -1,10 +1,11 @@
-import "server-only";
+import 'server-only';
+import { type Address, createPublicClient, erc20Abi, fallback, getAddress, http } from 'viem';
 
-import { type Address, createPublicClient, erc20Abi, fallback, getAddress, http } from "viem";
-import { redactError } from "@/common/utils/redactError";
-import { tryCatch } from "@/common/utils/tryCatch";
-import { APP_CONFIG } from "@/config";
-import type { SupportedChainId } from "@/config/types";
+import type { SupportedChainId } from '@/config/types';
+
+import { redactError } from '@/common/utils/redactError';
+import { tryCatch } from '@/common/utils/tryCatch';
+import { APP_CONFIG } from '@/config';
 
 /** Lowercased token address -> raw balance. */
 export type WalletTokenBalances = Map<string, bigint>;
@@ -50,7 +51,7 @@ export async function getWalletTokenBalances(
       contracts: uniqueTokens.map((address) => ({
         address,
         abi: erc20Abi,
-        functionName: "balanceOf" as const,
+        functionName: 'balanceOf' as const,
         args: [accountAddress] as const,
       })),
       allowFailure: true,
@@ -65,8 +66,10 @@ export async function getWalletTokenBalances(
   data.forEach((result, index) => {
     const token = uniqueTokens[index];
     if (!token) return;
-    if (result.status !== "success") {
-      console.warn(`balanceOf failed for ${token} on chain ${chainId}: ${redactError(result.error)}`);
+    if (result.status !== 'success') {
+      console.warn(
+        `balanceOf failed for ${token} on chain ${chainId}: ${redactError(result.error)}`,
+      );
       return;
     }
     balances.set(token.toLowerCase(), result.result);

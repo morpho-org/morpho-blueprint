@@ -1,16 +1,18 @@
-import { MathLib } from "@morpho-org/blue-sdk";
-import { encodeFunctionData, erc4626Abi, isAddressEqual } from "viem";
-import { wrappedNativeAssetAbi } from "@/actions/abis/wrappedNativeAssetAbi";
-import { getChainAddressesRequired } from "@/actions/utils/getChainAddressesRequired";
-import { requiredApprovalTransactionRequests } from "@/actions/utils/requiredApprovalTransactionRequests";
-import { tryCatch } from "@/common/utils/tryCatch";
+import { MathLib } from '@morpho-org/blue-sdk';
+import { encodeFunctionData, erc4626Abi, isAddressEqual } from 'viem';
+
+import { wrappedNativeAssetAbi } from '@/actions/abis/wrappedNativeAssetAbi';
+import { getChainAddressesRequired } from '@/actions/utils/getChainAddressesRequired';
+import { requiredApprovalTransactionRequests } from '@/actions/utils/requiredApprovalTransactionRequests';
+import { tryCatch } from '@/common/utils/tryCatch';
+
 import {
   type Erc4626SupplyActionParameters,
   type TransactionRequest,
   UserFacingError,
   type VaultAction,
-} from "../../types";
-import { fetchErc4626SupplyData, validateErc4626SupplyParameters } from "./helpers";
+} from '../../types';
+import { fetchErc4626SupplyData, validateErc4626SupplyParameters } from './helpers';
 
 /**
  * Action to supply directly to an ERC4626 vault.
@@ -38,10 +40,16 @@ export async function erc4626SupplyActionDirect({
 
   const { data, error } = await tryCatch(
     // Spender is vault address since we are calling deposit on the vault directly
-    fetchErc4626SupplyData({ client, vaultAddress, accountAddress, supplyAmount, spender: vaultAddress }),
+    fetchErc4626SupplyData({
+      client,
+      vaultAddress,
+      accountAddress,
+      supplyAmount,
+      spender: vaultAddress,
+    }),
   );
   if (error) {
-    throw new UserFacingError("Unable to load vault data.", { cause: error });
+    throw new UserFacingError('Unable to load vault data.', { cause: error });
   }
 
   const {
@@ -56,14 +64,16 @@ export async function erc4626SupplyActionDirect({
   const canWrapNativeAssets =
     isAddressEqual(underlyingAssetAddress, wrappedNativeAssetAddress) && allowNativeAssetWrapping;
   const shortfall = MathLib.zeroFloorSub(supplyAmount, accountUnderlyingAssetBalance);
-  const nativeAssetWrapAmount = canWrapNativeAssets ? MathLib.min(shortfall, accountNativeAssetBalance) : 0n;
+  const nativeAssetWrapAmount = canWrapNativeAssets
+    ? MathLib.min(shortfall, accountNativeAssetBalance)
+    : 0n;
 
   // Perform checks which if not met will cause the transaction to revert
   if (accountUnderlyingAssetBalance + nativeAssetWrapAmount < supplyAmount) {
-    throw new UserFacingError("Supply amount exceeds the account balance.");
+    throw new UserFacingError('Supply amount exceeds the account balance.');
   }
   if (quotedShares === 0n) {
-    throw new UserFacingError("Vault quoted 0 shares. Try to increase the supply amount.");
+    throw new UserFacingError('Vault quoted 0 shares. Try to increase the supply amount.');
   }
 
   const transactionRequests: TransactionRequest[] = [];
@@ -71,12 +81,12 @@ export async function erc4626SupplyActionDirect({
   if (nativeAssetWrapAmount > 0n) {
     // Wrap native assets
     transactionRequests.push({
-      name: "Wrap native assets",
+      name: 'Wrap native assets',
       tx: () => ({
         to: wrappedNativeAssetAddress,
         data: encodeFunctionData({
           abi: wrappedNativeAssetAbi,
-          functionName: "deposit",
+          functionName: 'deposit',
         }),
         value: nativeAssetWrapAmount,
       }),
@@ -86,7 +96,7 @@ export async function erc4626SupplyActionDirect({
   // Approve vault to spend underlying assets
   transactionRequests.push(
     ...requiredApprovalTransactionRequests({
-      approvalTransactionName: "Approve supply amount",
+      approvalTransactionName: 'Approve supply amount',
       chainId: client.chain.id,
       erc20Address: underlyingAssetAddress,
       spenderAddress: vaultAddress,
@@ -97,12 +107,12 @@ export async function erc4626SupplyActionDirect({
 
   // Supply directly to vault
   transactionRequests.push({
-    name: "Supply to vault",
+    name: 'Supply to vault',
     tx: () => ({
       to: vaultAddress,
       data: encodeFunctionData({
         abi: erc4626Abi,
-        functionName: "deposit",
+        functionName: 'deposit',
         args: [supplyAmount, accountAddress],
       }),
     }),

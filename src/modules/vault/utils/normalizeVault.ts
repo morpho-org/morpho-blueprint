@@ -1,7 +1,8 @@
-import type { ChainInfo } from "@/common/data/types";
-import type { SupportedChainId } from "@/config/types";
-import type { VaultMetadata } from "@/modules/vault/vault.types";
-import { getVaultConfig } from "./getVaultConfig";
+import type { ChainInfo } from '@/common/data/types';
+import type { SupportedChainId } from '@/config/types';
+import type { VaultMetadata } from '@/modules/vault/vault.types';
+
+import { getVaultConfig } from './getVaultConfig';
 
 /** Applies the per-vault config overrides (name, description, visibility) to an adapted vault. */
 export function normalizeVault<

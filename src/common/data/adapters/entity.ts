@@ -1,8 +1,10 @@
-import { type Address, getAddress, zeroAddress } from "viem";
-import { toDecimals } from "@/common/data/adapters/amount";
-import type { ChainInfo, CuratorInfo, TokenInfo } from "@/common/data/types";
-import { capitalizeFirstLetter } from "@/common/utils/format";
-import { APP_CONFIG } from "@/config";
+import { type Address, getAddress, zeroAddress } from 'viem';
+
+import type { ChainInfo, CuratorInfo, TokenInfo } from '@/common/data/types';
+
+import { toDecimals } from '@/common/data/adapters/amount';
+import { capitalizeFirstLetter } from '@/common/utils/format';
+import { APP_CONFIG } from '@/config';
 
 /**
  * The Morpho API exposes no chain icon, but the Morpho CDN hosts them under
@@ -19,25 +21,25 @@ import { APP_CONFIG } from "@/config";
  * silently lose an icon the CDN already has.
  */
 const CHAIN_ICON_SLUG: Record<number, string> = {
-  1: "eth",
-  10: "optimism",
-  130: "unichain",
-  137: "polygon",
-  480: "world.png",
-  999: "hyperliquid",
-  4663: "robinhood",
-  5042: "arc",
-  8453: "base.png",
-  42161: "arbitrum",
-  98866: "plume",
-  747474: "katana",
+  1: 'eth',
+  10: 'optimism',
+  130: 'unichain',
+  137: 'polygon',
+  480: 'world.png',
+  999: 'hyperliquid',
+  4663: 'robinhood',
+  5042: 'arc',
+  8453: 'base.png',
+  42161: 'arbitrum',
+  98866: 'plume',
+  747474: 'katana',
 };
 
 export function getChainIconUrl(chainId: number): string | null {
   const chainConfig = APP_CONFIG.chainConfig as Record<number, { iconSlug?: string } | undefined>;
   const slug = chainConfig[chainId]?.iconSlug ?? CHAIN_ICON_SLUG[chainId];
   if (!slug) return null;
-  const filename = slug.includes(".") ? slug : `${slug}.svg`;
+  const filename = slug.includes('.') ? slug : `${slug}.svg`;
   return `https://cdn.morpho.org/assets/chains/${filename}`;
 }
 
@@ -67,9 +69,9 @@ export function toTokenInfo(asset: RawAsset): TokenInfo {
  * categories and ignore the attributes; an asset with none stays uncategorized.
  */
 const CATEGORY_BY_TAG: [tag: string, category: string][] = [
-  ["stablecoin", "Stable"],
-  ["btc", "BTC"],
-  ["eth", "ETH"],
+  ['stablecoin', 'Stable'],
+  ['btc', 'BTC'],
+  ['eth', 'ETH'],
 ];
 
 function toCategory(tags: readonly string[] | null | undefined): string | null {
@@ -93,7 +95,9 @@ export function toChainInfo(chain: { id: number; network: string }): ChainInfo {
  * `Chain.network` for every chain the API serves (Ethereum, Base, Arbitrum One, World Chain, ...).
  */
 export function toChainInfoById(chainId: number): ChainInfo {
-  const configured = Object.entries(APP_CONFIG.chainConfig).find(([id]) => Number(id) === chainId)?.[1];
+  const configured = Object.entries(APP_CONFIG.chainConfig).find(
+    ([id]) => Number(id) === chainId,
+  )?.[1];
   return toChainInfo({ id: chainId, network: configured?.chain.name ?? `Chain ${chainId}` });
 }
 
@@ -106,7 +110,7 @@ interface RawCurator {
 export function toCuratorInfo(curator: RawCurator | null | undefined): CuratorInfo | null {
   if (!curator) return null;
   // `Curator.url` has no direct equivalent: pick the website-type social, else the first one.
-  const website = curator.socials.find((social) => social.type === "url") ?? curator.socials[0];
+  const website = curator.socials.find((social) => social.type === 'url') ?? curator.socials[0];
   return {
     name: curator.name,
     image: curator.image ?? null,

@@ -1,7 +1,9 @@
-import { MathLib, ORACLE_PRICE_SCALE } from "@morpho-org/blue-sdk";
-import { APP_CONFIG } from "@/config";
-import type { MarketNonIdle } from "@/modules/market/data/getMarket";
-import type { MarketPosition } from "@/modules/market/data/getMarketPositions";
+import { MathLib, ORACLE_PRICE_SCALE } from '@morpho-org/blue-sdk';
+
+import type { MarketNonIdle } from '@/modules/market/data/getMarket';
+import type { MarketPosition } from '@/modules/market/data/getMarketPositions';
+
+import { APP_CONFIG } from '@/config';
 
 export function computeRequiredCollateral(
   market: MarketNonIdle,

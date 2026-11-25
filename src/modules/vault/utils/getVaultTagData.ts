@@ -1,7 +1,8 @@
-import { type Address, getAddress } from "viem";
+import { type Address, getAddress } from 'viem';
 
-import { APP_CONFIG, VAULT_TAG_OPTIONS } from "@/config";
-import type { SupportedChainId, VaultTag } from "@/config/types";
+import type { SupportedChainId, VaultTag } from '@/config/types';
+
+import { APP_CONFIG, VAULT_TAG_OPTIONS } from '@/config';
 
 export function getVaultTagData(
   chainId: SupportedChainId,

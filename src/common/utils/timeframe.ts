@@ -1,12 +1,13 @@
-import { APP_CONFIG } from "@/config";
-import type { ApyWindow } from "@/config/types";
+import type { ApyWindow } from '@/config/types';
+
+import { APP_CONFIG } from '@/config';
 
 /** The configured APY window in Core REST's `apy-averages` vocabulary. */
 const REST_APY_LOOKBACK = {
-  "6h": "six_hours",
-  "1d": "one_day",
-  "7d": "seven_days",
-  "30d": "thirty_days",
+  '6h': 'six_hours',
+  '1d': 'one_day',
+  '7d': 'seven_days',
+  '30d': 'thirty_days',
 } as const satisfies Record<ApyWindow, string>;
 
 export const restApyLookback = REST_APY_LOOKBACK[APP_CONFIG.apyWindow];
@@ -28,5 +29,5 @@ export function rateLabel(base: string): string {
  * deployment plots the daily series, and naming it `6h` would claim a smoothing the points do not
  * have.
  */
-export const marketHistoryApyWindow: Exclude<ApyWindow, "6h"> =
-  APP_CONFIG.apyWindow === "6h" ? "1d" : APP_CONFIG.apyWindow;
+export const marketHistoryApyWindow: Exclude<ApyWindow, '6h'> =
+  APP_CONFIG.apyWindow === '6h' ? '1d' : APP_CONFIG.apyWindow;

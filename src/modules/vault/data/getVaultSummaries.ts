@@ -1,24 +1,44 @@
-import "server-only";
+import 'server-only';
+import { cache } from 'react';
+import { type Address, getAddress, type Hex, zeroAddress } from 'viem';
 
-import { cache } from "react";
-import { type Address, getAddress, type Hex, zeroAddress } from "viem";
-import { toRoleAddress } from "@/common/data/adapters/entity";
-import { getCurator, getCuratorsAumUsd, type RestCurator } from "@/common/data/rest/curators";
-import { getTokenInfo, getTokenMetadata, getTokenPriceUsd, getVaultAssetDecimals } from "@/common/data/rest/tokens";
-import type { TokenInfo } from "@/common/data/types";
-import { SECONDS_PER_DAY } from "@/common/utils/constants";
-import { chunk, fetchAllMorphoRestPages, fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
-import { isBlueprintApiEnabled } from "@/common/utils/morphoApiConfig";
-import { restApyLookback } from "@/common/utils/timeframe";
-import { tryCatch } from "@/common/utils/tryCatch";
-import { APP_CONFIG } from "@/config";
-import type { SupportedChainId } from "@/config/types";
-import { Erc4626VaultProtocol } from "@/config/vault-protocol";
-import { getMerklRewardIndex } from "@/modules/reward/data/getMerklRewardIndex";
-import { emptyMerklRewardIndex, type MerklRewardIndex, vaultRewardApys } from "@/modules/reward/data/merklRewardApys";
-import { withRewardTokenMetadata } from "@/modules/reward/data/rewardTokenMetadata";
-import { normalizeVault } from "@/modules/vault/utils/normalizeVault";
-import type { MorphoVaultV1Summary, MorphoVaultV2Summary, VaultSummary } from "@/modules/vault/vault.types";
+import type { TokenInfo } from '@/common/data/types';
+import type { SupportedChainId } from '@/config/types';
+import type {
+  MorphoVaultV1Summary,
+  MorphoVaultV2Summary,
+  VaultSummary,
+} from '@/modules/vault/vault.types';
+
+import { toRoleAddress } from '@/common/data/adapters/entity';
+import { getCurator, getCuratorsAumUsd, type RestCurator } from '@/common/data/rest/curators';
+import {
+  getTokenInfo,
+  getTokenMetadata,
+  getTokenPriceUsd,
+  getVaultAssetDecimals,
+} from '@/common/data/rest/tokens';
+import { SECONDS_PER_DAY } from '@/common/utils/constants';
+import {
+  chunk,
+  fetchAllMorphoRestPages,
+  fetchMorphoRestResource,
+  restSelector,
+} from '@/common/utils/fetchMorphoRest';
+import { isBlueprintApiEnabled } from '@/common/utils/morphoApiConfig';
+import { restApyLookback } from '@/common/utils/timeframe';
+import { tryCatch } from '@/common/utils/tryCatch';
+import { APP_CONFIG } from '@/config';
+import { Erc4626VaultProtocol } from '@/config/vault-protocol';
+import { getMerklRewardIndex } from '@/modules/reward/data/getMerklRewardIndex';
+import {
+  emptyMerklRewardIndex,
+  type MerklRewardIndex,
+  vaultRewardApys,
+} from '@/modules/reward/data/merklRewardApys';
+import { withRewardTokenMetadata } from '@/modules/reward/data/rewardTokenMetadata';
+import { normalizeVault } from '@/modules/vault/utils/normalizeVault';
+
 import {
   type Adapted,
   type RestVaultV1Allocation,
@@ -26,7 +46,7 @@ import {
   toRestVaultV1Summary,
   toRestVaultV2Summary,
   withdrawQueueAllocations,
-} from "./adapters";
+} from './adapters';
 
 // Both protocols' summaries come from Core REST, one set of reads per vault; the REST client caps
 // the calls in flight.
@@ -86,8 +106,8 @@ interface RestVaultMetadata {
  */
 export interface VaultV2SummaryRead {
   summary: Adapted<MorphoVaultV2Summary>;
-  root: RestVaultV2Root["data"];
-  state: RestVaultV2State["data"];
+  root: RestVaultV2Root['data'];
+  state: RestVaultV2State['data'];
   /** The curator's registry id, which keys the AUM read; `null` without a known curator. */
   curatorId: string | null;
 }
@@ -95,8 +115,8 @@ export interface VaultV2SummaryRead {
 /** One vault V1's summary with the root and state it was built from, which the vault page reuses. */
 export interface VaultV1SummaryRead {
   summary: Adapted<MorphoVaultV1Summary>;
-  root: RestVaultV1Root["data"];
-  state: RestVaultV1State["data"];
+  root: RestVaultV1Root['data'];
+  state: RestVaultV1State['data'];
   /** The curator's registry id, which keys the AUM read; `null` without a known curator. */
   curatorId: string | null;
 }
@@ -107,11 +127,13 @@ export interface VaultV1SummaryRead {
  * curator. With `hideCurator` the AUM is never read, so neither the earn table nor the vault page's
  * Curator AUC metric can show it.
  */
-async function withCuratorsAum<R extends { summary: { curatorAum?: number }; curatorId: string | null }>(
-  reads: readonly R[],
-): Promise<R[]> {
+async function withCuratorsAum<
+  R extends { summary: { curatorAum?: number }; curatorId: string | null },
+>(reads: readonly R[]): Promise<R[]> {
   if (APP_CONFIG.featureFlags.hideCurator) return [...reads];
-  const aums = await getCuratorsAumUsd(reads.flatMap(({ curatorId }) => (curatorId ? [curatorId] : [])));
+  const aums = await getCuratorsAumUsd(
+    reads.flatMap(({ curatorId }) => (curatorId ? [curatorId] : [])),
+  );
   return reads.map((read) => {
     const curatorAum = read.curatorId ? aums.get(read.curatorId) : undefined;
     return curatorAum === undefined ? read : { ...read, summary: { ...read.summary, curatorAum } };
@@ -136,7 +158,7 @@ function once<R>(load: (chainId: number, address: Address) => Promise<R>) {
  * warning and the vaults fall back to their config description, as with the key unset.
  */
 async function getVaultDescriptions(
-  kind: "vaults-v1" | "vaults-v2",
+  kind: 'vaults-v1' | 'vaults-v2',
   vaults: readonly { chainId: number; address: string }[],
 ) {
   const descriptions = new Map<string, string | null>();
@@ -147,12 +169,13 @@ async function getVaultDescriptions(
         fetchAllMorphoRestPages<RestVaultMetadata>(
           `/v0/blueprint-app-api/${kind}/metadata`,
           { vaults: selectors },
-          { api: "blueprint", quiet: true },
+          { api: 'blueprint', quiet: true },
         ),
       ),
     ),
   );
-  for (const row of data?.flat() ?? []) descriptions.set(vaultKey(row.chain_id, row.vault_address), row.description);
+  for (const row of data?.flat() ?? [])
+    descriptions.set(vaultKey(row.chain_id, row.vault_address), row.description);
   return descriptions;
 }
 
@@ -179,9 +202,12 @@ async function getVaultV2Summaries(
     const [root, state, apy, rewardIndex] = await Promise.all([
       fetchMorphoRestResource<RestVaultV2Root>(`/v0/vaults-v2/${selector}`),
       fetchMorphoRestResource<RestVaultV2State>(`/v1/vaults-v2/${selector}/state`),
-      fetchMorphoRestResource<{ data: { apy: number | null } }>(`/v1/vaults-v2/${selector}/apy-averages`, {
-        lookback: restApyLookback,
-      }),
+      fetchMorphoRestResource<{ data: { apy: number | null } }>(
+        `/v1/vaults-v2/${selector}/apy-averages`,
+        {
+          lookback: restApyLookback,
+        },
+      ),
       rewardIndexes.get(chainId) ?? emptyMerklRewardIndex(),
     ]);
     if (!root || !state) return null;
@@ -195,7 +221,8 @@ async function getVaultV2Summaries(
     ]);
     const decimals = await getVaultAssetDecimals(chainId, root.data.asset, token);
     // A vault with unknown decimals is dropped below: no reward metadata read for it.
-    const rewardApys = decimals === null ? [] : vaultRewardApys(rewardIndex, getAddress(root.data.address), "v2");
+    const rewardApys =
+      decimals === null ? [] : vaultRewardApys(rewardIndex, getAddress(root.data.address), 'v2');
     const rewards = await withRewardTokenMetadata(rewardIndex, rewardApys);
     return {
       chainId,
@@ -213,7 +240,7 @@ async function getVaultV2Summaries(
   };
 
   const [descriptions, reads] = await Promise.all([
-    getVaultDescriptions("vaults-v2", vaults),
+    getVaultDescriptions('vaults-v2', vaults),
     Promise.all(vaults.map(readVault)),
   ]);
 
@@ -226,7 +253,14 @@ async function getVaultV2Summaries(
       return [];
     }
     const description = descriptions.get(vaultKey(read.chainId, read.root.address)) ?? null;
-    return [{ summary: toRestVaultV2Summary({ ...source, decimals, description }), root: read.root, state, curatorId }];
+    return [
+      {
+        summary: toRestVaultV2Summary({ ...source, decimals, description }),
+        root: read.root,
+        state,
+        curatorId,
+      },
+    ];
   });
 }
 
@@ -244,7 +278,7 @@ async function getMarketCollaterals(
   const roots = await Promise.all(
     chunk([...new Set(marketIds)]).map((ids) =>
       fetchAllMorphoRestPages<RestMarketRoot>(
-        "/v0/blue/markets",
+        '/v0/blue/markets',
         { chain_id: [chainId], market_id: ids },
         { revalidate: SECONDS_PER_DAY },
       ),
@@ -285,9 +319,12 @@ async function getVaultV1Summaries(
     const [root, state, apy, allocations, rewardIndex] = await Promise.all([
       fetchMorphoRestResource<RestVaultV1Root>(`/v0/vaults-v1/${selector}`),
       fetchMorphoRestResource<RestVaultV1State>(`/v0/vaults-v1/${selector}/state`),
-      fetchMorphoRestResource<{ data: { apy: number | null } }>(`/v0/vaults-v1/${selector}/apy-averages`, {
-        lookback: restApyLookback,
-      }),
+      fetchMorphoRestResource<{ data: { apy: number | null } }>(
+        `/v0/vaults-v1/${selector}/apy-averages`,
+        {
+          lookback: restApyLookback,
+        },
+      ),
       withCollateral
         ? tryCatch(
             fetchMorphoRestResource<{ data: { allocations: RestVaultV1Allocation[] } }>(
@@ -311,7 +348,8 @@ async function getVaultV1Summaries(
     ]);
     const decimals = await getVaultAssetDecimals(chainId, root.data.asset, token);
     // A vault with unknown decimals is dropped below: no reward metadata read for it.
-    const rewardApys = decimals === null ? [] : vaultRewardApys(rewardIndex, getAddress(root.data.address), "v1");
+    const rewardApys =
+      decimals === null ? [] : vaultRewardApys(rewardIndex, getAddress(root.data.address), 'v1');
     return {
       chainId,
       root: root.data,
@@ -329,7 +367,7 @@ async function getVaultV1Summaries(
   };
 
   const [descriptions, reads] = await Promise.all([
-    getVaultDescriptions("vaults-v1", vaults),
+    getVaultDescriptions('vaults-v1', vaults),
     Promise.all(vaults.map(readVault)),
   ]);
 
@@ -345,8 +383,11 @@ async function getVaultV1Summaries(
     }
     await Promise.all(
       Array.from(marketIdsByChain.entries()).map(async ([chainId, ids]) => {
-        const { data, error } = await tryCatch(getMarketCollaterals(chainId, ids, collateralTokenOf));
-        if (error) console.warn(`Vault V1 exposure unavailable on chain ${chainId}: ${error.message}`);
+        const { data, error } = await tryCatch(
+          getMarketCollaterals(chainId, ids, collateralTokenOf),
+        );
+        if (error)
+          console.warn(`Vault V1 exposure unavailable on chain ${chainId}: ${error.message}`);
         collateralsByChain.set(chainId, data ?? new Map());
       }),
     );
@@ -390,7 +431,9 @@ export async function getVaultV1Summary(
   rewardIndex: Promise<MerklRewardIndex>,
 ): Promise<VaultV1SummaryRead | null> {
   const [summary] = await withCuratorsAum(
-    await getVaultV1Summaries([{ chainId, address }], new Map([[chainId, rewardIndex]]), { withCollateral: false }),
+    await getVaultV1Summaries([{ chainId, address }], new Map([[chainId, rewardIndex]]), {
+      withCollateral: false,
+    }),
   );
   return summary ?? null;
 }

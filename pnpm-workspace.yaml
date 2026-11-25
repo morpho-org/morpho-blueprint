@@ -6,12 +6,14 @@ minimumReleaseAge: 4320
 # Allow critical security patches that haven't aged
 minimumReleaseAgeExclude:
   - next
-  - "@next/env"
-  - "@next/swc-darwin-arm64"
-  - "@next/swc-darwin-x64"
-  - "@next/swc-linux-arm64-gnu"
-  - "@next/swc-linux-arm64-musl"
-  - "@next/swc-linux-x64-gnu"
-  - "@next/swc-linux-x64-musl"
-  - "@next/swc-win32-arm64-msvc"
-  - "@next/swc-win32-x64-msvc"
+  - '@next/env'
+  - '@next/swc-darwin-arm64'
+  - '@next/swc-darwin-x64'
+  - '@next/swc-linux-arm64-gnu'
+  - '@next/swc-linux-arm64-musl'
+  - '@next/swc-linux-x64-gnu'
+  - '@next/swc-linux-x64-musl'
+  - '@next/swc-win32-arm64-msvc'
+  - '@next/swc-win32-x64-msvc'
+  # Temporary bootstrap exception; remove after 2026-11-28 08:17 UTC.
+  - '@morpho-org/lint-config@1.0.0'

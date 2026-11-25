@@ -1,16 +1,26 @@
-import "server-only";
+import 'server-only';
+import { type Address, getAddress, type Hex, zeroAddress } from 'viem';
 
-import { type Address, getAddress, type Hex, zeroAddress } from "viem";
-import { descale, toRatio } from "@/common/data/adapters/amount";
-import { assembleApyWithRewards } from "@/common/data/adapters/apy";
-import { getTokenInfo, getTokenPriceUsd } from "@/common/data/rest/tokens";
-import type { ChainInfo, TokenInfo } from "@/common/data/types";
-import { SECONDS_PER_DAY } from "@/common/utils/constants";
-import { chunk, fetchAllMorphoRestPages, fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
-import type { MarketInfo } from "@/modules/market/market.types";
-import { type MerklRewardIndex, marketSupplyRewardApys } from "@/modules/reward/data/merklRewardApys";
-import { withRewardTokenMetadata } from "@/modules/reward/data/rewardTokenMetadata";
-import { composeMarketName } from "./adapters";
+import type { ChainInfo, TokenInfo } from '@/common/data/types';
+import type { MarketInfo } from '@/modules/market/market.types';
+
+import { descale, toRatio } from '@/common/data/adapters/amount';
+import { assembleApyWithRewards } from '@/common/data/adapters/apy';
+import { getTokenInfo, getTokenPriceUsd } from '@/common/data/rest/tokens';
+import { SECONDS_PER_DAY } from '@/common/utils/constants';
+import {
+  chunk,
+  fetchAllMorphoRestPages,
+  fetchMorphoRestResource,
+  restSelector,
+} from '@/common/utils/fetchMorphoRest';
+import {
+  type MerklRewardIndex,
+  marketSupplyRewardApys,
+} from '@/modules/reward/data/merklRewardApys';
+import { withRewardTokenMetadata } from '@/modules/reward/data/rewardTokenMetadata';
+
+import { composeMarketName } from './adapters';
 
 interface RestMarketRoot {
   chain_id: number;
@@ -24,7 +34,7 @@ interface RestMarketState {
   data: { total_supply_assets: string };
 }
 
-type ApyAverageKey = "6h" | "24h" | "7d" | "30d";
+type ApyAverageKey = '6h' | '24h' | '7d' | '30d';
 
 interface RestMarketApyAverages {
   data: { supply_apy_averages: Partial<Record<ApyAverageKey, number | null>> };
@@ -52,7 +62,7 @@ export async function getMarketInfos(
       chunk([...new Set(marketIds)]).map((ids) =>
         // Market params never change.
         fetchAllMorphoRestPages<RestMarketRoot>(
-          "/v0/blue/markets",
+          '/v0/blue/markets',
           { chain_id: [chainId], market_id: ids },
           { revalidate: SECONDS_PER_DAY },
         ),
@@ -65,16 +75,24 @@ export async function getMarketInfos(
   const tokenAddresses = new Set<Address>();
   for (const root of roots) {
     tokenAddresses.add(getAddress(root.loan_token));
-    if (getAddress(root.collateral_token) !== zeroAddress) tokenAddresses.add(getAddress(root.collateral_token));
+    if (getAddress(root.collateral_token) !== zeroAddress)
+      tokenAddresses.add(getAddress(root.collateral_token));
   }
 
   const [tokens, loanPrices, marketData, merklIndex] = await Promise.all([
-    Promise.all([...tokenAddresses].map(async (address) => [address, await getTokenInfo(chainId, address)] as const)),
+    Promise.all(
+      [...tokenAddresses].map(
+        async (address) => [address, await getTokenInfo(chainId, address)] as const,
+      ),
+    ),
     Promise.all(
       [...new Set(roots.map((root) => getAddress(root.loan_token)))].map(async (address) => {
         const known = knownPrices.get(address);
         // A known `null` (no price) is an answer too: only an absent entry is read.
-        return [address, known === undefined ? await getTokenPriceUsd(chainId, address) : known] as const;
+        return [
+          address,
+          known === undefined ? await getTokenPriceUsd(chainId, address) : known,
+        ] as const;
       }),
     ),
     Promise.all(
@@ -82,7 +100,9 @@ export async function getMarketInfos(
         const selector = restSelector(chainId, root.market_id);
         const [state, apy] = await Promise.all([
           fetchMorphoRestResource<RestMarketState>(`/v0/blue/markets/${selector}/state`),
-          fetchMorphoRestResource<RestMarketApyAverages>(`/v0/blue/markets/${selector}/apy-averages`),
+          fetchMorphoRestResource<RestMarketApyAverages>(
+            `/v0/blue/markets/${selector}/apy-averages`,
+          ),
         ]);
         return [root.market_id.toLowerCase(), { state, apy }] as const;
       }),
@@ -97,10 +117,13 @@ export async function getMarketInfos(
     const loanAsset = tokenByAddress.get(getAddress(root.loan_token));
     const collateralAddress = getAddress(root.collateral_token);
     // An idle market has no collateral token.
-    const collateralAsset = collateralAddress === zeroAddress ? null : tokenByAddress.get(collateralAddress);
+    const collateralAsset =
+      collateralAddress === zeroAddress ? null : tokenByAddress.get(collateralAddress);
     // A collateral token REST cannot describe is `null` here too: skip rather than show it as idle.
     if (!loanAsset || (collateralAddress !== zeroAddress && !collateralAsset)) {
-      console.warn(`Market tokens not returned by the API, skipping the market: ${chainId}:${root.market_id}`);
+      console.warn(
+        `Market tokens not returned by the API, skipping the market: ${chainId}:${root.market_id}`,
+      );
       return [];
     }
     return [{ root, loanAsset, collateralAddress, collateralAsset }];
@@ -137,10 +160,10 @@ export async function getMarketInfos(
             ? descale(state.data.total_supply_assets, loanAsset.decimals) * loanPriceUsd
             : null,
       },
-      supplyApy6h: supplyApy("6h"),
-      supplyApy1d: supplyApy("24h"),
-      supplyApy7d: supplyApy("7d"),
-      supplyApy30d: supplyApy("30d"),
+      supplyApy6h: supplyApy('6h'),
+      supplyApy1d: supplyApy('24h'),
+      supplyApy7d: supplyApy('7d'),
+      supplyApy30d: supplyApy('30d'),
     });
   }
 

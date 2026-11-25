@@ -1,6 +1,7 @@
-import { MathLib } from "@morpho-org/blue-sdk";
-import type { VaultPositionChange } from "@/actions";
-import type { VaultPosition } from "@/modules/vault/data/getVaultPositions";
+import { MathLib } from '@morpho-org/blue-sdk';
+
+import type { VaultPositionChange } from '@/actions';
+import type { VaultPosition } from '@/modules/vault/data/getVaultPositions';
 
 export function computeVaultPositionChange({
   currentPosition,

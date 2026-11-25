@@ -1,8 +1,9 @@
-import NumberFlow from "@/common/components/ui/number-flow";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import type { TokenInfo } from "@/common/data/types";
-import { descaleBigIntToNumber } from "@/common/utils/format";
-import type { BigIntish } from "@/morpho-types";
+import type { TokenInfo } from '@/common/data/types';
+import type { BigIntish } from '@/morpho-types';
+
+import NumberFlow from '@/common/components/ui/number-flow';
+import { Skeleton } from '@/common/components/ui/skeleton';
+import { descaleBigIntToNumber } from '@/common/utils/format';
 
 interface TableAssetAmountProps {
   asset: TokenInfo;
@@ -32,7 +33,11 @@ export function TableAssetAmount({ asset, amount, amountUsd, isLoading }: TableA
 
   return (
     <div className="flex flex-col">
-      <NumberFlow value={amountUsd ?? undefined} format={{ currency: "USD" }} className="body-medium-plus" />
+      <NumberFlow
+        value={amountUsd ?? undefined}
+        format={{ currency: 'USD' }}
+        className="body-medium-plus"
+      />
       <NumberFlow
         value={amountBigInt ? descaleBigIntToNumber(amountBigInt, asset.decimals) : undefined}
         className="body-small text-muted-foreground"

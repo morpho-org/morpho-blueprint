@@ -1,16 +1,21 @@
-"use client";
-import type { ColumnDef } from "@tanstack/react-table";
-import { ApyTooltip } from "@/common/components/ApyToolip";
-import NumberFlow, { NumberFlowWithLoading } from "@/common/components/ui/number-flow";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import { Table } from "@/common/components/ui/table";
-import { sortTableAssetAmount } from "@/common/utils/sort";
-import { rateLabel } from "@/common/utils/timeframe";
-import type { MarketSummary } from "@/modules/market/data/getMarketSummaries";
-import { type MarketTableDataEntry, useMarketTableData } from "@/modules/market/hooks/useMarketTableData";
-import { extractMarketBorrowApy } from "@/modules/market/utils/extractMarketBorrowApy";
-import { TableAssetAmount } from "@/modules/token/components/TableAssetAmount";
-import { TokenIcon } from "@/modules/token/components/TokenIcon";
+'use client';
+import type { ColumnDef } from '@tanstack/react-table';
+
+import type { MarketSummary } from '@/modules/market/data/getMarketSummaries';
+
+import { ApyTooltip } from '@/common/components/ApyToolip';
+import NumberFlow, { NumberFlowWithLoading } from '@/common/components/ui/number-flow';
+import { Skeleton } from '@/common/components/ui/skeleton';
+import { Table } from '@/common/components/ui/table';
+import { sortTableAssetAmount } from '@/common/utils/sort';
+import { rateLabel } from '@/common/utils/timeframe';
+import {
+  type MarketTableDataEntry,
+  useMarketTableData,
+} from '@/modules/market/hooks/useMarketTableData';
+import { extractMarketBorrowApy } from '@/modules/market/utils/extractMarketBorrowApy';
+import { TableAssetAmount } from '@/modules/token/components/TableAssetAmount';
+import { TokenIcon } from '@/modules/token/components/TokenIcon';
 
 interface MarketTableProps {
   marketSummaries: MarketSummary[];
@@ -19,9 +24,9 @@ interface MarketTableProps {
 function getColumns(isPositionLoading: boolean): ColumnDef<MarketTableDataEntry>[] {
   return [
     {
-      id: "collateralAsset",
-      accessorFn: (row) => row.marketSummary.collateralAsset?.symbol ?? "N/A",
-      header: "Collateral Asset",
+      id: 'collateralAsset',
+      accessorFn: (row) => row.marketSummary.collateralAsset?.symbol ?? 'N/A',
+      header: 'Collateral Asset',
       cell: ({ row }) => {
         const { marketSummary } = row.original;
         return marketSummary.collateralAsset ? (
@@ -32,18 +37,20 @@ function getColumns(isPositionLoading: boolean): ColumnDef<MarketTableDataEntry>
               size="md"
               chainClassName="border-[var(--row-color)] bg-[var(--row-color)]"
             />
-            <span className="body-medium-plus truncate">{marketSummary.collateralAsset.symbol}</span>
+            <span className="body-medium-plus truncate">
+              {marketSummary.collateralAsset.symbol}
+            </span>
           </div>
         ) : (
-          "N/A"
+          'N/A'
         );
       },
       minSize: 220,
     },
     {
-      id: "loanAsset",
+      id: 'loanAsset',
       accessorFn: (row) => row.marketSummary.loanAsset.symbol,
-      header: "Loan Asset",
+      header: 'Loan Asset',
       cell: ({ row }) => {
         const { marketSummary } = row.original;
         return (
@@ -61,9 +68,9 @@ function getColumns(isPositionLoading: boolean): ColumnDef<MarketTableDataEntry>
       minSize: 220,
     },
     {
-      id: "yourBorrows",
+      id: 'yourBorrows',
       accessorFn: (row) => row.position?.borrowAmount.usd ?? 0,
-      header: "Your Borrows",
+      header: 'Your Borrows',
       cell: ({ row }) => {
         const { marketSummary, position } = row.original;
         return (
@@ -77,17 +84,17 @@ function getColumns(isPositionLoading: boolean): ColumnDef<MarketTableDataEntry>
       },
       sortingFn: (a, b) =>
         sortTableAssetAmount(
-          Number(a.original.position?.borrowAmount.formatted ?? "0"),
+          Number(a.original.position?.borrowAmount.formatted ?? '0'),
           a.original.position?.borrowAmount.usd,
-          Number(b.original.position?.borrowAmount.formatted ?? "0"),
+          Number(b.original.position?.borrowAmount.formatted ?? '0'),
           b.original.position?.borrowAmount.usd,
         ),
       minSize: 160,
     },
     {
-      id: "inWallet",
+      id: 'inWallet',
       accessorFn: (row) => row.position?.walletCollateralAssetHolding?.balance.usd ?? 0,
-      header: "Collateral In Wallet",
+      header: 'Collateral In Wallet',
       cell: ({ row }) => {
         const { marketSummary, position } = row.original;
         return marketSummary.collateralAsset ? (
@@ -98,36 +105,36 @@ function getColumns(isPositionLoading: boolean): ColumnDef<MarketTableDataEntry>
             isLoading={isPositionLoading}
           />
         ) : (
-          "N/A"
+          'N/A'
         );
       },
       sortingFn: (a, b) =>
         sortTableAssetAmount(
-          Number(a.original.position?.walletCollateralAssetHolding?.balance.formatted ?? "0"),
+          Number(a.original.position?.walletCollateralAssetHolding?.balance.formatted ?? '0'),
           a.original.position?.walletCollateralAssetHolding?.balance.usd,
-          Number(b.original.position?.walletCollateralAssetHolding?.balance.formatted ?? "0"),
+          Number(b.original.position?.walletCollateralAssetHolding?.balance.formatted ?? '0'),
           b.original.position?.walletCollateralAssetHolding?.balance.usd,
         ),
       minSize: 160,
     },
     {
-      id: "ltv",
+      id: 'ltv',
       accessorFn: (row) => row.position?.ltv ?? 0,
-      header: "Your LTV / LLTV",
+      header: 'Your LTV / LLTV',
       cell: ({ row }) => {
         const { marketSummary, position } = row.original;
         return (
           <div className="inline-flex gap-1">
             <NumberFlowWithLoading
-              value={Number(position?.ltv?.formatted ?? "0")}
+              value={Number(position?.ltv?.formatted ?? '0')}
               isLoading={isPositionLoading}
               loadingContent={<Skeleton className="h-full w-[40px]" />}
-              format={{ style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 }}
+              format={{ style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }}
             />
             <span>/</span>
             <NumberFlow
-              value={Number(marketSummary.lltv?.formatted ?? "0")}
-              format={{ style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 }}
+              value={Number(marketSummary.lltv?.formatted ?? '0')}
+              format={{ style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }}
             />
           </div>
         );
@@ -135,9 +142,9 @@ function getColumns(isPositionLoading: boolean): ColumnDef<MarketTableDataEntry>
       minSize: 160,
     },
     {
-      id: "borrowApy",
+      id: 'borrowApy',
       accessorFn: (row) => extractMarketBorrowApy(row.marketSummary).total,
-      header: rateLabel("Net Rate"),
+      header: rateLabel('Net Rate'),
       cell: ({ row }) => {
         const { marketSummary } = row.original;
         const apy = extractMarketBorrowApy(marketSummary);
@@ -162,9 +169,9 @@ export function MarketTable({ marketSummaries }: MarketTableProps) {
     <Table
       columns={getColumns(isPositionsLoading)}
       data={data}
-      initialSort={[{ id: "yourBorrows", desc: true }]}
+      initialSort={[{ id: 'yourBorrows', desc: true }]}
       rowAction={(row) => ({
-        type: "link",
+        type: 'link',
         href: `/borrow/${row.marketSummary.chain.id}/${row.marketSummary.marketId}`,
       })}
     />

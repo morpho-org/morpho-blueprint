@@ -1,6 +1,6 @@
-"use client";
-import { useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
+'use client';
+import { useSearchParams } from 'next/navigation';
+import { useCallback, useMemo } from 'react';
 
 interface UseShallowSearchParamParams {
   keys: string[];
@@ -12,7 +12,9 @@ interface UseShallowSearchParamReturnType {
   removeShallowSearchParams: (keys: string[]) => void;
 }
 
-export function useShallowSearchParams({ keys }: UseShallowSearchParamParams): UseShallowSearchParamReturnType {
+export function useShallowSearchParams({
+  keys,
+}: UseShallowSearchParamParams): UseShallowSearchParamReturnType {
   const searchParams = useSearchParams();
   const values = useMemo(() => {
     return keys.map((key) => searchParams.getAll(key));
@@ -33,7 +35,7 @@ export function useShallowSearchParams({ keys }: UseShallowSearchParamParams): U
         }
       }
 
-      window.history.pushState(null, "", `?${newParams.toString()}`);
+      window.history.pushState(null, '', `?${newParams.toString()}`);
     },
     [searchParams],
   );
@@ -46,7 +48,7 @@ export function useShallowSearchParams({ keys }: UseShallowSearchParamParams): U
         params.delete(key);
       }
 
-      window.history.pushState(null, "", `?${params.toString()}`);
+      window.history.pushState(null, '', `?${params.toString()}`);
     },
     [searchParams],
   );

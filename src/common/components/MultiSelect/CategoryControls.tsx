@@ -1,7 +1,8 @@
-"use client";
+'use client';
 
-import { useCallback, useMemo } from "react";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
+import { useCallback, useMemo } from 'react';
+
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 
 type CategoryOptionLike = {
   value: string;
@@ -79,7 +80,7 @@ export function CategoryControls<TOption extends CategoryOptionLike>({
 
       const optAndMatch = options.map((o) => ({
         opt: o,
-        match: String(o.category ?? "") === category,
+        match: String(o.category ?? '') === category,
       }));
 
       // Sort
@@ -110,11 +111,16 @@ export function CategoryControls<TOption extends CategoryOptionLike>({
 
   return (
     <div className="flex w-full gap-2 overflow-x-auto px-4 pt-3 pb-2">
-      <Tabs variant="default" value={activeCategory ?? ""} onValueChange={handleCategoryChange} className="grow">
+      <Tabs
+        variant="default"
+        value={activeCategory ?? ''}
+        onValueChange={handleCategoryChange}
+        className="grow"
+      >
         <TabsList className="h-5 flex-1">
           {Array.from(categoryMap.keys()).map((category) => (
             <TabsTrigger value={category} key={category}>
-              {category === "Stable" ? "Stable" : category.toUpperCase()}
+              {category === 'Stable' ? 'Stable' : category.toUpperCase()}
             </TabsTrigger>
           ))}
         </TabsList>

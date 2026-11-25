@@ -1,20 +1,26 @@
-import type { Metadata } from "next";
-import Image from "next/image";
-import { Suspense } from "react";
-import type { MultiSelectOption } from "@/common/components/MultiSelect/MultiSelect";
-import { Avatar } from "@/common/components/ui/avatar";
-import { Card, CardHeader } from "@/common/components/ui/card";
-import { Skeleton, Skeletons } from "@/common/components/ui/skeleton";
-import { APP_CONFIG } from "@/config";
-import type { SupportedChainId } from "@/config/types";
-import { TokenIcon } from "@/modules/token/components/TokenIcon";
-import { EarnSummaryMetrics, EarnSummaryMetricsSkeleton } from "@/modules/vault/components/EarnSummaryMetrics";
-import { VaultFilters } from "@/modules/vault/components/VaultFilters";
-import { VaultTable } from "@/modules/vault/components/VaultTable";
-import { getVaultSummaries } from "@/modules/vault/data/getVaultSummaries";
-import { extractVaultCurator } from "@/modules/vault/utils/extractVaultCurator";
-import { getVaultTagData } from "@/modules/vault/utils/getVaultTagData";
-import { AccountFilters } from "@/modules/wallet/components/AccountFilters";
+import type { Metadata } from 'next';
+
+import Image from 'next/image';
+import { Suspense } from 'react';
+
+import type { MultiSelectOption } from '@/common/components/MultiSelect/MultiSelect';
+import type { SupportedChainId } from '@/config/types';
+
+import { Avatar } from '@/common/components/ui/avatar';
+import { Card, CardHeader } from '@/common/components/ui/card';
+import { Skeleton, Skeletons } from '@/common/components/ui/skeleton';
+import { APP_CONFIG } from '@/config';
+import { TokenIcon } from '@/modules/token/components/TokenIcon';
+import {
+  EarnSummaryMetrics,
+  EarnSummaryMetricsSkeleton,
+} from '@/modules/vault/components/EarnSummaryMetrics';
+import { VaultFilters } from '@/modules/vault/components/VaultFilters';
+import { VaultTable } from '@/modules/vault/components/VaultTable';
+import { getVaultSummaries } from '@/modules/vault/data/getVaultSummaries';
+import { extractVaultCurator } from '@/modules/vault/utils/extractVaultCurator';
+import { getVaultTagData } from '@/modules/vault/utils/getVaultTagData';
+import { AccountFilters } from '@/modules/wallet/components/AccountFilters';
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.metadata.name} | Earn`,

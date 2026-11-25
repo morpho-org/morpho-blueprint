@@ -1,12 +1,15 @@
-import { Suspense } from "react";
-import { DataChart } from "@/common/components/DataChart/DataChart";
-import { Card, CardHeader } from "@/common/components/ui/card";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import type { MorphoVaultV2 } from "@/modules/vault/vault.types";
-import { VaultHistoricalApyChart } from "../VaultHistoricalApyChart";
-import { VaultInfoSkeleton } from "../VaultInfo";
-import { AdaptersTable } from "./AdaptersTable";
-import { MorphoV2VaultInfo, MorphoV2VaultMetrics } from "./MorphoV2VaultInfo";
+import { Suspense } from 'react';
+
+import type { MorphoVaultV2 } from '@/modules/vault/vault.types';
+
+import { DataChart } from '@/common/components/DataChart/DataChart';
+import { Card, CardHeader } from '@/common/components/ui/card';
+import { Skeleton } from '@/common/components/ui/skeleton';
+
+import { VaultHistoricalApyChart } from '../VaultHistoricalApyChart';
+import { VaultInfoSkeleton } from '../VaultInfo';
+import { AdaptersTable } from './AdaptersTable';
+import { MorphoV2VaultInfo, MorphoV2VaultMetrics } from './MorphoV2VaultInfo';
 
 interface Props {
   vaultPromise: Promise<MorphoVaultV2>;
@@ -53,10 +56,10 @@ async function VaultHistoricalDepositsChart({ vaultPromise }: Props) {
       defaultTab="totalSupplied"
       tabOptions={[
         {
-          type: "tokenAmount",
-          key: "totalSupplied",
-          title: "Total Deposits",
-          description: "Total amount of assets deposited into the vault",
+          type: 'tokenAmount',
+          key: 'totalSupplied',
+          title: 'Total Deposits',
+          description: 'Total amount of assets deposited into the vault',
           underlyingAssetSymbol: vault.asset.symbol,
           underlyingAssetValue: Number(vault.totalAssets.formatted),
           usdValue: vault.totalAssets.usd ?? 0,

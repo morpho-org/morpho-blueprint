@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import "@tanstack/react-table";
+import '@tanstack/react-table';
 import {
   type ColumnDef,
   flexRender,
@@ -14,21 +14,25 @@ import {
   type RowData,
   type SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { cva } from "class-variance-authority";
-import clsx from "clsx";
-import { ChevronLeft, ChevronRight, ChevronsUpDown } from "lucide-react";
-import Link from "next/link";
-import { type HTMLAttributes, useEffect, useMemo, useRef, useState } from "react";
-import { ScrollSync, ScrollSyncPane } from "react-scroll-sync";
+} from '@tanstack/react-table';
+import { cva } from 'class-variance-authority';
+import clsx from 'clsx';
+import { ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
+import Link from 'next/link';
+import { type HTMLAttributes, useEffect, useMemo, useRef, useState } from 'react';
+import { ScrollSync, ScrollSyncPane } from 'react-scroll-sync';
 
-import { Button } from "@/common/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/common/components/ui/tooltip";
-import { cn } from "@/common/utils/shadcn";
+import { Button } from '@/common/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/common/components/ui/tooltip';
+import { cn } from '@/common/utils/shadcn';
 
 // Add a tooltip column to meta
-declare module "@tanstack/react-table" {
-  // biome-ignore lint/correctness/noUnusedVariables: Allow unused type parameters here for extending
+declare module '@tanstack/react-table' {
   interface ColumnMeta<TData extends RowData, TValue> {
     tooltip?: string;
   }
@@ -36,23 +40,23 @@ declare module "@tanstack/react-table" {
 
 type TableRowAction =
   | {
-      type: "link";
+      type: 'link';
       href: string;
     }
   | {
-      type: "callback";
+      type: 'callback';
       callback: () => void;
     };
 
 type SortIconProps = {
-  state: "asc" | "desc" | false;
+  state: 'asc' | 'desc' | false;
 };
 
-const sortIconVariants = cva("size-4", {
+const sortIconVariants = cva('size-4', {
   variants: {
     state: {
-      asc: "[&>path:last-child]:stroke-foreground [&>path:last-child]:transition",
-      desc: "[&>path:first-child]:stroke-foreground [&>path:first-child]:transition",
+      asc: '[&>path:last-child]:stroke-foreground [&>path:last-child]:transition',
+      desc: '[&>path:first-child]:stroke-foreground [&>path:first-child]:transition',
       false: null,
     },
   },
@@ -70,18 +74,18 @@ export function TableRow({
   className,
   children,
 }: HTMLAttributes<HTMLDivElement> & { action?: TableRowAction }) {
-  const tableRowColors = "bg-[var(--row-color)] [--row-color:var(--card)]";
+  const tableRowColors = 'bg-[var(--row-color)] [--row-color:var(--card)]';
 
-  if (action?.type === "link") {
+  if (action?.type === 'link') {
     return (
       // Annoying hack for the scroll sync to work
       <div className="w-fit min-w-full border-border not-last:border-b">
         <Link
           href={action.href}
           className={cn(
-            "flex w-full min-w-fit items-center transition-colors",
+            'flex w-full min-w-fit items-center transition-colors',
             tableRowColors,
-            "hover:[--row-color:var(--accent)]",
+            'hover:[--row-color:var(--accent)]',
             className,
           )}
         >
@@ -94,16 +98,14 @@ export function TableRow({
   return (
     // Annoying hack for the scroll sync to work
     <div className="w-fit min-w-full border-border not-last:border-b transition-colors first:border-b">
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: Allow for now... */}
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: Allow for now... */}
       <div
         className={cn(
-          "flex w-full min-w-fit items-center transition-colors",
+          'flex w-full min-w-fit items-center transition-colors',
           tableRowColors,
-          action?.type === "callback" && "hover:cursor-pointer hover:[--row-color:var(--accent)]",
+          action?.type === 'callback' && 'hover:cursor-pointer hover:[--row-color:var(--accent)]',
           className,
         )}
-        onClick={action?.type === "callback" ? action.callback : undefined}
+        onClick={action?.type === 'callback' ? action.callback : undefined}
       >
         {children}
       </div>
@@ -119,7 +121,7 @@ export function TableCell({ minWidth, className, style, ...props }: TableCellPro
   return (
     <div
       className={cn(
-        "flex h-full w-[0px] flex-1 shrink-0 grow items-center overflow-hidden text-ellipsis text-nowrap px-4",
+        'flex h-full w-[0px] flex-1 shrink-0 grow items-center overflow-hidden text-ellipsis text-nowrap px-4',
         className,
       )}
       style={{
@@ -159,14 +161,13 @@ export function Table<TData, TValue>({
   const grouping = useMemo(() => (groupBy ? [groupBy] : []), [groupBy]);
 
   // Scroll to top of the table on sort change if its above the header
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Need to re-scroll on sort change
   useEffect(() => {
     const tableTop = (tableRef.current?.getBoundingClientRect().top ?? 0) + 18; // Accounts for top padding and small overlap
     const headerHeight = Number.parseInt(
-      getComputedStyle(document.documentElement).getPropertyValue("--header-height"),
+      getComputedStyle(document.documentElement).getPropertyValue('--header-height'),
     );
     if (tableTop < headerHeight) {
-      window.scrollTo({ top: window.scrollY + (tableTop - headerHeight), behavior: "smooth" });
+      window.scrollTo({ top: window.scrollY + (tableTop - headerHeight), behavior: 'smooth' });
     }
   }, [sorting]);
 
@@ -197,7 +198,9 @@ export function Table<TData, TValue>({
     const label = groupLabels?.[groupValue] ?? groupValue;
     return (
       <div key={row.id} className="w-fit min-w-full border-border border-b">
-        <div className="body-small-plus flex h-8 items-center px-4 text-muted-foreground">{label}</div>
+        <div className="body-small-plus flex h-8 items-center px-4 text-muted-foreground">
+          {label}
+        </div>
       </div>
     );
   };
@@ -205,7 +208,11 @@ export function Table<TData, TValue>({
   const rows = table.getRowModel().rows;
 
   const renderRow = (row: Row<TData>) => (
-    <TableRow action={rowAction(row.original) ?? undefined} className="group h-[72px] gap-0" key={row.id}>
+    <TableRow
+      action={rowAction(row.original) ?? undefined}
+      className="group h-[72px] gap-0"
+      key={row.id}
+    >
       {row.getVisibleCells().map((cell) => (
         <TableCell minWidth={cell.column.columnDef.minSize} key={cell.id}>
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -217,7 +224,10 @@ export function Table<TData, TValue>({
   return (
     <>
       <ScrollSync>
-        <div className="relative h-fit min-w-0 grow overflow-hidden rounded-md border border-border" ref={tableRef}>
+        <div
+          className="relative h-fit min-w-0 grow overflow-hidden rounded-md border border-border"
+          ref={tableRef}
+        >
           {/* Gradients on left and right for mobile */}
           <div className="absolute top-0 bottom-0 left-0 z-[10] w-4 rounded-l-md bg-gradient-to-r from-card to-transparent md:hidden" />
           <div className="absolute top-0 right-0 bottom-0 z-[10] w-4 rounded-r-md bg-gradient-to-l from-card to-transparent md:hidden" />
@@ -233,8 +243,9 @@ export function Table<TData, TValue>({
                       const cellContent = (
                         <div
                           className={clsx(
-                            "flex h-12 select-none items-center gap-1",
-                            header.column.columnDef.enableSorting !== false && "hover:cursor-pointer",
+                            'flex h-12 select-none items-center gap-1',
+                            header.column.columnDef.enableSorting !== false &&
+                              'hover:cursor-pointer',
                           )}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
@@ -295,7 +306,12 @@ export function Table<TData, TValue>({
           <span className="body-medium text-muted-foreground">
             {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
           </span>
-          <Button size="sm" variant="outline" disabled={!table.getCanNextPage()} onClick={() => table.nextPage()}>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!table.getCanNextPage()}
+            onClick={() => table.nextPage()}
+          >
             <ChevronRight className="size-4" />
           </Button>
         </div>

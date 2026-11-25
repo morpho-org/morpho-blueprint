@@ -1,42 +1,52 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchJsonResponse } from "@/common/utils/fetch";
-import { trackEvent } from "@/common/utils/trackEvent";
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock("@/common/utils/trackEvent", () => ({ trackEvent: vi.fn() }));
+import { fetchJsonResponse } from '@/common/utils/fetch';
+import { trackEvent } from '@/common/utils/trackEvent';
 
-describe("fetchJsonResponse failure logging", () => {
+vi.mock('@/common/utils/trackEvent', () => ({ trackEvent: vi.fn() }));
+
+describe('fetchJsonResponse failure logging', () => {
   beforeEach(() => {
     vi.mocked(trackEvent).mockResolvedValue(undefined);
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.stubGlobal("fetch", async () => new Response("down", { status: 503, statusText: "Service Unavailable" }));
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal(
+      'fetch',
+      async () => new Response('down', { status: 503, statusText: 'Service Unavailable' }),
+    );
   });
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("warns, with no event, when the caller owns the fallback", async () => {
+  it('warns, with no event, when the caller owns the fallback', async () => {
     await expect(
-      fetchJsonResponse("https://api.merkl.xyz/v4/opportunities", {
-        retryOptionOverrides: "disabled",
+      fetchJsonResponse('https://api.merkl.xyz/v4/opportunities', {
+        retryOptionOverrides: 'disabled',
         suppressFailureEvent: true,
       }),
-    ).rejects.toThrow("Fetch failed");
+    ).rejects.toThrow('Fetch failed');
 
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Fetch failed for https://api.merkl.xyz"));
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Fetch failed for https://api.merkl.xyz'),
+    );
     expect(console.error).not.toHaveBeenCalled();
     expect(trackEvent).not.toHaveBeenCalled();
   });
 
-  it("logs an error and raises data-fetch-error otherwise", async () => {
+  it('logs an error and raises data-fetch-error otherwise', async () => {
     await expect(
-      fetchJsonResponse("https://api.merkl.xyz/v4/opportunities", { retryOptionOverrides: "disabled" }),
-    ).rejects.toThrow("Fetch failed");
+      fetchJsonResponse('https://api.merkl.xyz/v4/opportunities', {
+        retryOptionOverrides: 'disabled',
+      }),
+    ).rejects.toThrow('Fetch failed');
 
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("Fetch failed for https://api.merkl.xyz"));
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Fetch failed for https://api.merkl.xyz'),
+    );
     expect(trackEvent).toHaveBeenCalledWith(
-      "data-fetch-error",
-      expect.objectContaining({ url: "https://api.merkl.xyz/v4/opportunities" }),
+      'data-fetch-error',
+      expect.objectContaining({ url: 'https://api.merkl.xyz/v4/opportunities' }),
     );
   });
 });

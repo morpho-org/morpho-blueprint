@@ -1,6 +1,7 @@
-"use server";
-import { track } from "@vercel/analytics/server";
-import type { EventName } from "@/common/utils/trackEvent";
+'use server';
+import { track } from '@vercel/analytics/server';
+
+import type { EventName } from '@/common/utils/trackEvent';
 
 export async function eventCb(name: EventName, payload: Record<string, string | number>) {
   // Called from the server whenever an app event occurs.

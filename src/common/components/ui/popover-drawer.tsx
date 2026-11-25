@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 
-import { Drawer, DrawerContent, DrawerTrigger } from "@/common/components/ui/drawer";
-import { Popover, PopoverContent, PopoverTrigger } from "@/common/components/ui/popover";
-import { useResponsiveContext } from "@/common/providers/ResponsiveProvider";
-import { cn } from "@/common/utils/shadcn";
+import { Drawer, DrawerContent, DrawerTrigger } from '@/common/components/ui/drawer';
+import { Popover, PopoverContent, PopoverTrigger } from '@/common/components/ui/popover';
+import { useResponsiveContext } from '@/common/providers/ResponsiveProvider';
+import { cn } from '@/common/utils/shadcn';
 
 type PopoverDrawerProps = React.ComponentProps<typeof Popover>;
 
@@ -24,10 +24,13 @@ function PopoverDrawer({ children, ...props }: PopoverDrawerProps) {
   );
 }
 
-function PopoverDrawerTrigger({ className, ...props }: React.ComponentProps<typeof PopoverTrigger>) {
+function PopoverDrawerTrigger({
+  className,
+  ...props
+}: React.ComponentProps<typeof PopoverTrigger>) {
   const { isDesktop } = useResponsiveContext();
   return isDesktop ? (
-    <PopoverTrigger type="button" className={cn("cursor-pointer", className)} {...props} />
+    <PopoverTrigger type="button" className={cn('cursor-pointer', className)} {...props} />
   ) : (
     <DrawerTrigger type="button" className={className} {...props} />
   );

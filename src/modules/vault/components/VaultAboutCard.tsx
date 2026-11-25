@@ -1,6 +1,7 @@
-import { Card, CardHeader } from "@/common/components/ui/card";
-import { Markdown } from "@/common/components/ui/markdown";
-import type { Vault } from "@/modules/vault/data/getVault";
+import type { Vault } from '@/modules/vault/data/getVault';
+
+import { Card, CardHeader } from '@/common/components/ui/card';
+import { Markdown } from '@/common/components/ui/markdown';
 
 interface VaultAboutCardProps {
   vaultPromise: Promise<Vault>;
@@ -9,7 +10,7 @@ interface VaultAboutCardProps {
 export async function VaultAboutCard({ vaultPromise }: VaultAboutCardProps) {
   const vault = await vaultPromise;
 
-  if (!vault || !("metadata" in vault) || !vault.metadata?.description) {
+  if (!vault || !('metadata' in vault) || !vault.metadata?.description) {
     return null;
   }
 

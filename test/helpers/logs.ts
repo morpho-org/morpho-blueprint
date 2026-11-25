@@ -1,9 +1,10 @@
-import { getChainAddresses, MathLib } from "@morpho-org/blue-sdk";
-import { permit2Abi } from "@morpho-org/blue-sdk-viem";
-import type { AnvilTestClient } from "@morpho-org/test";
-import { type Address, erc20Abi, type Log, parseEventLogs } from "viem";
-import { readContract } from "viem/actions";
-import { expect } from "vitest";
+import type { AnvilTestClient } from '@morpho-org/test';
+
+import { getChainAddresses, MathLib } from '@morpho-org/blue-sdk';
+import { permit2Abi } from '@morpho-org/blue-sdk-viem';
+import { type Address, erc20Abi, type Log, parseEventLogs } from 'viem';
+import { readContract } from 'viem/actions';
+import { expect } from 'vitest';
 
 const REBASEING_MARGIN = BigInt(100030);
 const REBASEING_MARGIN_SCALE = BigInt(100000);
@@ -16,8 +17,8 @@ export async function extractApprovalEvents(logs: Log[], accountAddress: Address
 
   const erc20Approvals = erc20Events
     .filter(
-      (event): event is typeof event & { eventName: "Approval" } =>
-        event.eventName === "Approval" && event.args.owner === accountAddress,
+      (event): event is typeof event & { eventName: 'Approval' } =>
+        event.eventName === 'Approval' && event.args.owner === accountAddress,
     )
     .map((event) => ({
       asset: event.address,
@@ -36,8 +37,8 @@ export async function extractPermit2Events(logs: Log[], accountAddress: Address)
 
   const permits = permit2Events
     .filter(
-      (event): event is typeof event & { eventName: "Permit" } =>
-        event.eventName === "Permit" && event.args.owner === accountAddress,
+      (event): event is typeof event & { eventName: 'Permit' } =>
+        event.eventName === 'Permit' && event.args.owner === accountAddress,
     )
     .map((event) => ({
       asset: event.args.token,
@@ -74,13 +75,15 @@ export async function expectOnlyAllowedApprovals(
     if (
       erc20Approvals
         .slice(index + 1)
-        .some((later) => later.asset === erc20Approval.asset && later.spender === erc20Approval.spender)
+        .some(
+          (later) => later.asset === erc20Approval.asset && later.spender === erc20Approval.spender,
+        )
     )
       continue;
     const erc20Allowance = await readContract(client, {
       address: erc20Approval.asset,
       abi: erc20Abi,
-      functionName: "allowance",
+      functionName: 'allowance',
       args: [accountAddress, erc20Approval.spender],
     });
     expect(erc20Allowance).toBeLessThanOrEqual(
@@ -91,7 +94,7 @@ export async function expectOnlyAllowedApprovals(
   const { permit2 } = getChainAddresses(client.chain.id);
 
   if (!permit2) {
-    throw new Error("Missing permit2 address");
+    throw new Error('Missing permit2 address');
   }
 
   // Verify that the entire permit is used up (or at least up to the rebasing margin)
@@ -99,7 +102,7 @@ export async function expectOnlyAllowedApprovals(
     const permitAllowance = await readContract(client, {
       address: permit2,
       abi: permit2Abi,
-      functionName: "allowance",
+      functionName: 'allowance',
       args: [accountAddress, permit.asset, permit.spender],
     });
     expect(permitAllowance[0]).toBeLessThanOrEqual(

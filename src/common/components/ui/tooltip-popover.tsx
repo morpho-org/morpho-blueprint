@@ -1,9 +1,14 @@
-"use client";
+'use client';
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/common/components/ui/popover";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/common/components/ui/tooltip";
-import { useResponsiveContext } from "@/common/providers/ResponsiveProvider";
-import { cn } from "@/common/utils/shadcn";
+import { Popover, PopoverContent, PopoverTrigger } from '@/common/components/ui/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/common/components/ui/tooltip';
+import { useResponsiveContext } from '@/common/providers/ResponsiveProvider';
+import { cn } from '@/common/utils/shadcn';
 
 type TooltipPopoverProps = React.ComponentProps<typeof TooltipProvider>;
 
@@ -19,10 +24,13 @@ export function TooltipPopover({ children, ...props }: TooltipPopoverProps) {
   );
 }
 
-export function TooltipPopoverTrigger({ className, ...props }: React.ComponentProps<typeof TooltipTrigger>) {
+export function TooltipPopoverTrigger({
+  className,
+  ...props
+}: React.ComponentProps<typeof TooltipTrigger>) {
   const { isDesktop } = useResponsiveContext();
   return isDesktop ? (
-    <TooltipTrigger type="button" className={cn("cursor-pointer", className)} {...props} />
+    <TooltipTrigger type="button" className={cn('cursor-pointer', className)} {...props} />
   ) : (
     <PopoverTrigger type="button" className={className} {...props} />
   );

@@ -1,7 +1,10 @@
-import { z } from "zod";
-import { createOnchainAmountSchema } from "@/common/utils/schemas";
-import type { Vault } from "@/modules/vault/data/getVault";
-import { computeAvailableBalance, isVaultUnderlyingAssetWrappedNativeAsset } from "./utils";
+import { z } from 'zod';
+
+import type { Vault } from '@/modules/vault/data/getVault';
+
+import { createOnchainAmountSchema } from '@/common/utils/schemas';
+
+import { computeAvailableBalance, isVaultUnderlyingAssetWrappedNativeAsset } from './utils';
 
 export function createVaultSupplyFormSchema(
   vault: Vault,
@@ -23,14 +26,15 @@ export function createVaultSupplyFormSchema(
         accountLoanTokenBalance,
         accountNativeAssetBalance,
         maxFeePerGas,
-        includeNativeAssetWrapping: data.allowNativeAssetWrapping && isUnderlyingAssetWrappedNativeAsset,
+        includeNativeAssetWrapping:
+          data.allowNativeAssetWrapping && isUnderlyingAssetWrappedNativeAsset,
       });
 
       if (availableBalance !== undefined && data.supplyAmount > availableBalance) {
         ctx.addIssue({
-          path: ["supplyAmount"],
-          code: "custom",
-          message: "Amount exceeds balance.",
+          path: ['supplyAmount'],
+          code: 'custom',
+          message: 'Amount exceeds balance.',
         });
       }
     });

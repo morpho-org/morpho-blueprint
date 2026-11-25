@@ -1,14 +1,14 @@
-import type { ApyAverages } from "@/common/data/types";
+import type { ApyAverages } from '@/common/data/types';
 
 export const HOUR = 60 * 60;
 export const DAY = 24 * HOUR;
 export const WEEK = 7 * DAY;
 
 /** The three resolutions history is fetched at; also the keys of `HistoricalData`. */
-export type ChartResolution = "hourly" | "daily" | "weekly";
+export type ChartResolution = 'hourly' | 'daily' | 'weekly';
 
 /** The ranges the chart's date selector offers. */
-export type DataRange = "1W" | "1M" | "3M" | "All";
+export type DataRange = '1W' | '1M' | '3M' | 'All';
 
 interface ChartRange {
   /** Which fetched series serves this range. */
@@ -28,10 +28,10 @@ interface ChartRange {
  * Adding a range here is a compile error everywhere it has to be accounted for.
  */
 export const CHART_RANGES: Record<DataRange, ChartRange> = {
-  "1W": { resolution: "hourly", durationSeconds: WEEK, apyAverageKey: "sevenDays" },
-  "1M": { resolution: "daily", durationSeconds: 30 * DAY, apyAverageKey: "thirtyDays" },
-  "3M": { resolution: "daily", durationSeconds: 90 * DAY, apyAverageKey: "ninetyDays" },
-  All: { resolution: "weekly", durationSeconds: 0, apyAverageKey: "inception" },
+  '1W': { resolution: 'hourly', durationSeconds: WEEK, apyAverageKey: 'sevenDays' },
+  '1M': { resolution: 'daily', durationSeconds: 30 * DAY, apyAverageKey: 'thirtyDays' },
+  '3M': { resolution: 'daily', durationSeconds: 90 * DAY, apyAverageKey: 'ninetyDays' },
+  All: { resolution: 'weekly', durationSeconds: 0, apyAverageKey: 'inception' },
 };
 
 export const DATA_RANGES = Object.keys(CHART_RANGES) as DataRange[];

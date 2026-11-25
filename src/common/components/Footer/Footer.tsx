@@ -1,16 +1,18 @@
-import Link from "next/link";
-import { PoweredByMorpho } from "@/common/components/PoweredByMorpho";
-import { APP_CONFIG } from "@/config";
-import LinkExternal, { LinkExternalUnstyled } from "../LinkExternal";
-import { ThemeToggle } from "./ThemeToggle";
+import Link from 'next/link';
+
+import { PoweredByMorpho } from '@/common/components/PoweredByMorpho';
+import { APP_CONFIG } from '@/config';
+
+import LinkExternal, { LinkExternalUnstyled } from '../LinkExternal';
+import { ThemeToggle } from './ThemeToggle';
 
 const { footerLinks } = APP_CONFIG.ui;
 const { termsOfUse, privacyPolicy } = APP_CONFIG.compliance;
 
 const FOOTER_ITEMS: { text: string; href: string; internal?: boolean }[] = [
   ...(footerLinks ?? []),
-  ...(termsOfUse ? [{ text: "Terms", href: "/terms", internal: true }] : []),
-  ...(privacyPolicy ? [{ text: "Privacy", href: "/privacy", internal: true }] : []),
+  ...(termsOfUse ? [{ text: 'Terms', href: '/terms', internal: true }] : []),
+  ...(privacyPolicy ? [{ text: 'Privacy', href: '/privacy', internal: true }] : []),
 ];
 
 export function Footer() {
@@ -23,7 +25,11 @@ export function Footer() {
         {FOOTER_ITEMS.map((item) => {
           const Element = item.internal ? Link : LinkExternalUnstyled;
           return (
-            <Element key={item.text} href={item.href} className="span text-start text-current hover:underline">
+            <Element
+              key={item.text}
+              href={item.href}
+              className="span text-start text-current hover:underline"
+            >
               {item.text}
             </Element>
           );

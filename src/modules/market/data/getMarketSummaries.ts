@@ -1,17 +1,24 @@
-import "server-only";
+import 'server-only';
+import { cache } from 'react';
+import { type Address, getAddress, type Hex, zeroAddress } from 'viem';
 
-import { cache } from "react";
-import { type Address, getAddress, type Hex, zeroAddress } from "viem";
-import { toChainInfoById } from "@/common/data/adapters/entity";
-import { getTokenInfo, getTokenPriceUsd } from "@/common/data/rest/tokens";
-import { SECONDS_PER_DAY } from "@/common/utils/constants";
-import { chunk, fetchAllMorphoRestPages, fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
-import type { MarketSummary } from "@/modules/market/market.types";
-import { getMerklRewardIndex } from "@/modules/reward/data/getMerklRewardIndex";
-import { marketBorrowRewardApys } from "@/modules/reward/data/merklRewardApys";
-import { withRewardTokenMetadata } from "@/modules/reward/data/rewardTokenMetadata";
-import { type RestApyAverageKey, toRestMarketSummary } from "./adapters";
-import { getSupportedMarketIds } from "./getSupportedMarketIds";
+import type { MarketSummary } from '@/modules/market/market.types';
+
+import { toChainInfoById } from '@/common/data/adapters/entity';
+import { getTokenInfo, getTokenPriceUsd } from '@/common/data/rest/tokens';
+import { SECONDS_PER_DAY } from '@/common/utils/constants';
+import {
+  chunk,
+  fetchAllMorphoRestPages,
+  fetchMorphoRestResource,
+  restSelector,
+} from '@/common/utils/fetchMorphoRest';
+import { getMerklRewardIndex } from '@/modules/reward/data/getMerklRewardIndex';
+import { marketBorrowRewardApys } from '@/modules/reward/data/merklRewardApys';
+import { withRewardTokenMetadata } from '@/modules/reward/data/rewardTokenMetadata';
+
+import { type RestApyAverageKey, toRestMarketSummary } from './adapters';
+import { getSupportedMarketIds } from './getSupportedMarketIds';
 
 export type { MarketSummary };
 
@@ -45,14 +52,17 @@ function once<R>(load: (chainId: number, address: Address) => Promise<R>) {
   };
 }
 
-async function getChainMarketSummaries(chainId: number, marketIds: readonly Hex[]): Promise<MarketSummary[]> {
+async function getChainMarketSummaries(
+  chainId: number,
+  marketIds: readonly Hex[],
+): Promise<MarketSummary[]> {
   const rewardIndex = getMerklRewardIndex(chainId);
   const roots = (
     await Promise.all(
       chunk([...new Set(marketIds)]).map((ids) =>
         // Market params never change.
         fetchAllMorphoRestPages<RestMarketRoot>(
-          "/v0/blue/markets",
+          '/v0/blue/markets',
           { chain_id: [chainId], market_id: ids },
           { revalidate: SECONDS_PER_DAY },
         ),
@@ -61,7 +71,9 @@ async function getChainMarketSummaries(chainId: number, marketIds: readonly Hex[
   )
     .flat()
     // The borrow table shows no idle market (no collateral), so its state is never read.
-    .filter((root) => root.chain_id === chainId && getAddress(root.collateral_token) !== zeroAddress)
+    .filter(
+      (root) => root.chain_id === chainId && getAddress(root.collateral_token) !== zeroAddress,
+    )
     // The table's default order, as GraphQL served it: market id descending within a chain.
     .sort((a, b) => (a.market_id.toLowerCase() < b.market_id.toLowerCase() ? 1 : -1));
 
@@ -119,6 +131,8 @@ export const getMarketSummaries = cache(async (): Promise<MarketSummary[]> => {
     .map(([chainId, ids]) => [Number.parseInt(chainId), Array.from(ids)] as const)
     .filter(([, ids]) => ids.length > 0);
 
-  const perChain = await Promise.all(byChain.map(([chainId, ids]) => getChainMarketSummaries(chainId, ids)));
+  const perChain = await Promise.all(
+    byChain.map(([chainId, ids]) => getChainMarketSummaries(chainId, ids)),
+  );
   return perChain.flat();
 });

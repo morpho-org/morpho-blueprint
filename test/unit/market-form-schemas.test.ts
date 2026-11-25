@@ -1,106 +1,116 @@
-import { parseUnits } from "viem";
-import { describe, expect, it } from "vitest";
-import { createMarketRepayAndWithdrawCollateralFormSchema } from "@/modules/market/components/MarketRepayAndWithdrawCollateralForm/schema";
-import { createMarketSupplyCollateralAndBorrowFormSchema } from "@/modules/market/components/MarketSupplyCollateralAndBorrowForm/schema";
-import type { MarketNonIdle } from "@/modules/market/data/getMarket";
-import type { MarketPosition } from "@/modules/market/data/getMarketPositions";
+import { parseUnits } from 'viem';
+import { describe, expect, it } from 'vitest';
+
+import type { MarketNonIdle } from '@/modules/market/data/getMarket';
+import type { MarketPosition } from '@/modules/market/data/getMarketPositions';
+
+import { createMarketRepayAndWithdrawCollateralFormSchema } from '@/modules/market/components/MarketRepayAndWithdrawCollateralForm/schema';
+import { createMarketSupplyCollateralAndBorrowFormSchema } from '@/modules/market/components/MarketSupplyCollateralAndBorrowForm/schema';
 
 /**
  * Security tests for market form validation schemas
  * Focus: Business logic validation, position health checks
  */
 
-describe("Market Form Schema Tests", () => {
-  describe("MarketSupplyCollateralAndBorrowFormSchema - Critical Health Checks", () => {
-    it("should prevent borrowing more than collateral allows", () => {
+describe('Market Form Schema Tests', () => {
+  describe('MarketSupplyCollateralAndBorrowFormSchema - Critical Health Checks', () => {
+    it('should prevent borrowing more than collateral allows', () => {
       const market = createMockMarket({
-        collateralPrice: parseUnits("2000", 18),
-        lltv: parseUnits("0.8", 18),
+        collateralPrice: parseUnits('2000', 18),
+        lltv: parseUnits('0.8', 18),
       });
 
       const schema = createMarketSupplyCollateralAndBorrowFormSchema(market);
 
       const result = schema.safeParse({
-        supplyCollateralAmount: "1",
+        supplyCollateralAmount: '1',
         isMaxSupplyCollateral: false,
-        borrowAmount: "2000",
+        borrowAmount: '2000',
       });
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues.some((i) => i.message === "Causes unhealthy position.")).toBe(true);
+        expect(result.error.issues.some((i) => i.message === 'Causes unhealthy position.')).toBe(
+          true,
+        );
       }
     });
 
-    it("blocks a borrow above the available liquidity and allows one at it", () => {
+    it('blocks a borrow above the available liquidity and allows one at it', () => {
       // 10 WETH at 2,000 allows ~16,000 USDC healthy: liquidity is the binding limit.
       const market = createMockMarket({
-        collateralPrice: parseUnits("2000", 36 + 6 - 18),
-        lltv: parseUnits("0.8", 18),
-        availableToBorrow: parseUnits("1000", 6),
+        collateralPrice: parseUnits('2000', 36 + 6 - 18),
+        lltv: parseUnits('0.8', 18),
+        availableToBorrow: parseUnits('1000', 6),
       });
       const schema = createMarketSupplyCollateralAndBorrowFormSchema(market);
 
       const above = schema.safeParse({
-        supplyCollateralAmount: "10",
+        supplyCollateralAmount: '10',
         isMaxSupplyCollateral: false,
-        borrowAmount: "1000.000001",
+        borrowAmount: '1000.000001',
       });
       expect(above.success).toBe(false);
       if (!above.success) {
-        expect(above.error.issues.map((i) => i.message)).toEqual(["Amount exceeds available liquidity."]);
+        expect(above.error.issues.map((i) => i.message)).toEqual([
+          'Amount exceeds available liquidity.',
+        ]);
       }
 
-      const at = schema.safeParse({ supplyCollateralAmount: "10", isMaxSupplyCollateral: false, borrowAmount: "1000" });
+      const at = schema.safeParse({
+        supplyCollateralAmount: '10',
+        isMaxSupplyCollateral: false,
+        borrowAmount: '1000',
+      });
       expect(at.success).toBe(true);
     });
 
     it("should require at least one amount (can't both be zero)", () => {
       const market = createMockMarket({
-        collateralPrice: parseUnits("2000", 18),
-        lltv: parseUnits("0.8", 18),
+        collateralPrice: parseUnits('2000', 18),
+        lltv: parseUnits('0.8', 18),
       });
 
       const schema = createMarketSupplyCollateralAndBorrowFormSchema(market);
 
       const result = schema.safeParse({
-        supplyCollateralAmount: "0",
+        supplyCollateralAmount: '0',
         isMaxSupplyCollateral: false,
-        borrowAmount: "0",
+        borrowAmount: '0',
       });
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues.some((i) => i.message === "One amount is required.")).toBe(true);
+        expect(result.error.issues.some((i) => i.message === 'One amount is required.')).toBe(true);
       }
     });
 
-    it("should allow supplying collateral without borrowing", () => {
+    it('should allow supplying collateral without borrowing', () => {
       const market = createMockMarket({
-        collateralPrice: parseUnits("2000", 18),
-        lltv: parseUnits("0.8", 18),
+        collateralPrice: parseUnits('2000', 18),
+        lltv: parseUnits('0.8', 18),
       });
 
       const schema = createMarketSupplyCollateralAndBorrowFormSchema(market);
 
       const result = schema.parse({
-        supplyCollateralAmount: "1",
+        supplyCollateralAmount: '1',
         isMaxSupplyCollateral: false,
-        borrowAmount: "0",
+        borrowAmount: '0',
       });
 
-      expect(result.supplyCollateralAmount).toBe(parseUnits("1", 18));
+      expect(result.supplyCollateralAmount).toBe(parseUnits('1', 18));
       expect(result.borrowAmount).toBe(0n);
     });
 
-    it("should enforce wallet balance limits", () => {
+    it('should enforce wallet balance limits', () => {
       const market = createMockMarket({
-        collateralPrice: parseUnits("2000", 18),
-        lltv: parseUnits("0.8", 18),
+        collateralPrice: parseUnits('2000', 18),
+        lltv: parseUnits('0.8', 18),
       });
 
       const position = createMockPosition({
-        walletBalance: parseUnits("5", 18),
+        walletBalance: parseUnits('5', 18),
         borrowed: 0n,
       });
 
@@ -108,189 +118,196 @@ describe("Market Form Schema Tests", () => {
 
       expect(() =>
         schema.parse({
-          supplyCollateralAmount: "10",
+          supplyCollateralAmount: '10',
           isMaxSupplyCollateral: false,
-          borrowAmount: "0",
+          borrowAmount: '0',
         }),
-      ).toThrow("Amount exceeds wallet balance");
+      ).toThrow('Amount exceeds wallet balance');
     });
 
-    it("should account for existing borrow when checking health", () => {
+    it('should account for existing borrow when checking health', () => {
       const market = createMockMarket({
-        collateralPrice: parseUnits("2000", 18),
-        lltv: parseUnits("0.8", 18),
+        collateralPrice: parseUnits('2000', 18),
+        lltv: parseUnits('0.8', 18),
       });
 
       const position = createMockPosition({
-        walletBalance: parseUnits("10", 18),
-        borrowed: parseUnits("1000", 6),
+        walletBalance: parseUnits('10', 18),
+        borrowed: parseUnits('1000', 6),
       });
 
       const schema = createMarketSupplyCollateralAndBorrowFormSchema(market, position);
 
       const result = schema.safeParse({
-        supplyCollateralAmount: "1",
+        supplyCollateralAmount: '1',
         isMaxSupplyCollateral: false,
-        borrowAmount: "1000",
+        borrowAmount: '1000',
       });
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues.some((i) => i.message === "Causes unhealthy position.")).toBe(true);
+        expect(result.error.issues.some((i) => i.message === 'Causes unhealthy position.')).toBe(
+          true,
+        );
       }
     });
 
-    it("should handle zero LLTV safely", () => {
+    it('should handle zero LLTV safely', () => {
       const market = createMockMarket({
-        collateralPrice: parseUnits("2000", 18),
+        collateralPrice: parseUnits('2000', 18),
         lltv: 0n,
       });
 
       const schema = createMarketSupplyCollateralAndBorrowFormSchema(market);
 
       const result = schema.safeParse({
-        supplyCollateralAmount: "1",
+        supplyCollateralAmount: '1',
         isMaxSupplyCollateral: false,
-        borrowAmount: "100",
+        borrowAmount: '100',
       });
 
       expect(result.success).toBe(false);
     });
 
-    it("should handle zero price (oracle failure) safely", () => {
+    it('should handle zero price (oracle failure) safely', () => {
       const market = createMockMarket({
         collateralPrice: 0n,
-        lltv: parseUnits("0.8", 18),
+        lltv: parseUnits('0.8', 18),
       });
 
       const schema = createMarketSupplyCollateralAndBorrowFormSchema(market);
 
       const result = schema.safeParse({
-        supplyCollateralAmount: "1",
+        supplyCollateralAmount: '1',
         isMaxSupplyCollateral: false,
-        borrowAmount: "100",
+        borrowAmount: '100',
       });
 
       expect(result.success).toBe(false);
     });
   });
 
-  describe("MarketRepayAndWithdrawCollateralFormSchema - Health Validation", () => {
-    it("should prevent withdrawing collateral that causes unhealthy position", () => {
+  describe('MarketRepayAndWithdrawCollateralFormSchema - Health Validation', () => {
+    it('should prevent withdrawing collateral that causes unhealthy position', () => {
       const market = createMockMarket({
-        collateralPrice: parseUnits("2000", 18),
-        lltv: parseUnits("0.8", 18),
+        collateralPrice: parseUnits('2000', 18),
+        lltv: parseUnits('0.8', 18),
       });
 
       const position = createMockPositionWithCollateral({
-        walletLoanBalance: parseUnits("10000", 6),
-        walletCollateralBalance: parseUnits("10", 18),
-        positionCollateral: parseUnits("2", 18),
-        positionBorrowed: parseUnits("2000", 6),
+        walletLoanBalance: parseUnits('10000', 6),
+        walletCollateralBalance: parseUnits('10', 18),
+        positionCollateral: parseUnits('2', 18),
+        positionBorrowed: parseUnits('2000', 6),
       });
 
       const schema = createMarketRepayAndWithdrawCollateralFormSchema(market, position);
 
       const result = schema.safeParse({
-        repayAmount: "0",
+        repayAmount: '0',
         isMaxRepay: false,
-        withdrawCollateralAmount: "1.5",
+        withdrawCollateralAmount: '1.5',
       });
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues.some((i) => i.message === "Causes unhealthy position.")).toBe(true);
+        expect(result.error.issues.some((i) => i.message === 'Causes unhealthy position.')).toBe(
+          true,
+        );
       }
     });
 
-    it("should require at least one amount", () => {
+    it('should require at least one amount', () => {
       const market = createMockMarket({
-        collateralPrice: parseUnits("2000", 18),
-        lltv: parseUnits("0.8", 18),
+        collateralPrice: parseUnits('2000', 18),
+        lltv: parseUnits('0.8', 18),
       });
 
       const schema = createMarketRepayAndWithdrawCollateralFormSchema(market);
 
       const result = schema.safeParse({
-        repayAmount: "0",
+        repayAmount: '0',
         isMaxRepay: false,
-        withdrawCollateralAmount: "0",
+        withdrawCollateralAmount: '0',
       });
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues.some((i) => i.message === "One amount is required.")).toBe(true);
+        expect(result.error.issues.some((i) => i.message === 'One amount is required.')).toBe(true);
       }
     });
 
-    it("should enforce repay limits based on position vs wallet", () => {
+    it('should enforce repay limits based on position vs wallet', () => {
       const market = createMockMarket({
-        collateralPrice: parseUnits("2000", 18),
-        lltv: parseUnits("0.8", 18),
+        collateralPrice: parseUnits('2000', 18),
+        lltv: parseUnits('0.8', 18),
       });
 
       const positionWithLowWallet = createMockPositionWithCollateral({
-        walletLoanBalance: parseUnits("500", 6),
-        walletCollateralBalance: parseUnits("10", 18),
-        positionCollateral: parseUnits("2", 18),
-        positionBorrowed: parseUnits("1000", 6),
+        walletLoanBalance: parseUnits('500', 6),
+        walletCollateralBalance: parseUnits('10', 18),
+        positionCollateral: parseUnits('2', 18),
+        positionBorrowed: parseUnits('1000', 6),
       });
 
-      const schema = createMarketRepayAndWithdrawCollateralFormSchema(market, positionWithLowWallet);
+      const schema = createMarketRepayAndWithdrawCollateralFormSchema(
+        market,
+        positionWithLowWallet,
+      );
 
       expect(() =>
         schema.parse({
-          repayAmount: "600",
+          repayAmount: '600',
           isMaxRepay: false,
-          withdrawCollateralAmount: "0",
+          withdrawCollateralAmount: '0',
         }),
-      ).toThrow("Exceeds wallet balance");
+      ).toThrow('Exceeds wallet balance');
     });
 
-    it("should handle zero LLTV safely", () => {
+    it('should handle zero LLTV safely', () => {
       const market = createMockMarket({
-        collateralPrice: parseUnits("2000", 18),
+        collateralPrice: parseUnits('2000', 18),
         lltv: 0n,
       });
 
       const position = createMockPositionWithCollateral({
-        walletLoanBalance: parseUnits("10000", 6),
-        walletCollateralBalance: parseUnits("10", 18),
-        positionCollateral: parseUnits("2", 18),
-        positionBorrowed: parseUnits("1000", 6),
+        walletLoanBalance: parseUnits('10000', 6),
+        walletCollateralBalance: parseUnits('10', 18),
+        positionCollateral: parseUnits('2', 18),
+        positionBorrowed: parseUnits('1000', 6),
       });
 
       const schema = createMarketRepayAndWithdrawCollateralFormSchema(market, position);
 
       expect(() =>
         schema.parse({
-          repayAmount: "0",
+          repayAmount: '0',
           isMaxRepay: false,
-          withdrawCollateralAmount: "0.5",
+          withdrawCollateralAmount: '0.5',
         }),
       ).not.toThrow();
     });
 
-    it("should handle zero price (oracle failure) safely", () => {
+    it('should handle zero price (oracle failure) safely', () => {
       const market = createMockMarket({
         collateralPrice: 0n,
-        lltv: parseUnits("0.8", 18),
+        lltv: parseUnits('0.8', 18),
       });
 
       const position = createMockPositionWithCollateral({
-        walletLoanBalance: parseUnits("10000", 6),
-        walletCollateralBalance: parseUnits("10", 18),
-        positionCollateral: parseUnits("2", 18),
-        positionBorrowed: parseUnits("1000", 6),
+        walletLoanBalance: parseUnits('10000', 6),
+        walletCollateralBalance: parseUnits('10', 18),
+        positionCollateral: parseUnits('2', 18),
+        positionBorrowed: parseUnits('1000', 6),
       });
 
       const schema = createMarketRepayAndWithdrawCollateralFormSchema(market, position);
 
       expect(() =>
         schema.parse({
-          repayAmount: "0",
+          repayAmount: '0',
           isMaxRepay: false,
-          withdrawCollateralAmount: "0.5",
+          withdrawCollateralAmount: '0.5',
         }),
       ).not.toThrow();
     });
@@ -300,7 +317,7 @@ describe("Market Form Schema Tests", () => {
 function createMockMarket({
   collateralPrice,
   lltv,
-  availableToBorrow = parseUnits("1000000000", 6),
+  availableToBorrow = parseUnits('1000000000', 6),
 }: {
   collateralPrice: bigint;
   lltv: bigint;
@@ -319,7 +336,13 @@ function createMockMarket({
   } as MarketNonIdle;
 }
 
-function createMockPosition({ walletBalance, borrowed }: { walletBalance: bigint; borrowed: bigint }): MarketPosition {
+function createMockPosition({
+  walletBalance,
+  borrowed,
+}: {
+  walletBalance: bigint;
+  borrowed: bigint;
+}): MarketPosition {
   return {
     walletCollateralAssetHolding: {
       balance: {

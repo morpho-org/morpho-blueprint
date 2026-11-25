@@ -1,6 +1,11 @@
-import { type Address, erc20Abi, erc4626Abi, isAddressEqual, maxUint256, zeroAddress } from "viem";
-import { multicall, readContract } from "viem/actions";
-import { type Erc4626WithdrawActionParameters, type Position, UserFacingError } from "@/actions/types";
+import { type Address, erc20Abi, erc4626Abi, isAddressEqual, maxUint256, zeroAddress } from 'viem';
+import { multicall, readContract } from 'viem/actions';
+
+import {
+  type Erc4626WithdrawActionParameters,
+  type Position,
+  UserFacingError,
+} from '@/actions/types';
 
 export function validateErc4626WithdrawParameters({
   vaultAddress,
@@ -12,12 +17,12 @@ export function validateErc4626WithdrawParameters({
   withdrawAmount: bigint;
 }) {
   if (withdrawAmount <= 0n) {
-    throw new UserFacingError("Invalid input: Amount must be greater than 0.");
+    throw new UserFacingError('Invalid input: Amount must be greater than 0.');
   }
 
   // Disallow maxUint256 also, since this has special handling in GA1
   if (withdrawAmount > maxUint256) {
-    throw new UserFacingError("Invalid input: Amount must be less than or equal to maxUint256.");
+    throw new UserFacingError('Invalid input: Amount must be less than or equal to maxUint256.');
   }
 
   if (
@@ -25,7 +30,9 @@ export function validateErc4626WithdrawParameters({
     isAddressEqual(vaultAddress, zeroAddress) ||
     isAddressEqual(accountAddress, vaultAddress)
   ) {
-    throw new UserFacingError("Invalid input: Account and vault addresses must be distinct and non-zero.");
+    throw new UserFacingError(
+      'Invalid input: Account and vault addresses must be distinct and non-zero.',
+    );
   }
 }
 
@@ -40,7 +47,7 @@ export async function fetchErc4626WithdrawData({
   accountAddress,
   withdrawAmount,
   spender,
-}: Omit<Erc4626WithdrawActionParameters, "unwrapNativeAssets"> & {
+}: Omit<Erc4626WithdrawActionParameters, 'unwrapNativeAssets'> & {
   spender?: Address;
 }) {
   const [underlyingAssetAddress, initialPositionShares] = await multicall(client, {
@@ -48,13 +55,13 @@ export async function fetchErc4626WithdrawData({
       {
         abi: erc4626Abi,
         address: vaultAddress,
-        functionName: "asset",
+        functionName: 'asset',
         args: [],
       },
       {
         abi: erc4626Abi,
         address: vaultAddress,
-        functionName: "balanceOf",
+        functionName: 'balanceOf',
         args: [accountAddress],
       },
     ],
@@ -66,7 +73,7 @@ export async function fetchErc4626WithdrawData({
       {
         abi: erc4626Abi,
         address: vaultAddress,
-        functionName: "previewRedeem",
+        functionName: 'previewRedeem',
         args: [initialPositionShares],
       },
 
@@ -74,7 +81,7 @@ export async function fetchErc4626WithdrawData({
       {
         abi: erc20Abi,
         address: vaultAddress,
-        functionName: "allowance",
+        functionName: 'allowance',
         args: [accountAddress, spender ?? zeroAddress],
       },
     ],
@@ -87,7 +94,7 @@ export async function fetchErc4626WithdrawData({
     quotedSharesRedeemed = await readContract(client, {
       abi: erc4626Abi,
       address: vaultAddress,
-      functionName: "previewWithdraw",
+      functionName: 'previewWithdraw',
       args: [withdrawAmount],
     });
   }

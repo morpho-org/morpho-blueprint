@@ -1,16 +1,20 @@
-"use client";
-import { useQuery } from "@tanstack/react-query";
-import type { Address } from "viem";
-import { useAccount } from "wagmi";
-import { fetchJsonResponse } from "@/common/utils/fetch";
-import type { SupportedChainId } from "@/config/types";
-import type { VaultPositionMap } from "@/modules/vault/data/getVaultPositions";
+'use client';
+import type { Address } from 'viem';
+
+import { useQuery } from '@tanstack/react-query';
+import { useAccount } from 'wagmi';
+
+import type { SupportedChainId } from '@/config/types';
+import type { VaultPositionMap } from '@/modules/vault/data/getVaultPositions';
+
+import { fetchJsonResponse } from '@/common/utils/fetch';
 
 export function useVaultPositions() {
   const { address } = useAccount();
   return useQuery({
-    queryKey: ["vault-positions", address],
-    queryFn: async () => fetchJsonResponse<VaultPositionMap>(`/api/account/${address}/vault-positions`),
+    queryKey: ['vault-positions', address],
+    queryFn: async () =>
+      fetchJsonResponse<VaultPositionMap>(`/api/account/${address}/vault-positions`),
     enabled: !!address,
   });
 }

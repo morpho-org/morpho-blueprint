@@ -1,14 +1,16 @@
-import { encodeFunctionData, erc4626Abi, isAddressEqual, maxUint256 } from "viem";
-import { wrappedNativeAssetAbi } from "@/actions/abis/wrappedNativeAssetAbi";
+import { encodeFunctionData, erc4626Abi, isAddressEqual, maxUint256 } from 'viem';
+
+import { wrappedNativeAssetAbi } from '@/actions/abis/wrappedNativeAssetAbi';
 import {
   type Erc4626WithdrawActionParameters,
   type TransactionRequest,
   UserFacingError,
   type VaultAction,
-} from "@/actions/types";
-import { getChainAddressesRequired } from "@/actions/utils/getChainAddressesRequired";
-import { tryCatch } from "@/common/utils/tryCatch";
-import { fetchErc4626WithdrawData, validateErc4626WithdrawParameters } from "./helpers";
+} from '@/actions/types';
+import { getChainAddressesRequired } from '@/actions/utils/getChainAddressesRequired';
+import { tryCatch } from '@/common/utils/tryCatch';
+
+import { fetchErc4626WithdrawData, validateErc4626WithdrawParameters } from './helpers';
 
 /**
  * Action to withdraw directly from an ERC4626 vault.
@@ -36,22 +38,25 @@ export async function erc4626WithdrawActionDirect({
     fetchErc4626WithdrawData({ client, vaultAddress, accountAddress, withdrawAmount }),
   );
   if (error) {
-    throw new UserFacingError("Unable to load vault data.", { cause: error });
+    throw new UserFacingError('Unable to load vault data.', { cause: error });
   }
 
   const { underlyingAssetAddress, initialPosition, quotedSharesRedeemed } = data;
 
   if (!isFullWithdraw && initialPosition.assets < withdrawAmount) {
-    throw new UserFacingError("Withdraw amount exceeds account balance.");
+    throw new UserFacingError('Withdraw amount exceeds account balance.');
   }
   if (quotedSharesRedeemed === 0n) {
-    throw new UserFacingError("Vault quoted 0 shares redeemed. Try to increase the withdraw amount.");
+    throw new UserFacingError(
+      'Vault quoted 0 shares redeemed. Try to increase the withdraw amount.',
+    );
   }
   if (initialPosition.shares === 0n) {
-    throw new UserFacingError("Account has no shares to withdraw.");
+    throw new UserFacingError('Account has no shares to withdraw.');
   }
 
-  const shouldUnwrap = isAddressEqual(underlyingAssetAddress, wrappedNativeAssetAddress) && unwrapNativeAssets;
+  const shouldUnwrap =
+    isAddressEqual(underlyingAssetAddress, wrappedNativeAssetAddress) && unwrapNativeAssets;
 
   const transactionRequests: TransactionRequest[] = [];
 
@@ -59,24 +64,24 @@ export async function erc4626WithdrawActionDirect({
   if (isFullWithdraw) {
     // Redeems all shares to ensure no dust is left
     transactionRequests.push({
-      name: "Withdraw from vault",
+      name: 'Withdraw from vault',
       tx: () => ({
         to: vaultAddress,
         data: encodeFunctionData({
           abi: erc4626Abi,
-          functionName: "redeem",
+          functionName: 'redeem',
           args: [initialPosition.shares, accountAddress, accountAddress],
         }),
       }),
     });
   } else {
     transactionRequests.push({
-      name: "Withdraw from vault",
+      name: 'Withdraw from vault',
       tx: () => ({
         to: vaultAddress,
         data: encodeFunctionData({
           abi: erc4626Abi,
-          functionName: "withdraw",
+          functionName: 'withdraw',
           args: [withdrawAmount, accountAddress, accountAddress],
         }),
       }),
@@ -87,12 +92,12 @@ export async function erc4626WithdrawActionDirect({
     // For full withdraws, this will leave any interest accrued between action build and execution as dust wrapped native assets within the wallet
     // Note: wNative.withdraw uses msg.sender.transfer, which will revert if the caller is a contract without a payable fallback function
     transactionRequests.push({
-      name: "Unwrap native asset",
+      name: 'Unwrap native asset',
       tx: () => ({
         to: wrappedNativeAssetAddress,
         data: encodeFunctionData({
           abi: wrappedNativeAssetAbi,
-          functionName: "withdraw",
+          functionName: 'withdraw',
           args: [isFullWithdraw ? initialPosition.assets : withdrawAmount],
         }),
       }),

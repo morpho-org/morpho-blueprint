@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   type ComponentProps,
@@ -8,11 +8,23 @@ import {
   useContext,
   useMemo,
   useState,
-} from "react";
+} from 'react';
 
-import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/common/components/ui/dialog";
-import { Drawer, DrawerClose, DrawerContent, DrawerTitle, DrawerTrigger } from "@/common/components/ui/drawer";
-import { useResponsiveContext } from "@/common/providers/ResponsiveProvider";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from '@/common/components/ui/dialog';
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/common/components/ui/drawer';
+import { useResponsiveContext } from '@/common/providers/ResponsiveProvider';
 
 const DialogDrawerContext = createContext<{ dismissible?: boolean }>({});
 
@@ -20,7 +32,7 @@ const DialogDrawerContext = createContext<{ dismissible?: boolean }>({});
 export const useDialogDrawerContext = () => {
   const context = useContext(DialogDrawerContext);
   if (context === undefined) {
-    throw new Error("useDialogDrawerContext must be used within a DialogDrawer");
+    throw new Error('useDialogDrawerContext must be used within a DialogDrawer');
   }
   return context;
 };
@@ -58,7 +70,9 @@ export function DialogDrawer({ open, onOpenChange, dismissible, children }: Dial
   );
 }
 
-export function DialogDrawerTrigger(props: HTMLAttributes<HTMLButtonElement> | { asChild?: boolean }) {
+export function DialogDrawerTrigger(
+  props: HTMLAttributes<HTMLButtonElement> | { asChild?: boolean },
+) {
   const { isDesktop } = useResponsiveContext();
   return isDesktop ? <DialogTrigger {...props} /> : <DrawerTrigger {...props} />;
 }
@@ -69,7 +83,10 @@ export function DialogDrawerContent({
   const { isDesktop } = useResponsiveContext();
   const { dismissible } = useDialogDrawerContext();
   return isDesktop ? (
-    <DialogContent onInteractOutside={(event) => (dismissible ? {} : event.preventDefault())} {...props} />
+    <DialogContent
+      onInteractOutside={(event) => (dismissible ? {} : event.preventDefault())}
+      {...props}
+    />
   ) : (
     <DrawerContent {...props} />
   );
@@ -80,7 +97,9 @@ export function DialogDrawerTitle(props: HTMLAttributes<HTMLHeadingElement>) {
   return isDesktop ? <DialogTitle {...props} /> : <DrawerTitle {...props} />;
 }
 
-export function DialogDrawerClose(props: HTMLAttributes<HTMLButtonElement> | { asChild?: boolean }) {
+export function DialogDrawerClose(
+  props: HTMLAttributes<HTMLButtonElement> | { asChild?: boolean },
+) {
   const { isDesktop } = useResponsiveContext();
   return isDesktop ? <DialogClose {...props} /> : <DrawerClose {...props} />;
 }

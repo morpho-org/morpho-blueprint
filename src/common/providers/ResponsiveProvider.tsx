@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useEffect, useState } from "react";
-import { useMediaQuery } from "usehooks-ts";
+import { createContext, useContext, useEffect, useState } from 'react';
+import { useMediaQuery } from 'usehooks-ts';
 
 const ResponsiveContext = createContext<{ isDesktop: boolean; hasMounted: boolean }>({
   isDesktop: true,
@@ -12,14 +12,14 @@ const ResponsiveContext = createContext<{ isDesktop: boolean; hasMounted: boolea
 export const useResponsiveContext = () => {
   const context = useContext(ResponsiveContext);
   if (context === undefined) {
-    throw new Error("useTooltipPopover must be used within a TooltipPopoverProvider");
+    throw new Error('useTooltipPopover must be used within a TooltipPopoverProvider');
   }
   return context;
 };
 
 // Syncronized provider any components can use
 export const ResponsiveProvider = ({ children }: { children: React.ReactNode }) => {
-  const isDesktop = useMediaQuery("(min-width: 1080px)", { defaultValue: true });
+  const isDesktop = useMediaQuery('(min-width: 1080px)', { defaultValue: true });
   const [isDesktopHydrated, setIsDesktopHydrated] = useState(true);
   const [hasMounted, setHasMounted] = useState(false);
 

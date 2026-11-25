@@ -1,15 +1,16 @@
-import { CHART_RANGES, DAY, type DataRange } from "@/common/utils/chart-ranges";
-import type { DataEntry } from "./types";
+import { CHART_RANGES, DAY, type DataRange } from '@/common/utils/chart-ranges';
+
+import type { DataEntry } from './types';
 
 export const NO_DATA_POINT_THRESHOLD = 10; // Need at least this many data points to show a nice chart
 
 export function prepareChartDataWithDomain<D extends DataEntry>(
   data: D[],
   range: DataRange,
-  field: keyof D[Exclude<keyof D, "bucketTimestamp">],
+  field: keyof D[Exclude<keyof D, 'bucketTimestamp'>],
 ): D[] {
   if (!data.length || !data[0]) return [];
-  if (range === "All") return data;
+  if (range === 'All') return data;
 
   const minX = getMinX(data, range);
   const maxX = data[data.length - 1]!.bucketTimestamp;
@@ -28,7 +29,7 @@ export function prepareChartDataWithDomain<D extends DataEntry>(
 function createPaddedData<D extends DataEntry>(
   data: D[],
   minX: number,
-  field: keyof D[Exclude<keyof D, "bucketTimestamp">],
+  field: keyof D[Exclude<keyof D, 'bucketTimestamp'>],
 ): D[] {
   if (!data.length || !data[0] || data[0].bucketTimestamp <= minX) return data;
 
@@ -57,13 +58,13 @@ export function calculateDataInterval<D extends DataEntry>(data: D[]): number | 
 function createEmptyPoint<D extends DataEntry>(
   template: D,
   timestamp: number,
-  field: keyof D[Exclude<keyof D, "bucketTimestamp">],
+  field: keyof D[Exclude<keyof D, 'bucketTimestamp'>],
 ): D {
   const point = structuredClone(template);
   point.bucketTimestamp = timestamp;
 
   for (const key in point) {
-    if (key !== "bucketTimestamp" && typeof point[key] === "object" && point[key] !== null) {
+    if (key !== 'bucketTimestamp' && typeof point[key] === 'object' && point[key] !== null) {
       const obj = point[key] as Record<string, unknown>;
       if (field in obj) {
         obj[field as string] = 0;
@@ -77,7 +78,7 @@ function createEmptyPoint<D extends DataEntry>(
 export function getMinX<D extends DataEntry>(data: D[], range: DataRange) {
   if (!data.length || !data[0]) return 0;
 
-  if (range === "All") return data[0].bucketTimestamp;
+  if (range === 'All') return data[0].bucketTimestamp;
 
   const now = Math.floor(Date.now() / 1000);
   const minX = now - CHART_RANGES[range].durationSeconds;

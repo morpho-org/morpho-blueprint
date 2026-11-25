@@ -1,9 +1,12 @@
-"use client";
-import { useMemo } from "react";
-import { useAccount } from "wagmi";
-import type { MarketSummary } from "@/modules/market/data/getMarketSummaries";
-import { extractMarketBorrowApy } from "@/modules/market/utils/extractMarketBorrowApy";
-import { useMarketTableData } from "./useMarketTableData";
+'use client';
+import { useMemo } from 'react';
+import { useAccount } from 'wagmi';
+
+import type { MarketSummary } from '@/modules/market/data/getMarketSummaries';
+
+import { extractMarketBorrowApy } from '@/modules/market/utils/extractMarketBorrowApy';
+
+import { useMarketTableData } from './useMarketTableData';
 
 interface EarnSummaryMetrics {
   data: {
@@ -17,12 +20,19 @@ interface EarnSummaryMetrics {
   isPositionsLoading: boolean;
 }
 
-export function useBorrowSummaryMetrics({ marketSummaries }: { marketSummaries: MarketSummary[] }): EarnSummaryMetrics {
+export function useBorrowSummaryMetrics({
+  marketSummaries,
+}: {
+  marketSummaries: MarketSummary[];
+}): EarnSummaryMetrics {
   const { data: marketTableData, isPositionsLoading } = useMarketTableData({ marketSummaries });
   const { address } = useAccount();
 
   const borrowSummaryMetrics = useMemo(() => {
-    const totalBorrowedUsd = marketSummaries.reduce((acc, entry) => acc + (entry.totalBorrowed.usd ?? 0), 0);
+    const totalBorrowedUsd = marketSummaries.reduce(
+      (acc, entry) => acc + (entry.totalBorrowed.usd ?? 0),
+      0,
+    );
 
     let userBorrowsUsd: number | undefined;
     let userBorrowApy: number | undefined;

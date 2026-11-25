@@ -1,7 +1,8 @@
-import type { Address, Hex } from "viem";
-import type { Amount, Apy, ChainInfo, CuratorInfo, Ratio, TokenInfo } from "@/common/data/types";
-import type { SupportedChainId } from "@/config/types";
-import type { Erc4626VaultProtocol } from "@/config/vault-protocol";
+import type { Address, Hex } from 'viem';
+
+import type { Amount, Apy, ChainInfo, CuratorInfo, Ratio, TokenInfo } from '@/common/data/types';
+import type { SupportedChainId } from '@/config/types';
+import type { Erc4626VaultProtocol } from '@/config/vault-protocol';
 
 export interface MarketIdentifier {
   chainId: SupportedChainId;
@@ -127,7 +128,10 @@ export interface Market extends MarketSummary {
   } | null;
 }
 
-export type MarketNonIdle = Market & { isIdle: false; collateralAsset: NonNullable<Market["collateralAsset"]> };
+export type MarketNonIdle = Market & {
+  isIdle: false;
+  collateralAsset: NonNullable<Market['collateralAsset']>;
+};
 
 export interface MarketPosition {
   market: { chain: { id: number }; marketId: Hex };

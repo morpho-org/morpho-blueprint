@@ -1,34 +1,50 @@
-import Image from "next/image";
-import type { ComponentProps } from "react";
-import type { ChainInfo, TokenInfo } from "@/common/data/types";
-import { cn } from "@/common/utils/shadcn";
+import type { ComponentProps } from 'react';
 
-import { Avatar, type AvatarProps } from "../../../common/components/ui/avatar";
+import Image from 'next/image';
 
-interface TokenIconProps extends Omit<ComponentProps<typeof Avatar>, "src" | "alt" | "fallback" | "size" | "sub"> {
+import type { ChainInfo, TokenInfo } from '@/common/data/types';
+
+import { cn } from '@/common/utils/shadcn';
+
+import { Avatar, type AvatarProps } from '../../../common/components/ui/avatar';
+
+interface TokenIconProps extends Omit<
+  ComponentProps<typeof Avatar>,
+  'src' | 'alt' | 'fallback' | 'size' | 'sub'
+> {
   token: TokenInfo;
   chain: ChainInfo;
-  size: "sm" | "md" | "lg";
+  size: 'sm' | 'md' | 'lg';
   showChain?: boolean;
   chainClassName?: string;
 }
 
-const SIZE_MAP: Record<TokenIconProps["size"], { tokenSize: AvatarProps["size"]; chainSize: AvatarProps["size"] }> = {
+const SIZE_MAP: Record<
+  TokenIconProps['size'],
+  { tokenSize: AvatarProps['size']; chainSize: AvatarProps['size'] }
+> = {
   sm: {
-    tokenSize: "sm",
-    chainSize: "xs",
+    tokenSize: 'sm',
+    chainSize: 'xs',
   },
   md: {
-    tokenSize: "md",
-    chainSize: "xs",
+    tokenSize: 'md',
+    chainSize: 'xs',
   },
   lg: {
-    tokenSize: "lg",
-    chainSize: "sm",
+    tokenSize: 'lg',
+    chainSize: 'sm',
   },
 };
 
-export function TokenIcon({ chainClassName, token, chain, size, showChain = true, ...rest }: TokenIconProps) {
+export function TokenIcon({
+  chainClassName,
+  token,
+  chain,
+  size,
+  showChain = true,
+  ...rest
+}: TokenIconProps) {
   return (
     <Avatar
       src={token.icon}
@@ -48,7 +64,10 @@ export function TokenIcon({ chainClassName, token, chain, size, showChain = true
             // The background matches it too: the artwork's own circle is antialiased against the
             // identical `rounded-full` edge, and without it that seam lets the token icon show
             // through. Call sites overriding one color must override both.
-            className={cn("rounded-full border-2 border-background bg-background transition-colors", chainClassName)}
+            className={cn(
+              'rounded-full border-2 border-background bg-background transition-colors',
+              chainClassName,
+            )}
           />
         ) : null
       }

@@ -1,16 +1,17 @@
-"use client";
+'use client';
 
-import { Button } from "@/common/components/ui/button";
+import { Button } from '@/common/components/ui/button';
 import {
   DialogDrawer,
   DialogDrawerClose,
   DialogDrawerContent,
   DialogDrawerTitle,
   DialogDrawerTrigger,
-} from "@/common/components/ui/dialog-drawer";
-import { APP_CONFIG } from "@/config";
-import { useCountryCode } from "@/modules/compliance/hooks/useCountryCode";
-import { Banner } from "../../../common/components/Banner";
+} from '@/common/components/ui/dialog-drawer';
+import { APP_CONFIG } from '@/config';
+import { useCountryCode } from '@/modules/compliance/hooks/useCountryCode';
+
+import { Banner } from '../../../common/components/Banner';
 
 export function CountrySpecificDisclaimer() {
   const { data: countryCode } = useCountryCode();
@@ -25,7 +26,13 @@ export function CountrySpecificDisclaimer() {
     return null;
   }
 
-  return <Banner text={`${data.title}: ${data.text}`} cta={<DisclaimerModal {...data} />} singleLineOnly />;
+  return (
+    <Banner
+      text={`${data.title}: ${data.text}`}
+      cta={<DisclaimerModal {...data} />}
+      singleLineOnly
+    />
+  );
 }
 
 export function DisclaimerModal({ title, text }: { title: string; text: string }) {

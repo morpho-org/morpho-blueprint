@@ -1,17 +1,22 @@
-"use client";
-import { ChevronDown } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import Image from "next/image";
-import { useState } from "react";
-import { Button } from "@/common/components/ui/button";
-import { Card } from "@/common/components/ui/card";
-import NumberFlow from "@/common/components/ui/number-flow";
-import { Separator } from "@/common/components/ui/seperator";
-import { cn } from "@/common/utils/shadcn";
-import { SUPPORTED_CHAIN_IDS } from "@/config";
-import type { SupportedChainId } from "@/config/types";
-import { RewardTokenRow } from "@/modules/reward/components/RewardTokenRow";
-import type { MerklAccountReward, MerklAccountRewardsMap } from "@/modules/reward/data/getAccountRewards";
+'use client';
+import { ChevronDown } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import Image from 'next/image';
+import { useState } from 'react';
+
+import type { SupportedChainId } from '@/config/types';
+import type {
+  MerklAccountReward,
+  MerklAccountRewardsMap,
+} from '@/modules/reward/data/getAccountRewards';
+
+import { Button } from '@/common/components/ui/button';
+import { Card } from '@/common/components/ui/card';
+import NumberFlow from '@/common/components/ui/number-flow';
+import { Separator } from '@/common/components/ui/seperator';
+import { cn } from '@/common/utils/shadcn';
+import { SUPPORTED_CHAIN_IDS } from '@/config';
+import { RewardTokenRow } from '@/modules/reward/components/RewardTokenRow';
 
 interface RewardsSelectorProps {
   rewardsMap: MerklAccountRewardsMap;
@@ -23,7 +28,8 @@ export function RewardsSelector({ rewardsMap, onSubmit }: RewardsSelectorProps) 
   if (entries.length === 0) {
     return (
       <Card className="flex h-[80px] w-full items-center justify-center bg-secondary text-center text-secondary-foreground shadow-none">
-        You currently have no claimable rewards. <br /> Rewards update every 24 hours, check back later.
+        You currently have no claimable rewards. <br /> Rewards update every 24 hours, check back
+        later.
       </Card>
     );
   }
@@ -95,13 +101,16 @@ function RewardsSelectorChain({
           <div className="flex flex-col">
             <span>{chainInfo.name}</span>
             <span className="body-small text-muted-foreground">
-              {rewards.length} token{rewards.length === 1 ? "" : "s"}
+              {rewards.length} token{rewards.length === 1 ? '' : 's'}
             </span>
           </div>
         </div>
-        <NumberFlow value={totalUsd} format={{ currency: "USD" }} className="ml-auto" />
+        <NumberFlow value={totalUsd} format={{ currency: 'USD' }} className="ml-auto" />
         <ChevronDown
-          className={cn("size-5 shrink-0 transition-transform hover:cursor-pointer", dropdownOpen && "rotate-180")}
+          className={cn(
+            'size-5 shrink-0 transition-transform hover:cursor-pointer',
+            dropdownOpen && 'rotate-180',
+          )}
         />
       </button>
 
@@ -114,9 +123,9 @@ function RewardsSelectorChain({
           <motion.div
             key="rewards-list"
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
+            animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
             className="overflow-hidden "
           >
             <div className="flex flex-col gap-3 ">
@@ -132,7 +141,7 @@ function RewardsSelectorChain({
 
       <div className=" px-4 py-4">
         <Button className="w-full" onClick={handleClick}>
-          Claim {SUPPORTED_CHAIN_IDS.length > 1 ? `on ${chainInfo.name}` : ""}
+          Claim {SUPPORTED_CHAIN_IDS.length > 1 ? `on ${chainInfo.name}` : ''}
         </Button>
         {submitError && <p className="text-destructive text-sm">{submitError}</p>}
       </div>

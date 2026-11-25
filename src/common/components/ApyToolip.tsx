@@ -1,13 +1,18 @@
-import { Avatar } from "@/common/components/ui/avatar";
-import { Sparkles } from "@/common/components/ui/icons/Sparkles";
-import NumberFlow from "@/common/components/ui/number-flow";
-import { TooltipPopover, TooltipPopoverContent, TooltipPopoverTrigger } from "@/common/components/ui/tooltip-popover";
-import type { TokenInfo } from "@/common/data/types";
-import { formatNumber } from "@/common/utils/format";
-import { rateLabel } from "@/common/utils/timeframe";
+import type { TokenInfo } from '@/common/data/types';
+
+import { Avatar } from '@/common/components/ui/avatar';
+import { Sparkles } from '@/common/components/ui/icons/Sparkles';
+import NumberFlow from '@/common/components/ui/number-flow';
+import {
+  TooltipPopover,
+  TooltipPopoverContent,
+  TooltipPopoverTrigger,
+} from '@/common/components/ui/tooltip-popover';
+import { formatNumber } from '@/common/utils/format';
+import { rateLabel } from '@/common/utils/timeframe';
 
 /** `earn` is a vault deposit; `marketSupply` is a single market's supply side inside an allocation table. */
-type ApyTooltipType = "borrow" | "earn" | "marketSupply";
+type ApyTooltipType = 'borrow' | 'earn' | 'marketSupply';
 
 type ApyTooltipContent = {
   title: string;
@@ -19,53 +24,55 @@ type ApyTooltipContent = {
 
 const TOOLTIP_CONTENT: Record<ApyTooltipType, ApyTooltipContent> = {
   borrow: {
-    title: rateLabel("Net Rate"),
+    title: rateLabel('Net Rate'),
     // Not "after fees": the market fee is taken from supplier interest, so it never reduces what a
     // borrower pays. Only the vault side has a meaningful after-fees rate.
-    afterFeesLabel: "Native Rate",
-    totalLabel: "Net Rate",
-    description: "The net annual rate paid to borrow from this market, including rewards.",
+    afterFeesLabel: 'Native Rate',
+    totalLabel: 'Net Rate',
+    description: 'The net annual rate paid to borrow from this market, including rewards.',
   },
   earn: {
-    title: rateLabel("Net APY"),
-    afterFeesLabel: "Vault APY after fees",
-    totalLabel: "Net APY",
-    description: "The net annual percentage yield for a deposit in this vault, after fees and including rewards.",
+    title: rateLabel('Net APY'),
+    afterFeesLabel: 'Vault APY after fees',
+    totalLabel: 'Net APY',
+    description:
+      'The net annual percentage yield for a deposit in this vault, after fees and including rewards.',
   },
   marketSupply: {
-    title: rateLabel("Net APY"),
-    afterFeesLabel: "Market APY after fees",
-    totalLabel: "Net APY",
-    description: "The net annual percentage yield for supplying to this market, after fees and including rewards.",
+    title: rateLabel('Net APY'),
+    afterFeesLabel: 'Market APY after fees',
+    totalLabel: 'Net APY',
+    description:
+      'The net annual percentage yield for supplying to this market, after fees and including rewards.',
   },
 };
 
-type ApyTooltipTriggerVariant = "default" | "sm";
+type ApyTooltipTriggerVariant = 'default' | 'sm';
 
 type ApyTooltipTriggerProps = {
   totalApy: number;
   showSparkle?: boolean;
   variant?: ApyTooltipTriggerVariant;
-  sparkleSide?: "left" | "right";
+  sparkleSide?: 'left' | 'right';
 };
 
 function ApyTooltipTrigger({
   showSparkle = false,
-  sparkleSide = "right",
+  sparkleSide = 'right',
   totalApy,
-  variant = "default",
+  variant = 'default',
 }: ApyTooltipTriggerProps) {
-  return variant === "sm" ? (
+  return variant === 'sm' ? (
     <span className="body-medium-plus flex items-center gap-1">
-      {showSparkle && sparkleSide === "left" && <Sparkles className="size-4 fill-primary" />}
-      {formatNumber(totalApy, { style: "percent" })}
-      {showSparkle && sparkleSide === "right" && <Sparkles className="size-4 fill-primary" />}
+      {showSparkle && sparkleSide === 'left' && <Sparkles className="size-4 fill-primary" />}
+      {formatNumber(totalApy, { style: 'percent' })}
+      {showSparkle && sparkleSide === 'right' && <Sparkles className="size-4 fill-primary" />}
     </span>
   ) : (
     <div className="flex items-center gap-1">
-      {showSparkle && sparkleSide === "left" && <Sparkles className="size-6 fill-primary" />}
-      <NumberFlow className="heading-4" value={totalApy} format={{ style: "percent" }} />
-      {showSparkle && sparkleSide === "right" && <Sparkles className="size-6 fill-primary" />}
+      {showSparkle && sparkleSide === 'left' && <Sparkles className="size-6 fill-primary" />}
+      <NumberFlow className="heading-4" value={totalApy} format={{ style: 'percent' }} />
+      {showSparkle && sparkleSide === 'right' && <Sparkles className="size-6 fill-primary" />}
     </div>
   );
 }
@@ -104,7 +111,9 @@ function ApyTooltipContent({ type, totalApy, apyAfterFees, rewards }: ApyTooltip
         <div className="body-small flex flex-col gap-2">
           <span className="flex justify-between">
             <span>{content.afterFeesLabel}</span>
-            <span className="body-small-plus">{formatNumber(apyAfterFees, { style: "percent" })}</span>
+            <span className="body-small-plus">
+              {formatNumber(apyAfterFees, { style: 'percent' })}
+            </span>
           </span>
           {rewards.map((reward) => (
             <span key={reward.asset.symbol} className="flex justify-between">
@@ -112,9 +121,9 @@ function ApyTooltipContent({ type, totalApy, apyAfterFees, rewards }: ApyTooltip
                 {reward.asset.symbol} <Avatar src={reward.asset.icon} size="xs" />
               </span>
               <span className="body-small-plus">
-                {formatNumber((type === "borrow" ? -1 : 1) * reward.apr, {
-                  style: "percent",
-                  signDisplay: "exceptZero",
+                {formatNumber((type === 'borrow' ? -1 : 1) * reward.apr, {
+                  style: 'percent',
+                  signDisplay: 'exceptZero',
                 })}
               </span>
             </span>
@@ -131,7 +140,7 @@ function ApyTooltipContent({ type, totalApy, apyAfterFees, rewards }: ApyTooltip
          * `total` falls back to `afterFees` when the API returns no net figure. Asserting a sum
          * that can visibly fail to add up is the confusion this layout exists to remove.
          */}
-        <span className="font-semibold">{formatNumber(totalApy, { style: "percent" })}</span>
+        <span className="font-semibold">{formatNumber(totalApy, { style: 'percent' })}</span>
       </div>
     </div>
   );
@@ -139,16 +148,16 @@ function ApyTooltipContent({ type, totalApy, apyAfterFees, rewards }: ApyTooltip
 
 type ApyTooltipProps = {
   triggerVariant?: ApyTooltipTriggerVariant;
-  sparkleSide?: "left" | "right";
+  sparkleSide?: 'left' | 'right';
 } & ApyTooltipContentProps;
 
 function ApyTooltip({
   apyAfterFees,
   rewards,
-  sparkleSide = "right",
+  sparkleSide = 'right',
   totalApy,
   type,
-  triggerVariant = "default",
+  triggerVariant = 'default',
 }: ApyTooltipProps) {
   return (
     <TooltipPopover>
@@ -161,7 +170,12 @@ function ApyTooltip({
         />
       </TooltipPopoverTrigger>
       <TooltipPopoverContent>
-        <ApyTooltipContent apyAfterFees={apyAfterFees} rewards={rewards} totalApy={totalApy} type={type} />
+        <ApyTooltipContent
+          apyAfterFees={apyAfterFees}
+          rewards={rewards}
+          totalApy={totalApy}
+          type={type}
+        />
       </TooltipPopoverContent>
     </TooltipPopover>
   );

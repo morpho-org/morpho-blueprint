@@ -1,5 +1,6 @@
-import { MathLib } from "@morpho-org/blue-sdk";
-import type { MarketPositionChange } from "@/actions";
+import { MathLib } from '@morpho-org/blue-sdk';
+
+import type { MarketPositionChange } from '@/actions';
 
 /**
  * Caps the position's "available to borrow" (collateral headroom) by what the market can still lend.

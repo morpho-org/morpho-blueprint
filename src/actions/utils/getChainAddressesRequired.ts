@@ -1,5 +1,6 @@
-import { getChainAddresses } from "@morpho-org/blue-sdk";
-import { UserFacingError } from "..";
+import { getChainAddresses } from '@morpho-org/blue-sdk';
+
+import { UserFacingError } from '..';
 
 // Will throw if unsupported chainId or a required address is missing
 export function getChainAddressesRequired(chainId: number) {

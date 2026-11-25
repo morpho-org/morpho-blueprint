@@ -1,8 +1,9 @@
-import type { AnvilTestClient } from "@morpho-org/test";
-import type { Hex, Log } from "viem";
-import { estimateGas, getTransactionReceipt, sendTransaction } from "viem/actions";
+import type { AnvilTestClient } from '@morpho-org/test';
+import type { Hex, Log } from 'viem';
 
-import type { Action } from "@/actions";
+import { estimateGas, getTransactionReceipt, sendTransaction } from 'viem/actions';
+
+import type { Action } from '@/actions';
 
 export async function executeAction(client: AnvilTestClient, action: Action): Promise<Log[]> {
   let logs: Log[] = [];
@@ -11,7 +12,7 @@ export async function executeAction(client: AnvilTestClient, action: Action): Pr
       await step.sign(client);
     }
   } catch {
-    throw Error("signature failed");
+    throw Error('signature failed');
   }
 
   // Remove try-catch to get full trace for debugging
@@ -38,11 +39,11 @@ export async function executeAction(client: AnvilTestClient, action: Action): Pr
       });
     } catch {
       // console.log("Send threw...", e);
-      throw Error("action-tx-reverted");
+      throw Error('action-tx-reverted');
     }
     const receipt = await getTransactionReceipt(client, { hash });
-    if (receipt.status === "reverted") {
-      throw Error("action-tx-reverted");
+    if (receipt.status === 'reverted') {
+      throw Error('action-tx-reverted');
     }
 
     logs = [...logs, ...receipt.logs];

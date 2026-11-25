@@ -11,13 +11,13 @@ export const DEBOUNCE_TIME_MS = 150;
 export const NATIVE_ASSET_GAS_RESERVE_UNITS = 1_000_000n;
 
 export enum FilterKey {
-  Chains = "chains",
-  SupplyAssets = "supply-assets",
-  CollateralAssets = "collateral-assets",
-  LoanAssets = "loan-assets",
-  Curators = "curators",
-  VaultTags = "vault-tags",
-  Account = "account",
+  Chains = 'chains',
+  SupplyAssets = 'supply-assets',
+  CollateralAssets = 'collateral-assets',
+  LoanAssets = 'loan-assets',
+  Curators = 'curators',
+  VaultTags = 'vault-tags',
+  Account = 'account',
 }
 
 export const ALL_FILTER_KEYS = Object.values(FilterKey);

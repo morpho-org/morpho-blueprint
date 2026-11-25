@@ -1,31 +1,44 @@
-import "server-only";
+import 'server-only';
+import { type Address, getAddress, type Hex } from 'viem';
 
-import { type Address, getAddress, type Hex } from "viem";
-import { toBigInt } from "@/common/data/adapters/amount";
-import { toCuratorInfo, toRoleAddress } from "@/common/data/adapters/entity";
-import { getCuratorInfo } from "@/common/data/rest/curators";
-import type { CuratorInfo } from "@/common/data/types";
-import { fetchAllMorphoRestPages, fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
-import { isBlueprintApiEnabled } from "@/common/utils/morphoApiConfig";
-import { tryCatch } from "@/common/utils/tryCatch";
-import { APP_CONFIG } from "@/config";
-import type { SupportedChainId } from "@/config/types";
-import { Erc4626VaultProtocol } from "@/config/vault-protocol";
-import type { RestMarketSupplier } from "./adapters";
+import type { CuratorInfo } from '@/common/data/types';
+import type { SupportedChainId } from '@/config/types';
+
+import { toBigInt } from '@/common/data/adapters/amount';
+import { toCuratorInfo, toRoleAddress } from '@/common/data/adapters/entity';
+import { getCuratorInfo } from '@/common/data/rest/curators';
+import {
+  fetchAllMorphoRestPages,
+  fetchMorphoRestResource,
+  restSelector,
+} from '@/common/utils/fetchMorphoRest';
+import { isBlueprintApiEnabled } from '@/common/utils/morphoApiConfig';
+import { tryCatch } from '@/common/utils/tryCatch';
+import { APP_CONFIG } from '@/config';
+import { Erc4626VaultProtocol } from '@/config/vault-protocol';
+
+import type { RestMarketSupplier } from './adapters';
 
 interface RestVaultV1Allocations {
-  data: { allocations: { market_id: Hex; supply_assets: string; supply_shares: string; supply_cap: string }[] };
+  data: {
+    allocations: {
+      market_id: Hex;
+      supply_assets: string;
+      supply_shares: string;
+      supply_cap: string;
+    }[];
+  };
 }
 
 type RestVaultV2Cap =
   | {
-      cap_type: "market_v1";
+      cap_type: 'market_v1';
       market_id: Hex;
       allocated_assets: string;
       absolute_cap: string;
       expected_supply_assets?: string | null;
     }
-  | { cap_type: "adapter" | "collateral" | "unknown" };
+  | { cap_type: 'adapter' | 'collateral' | 'unknown' };
 
 interface RestVaultV2Allocations {
   data: { allocations: { caps: RestVaultV2Cap[] }[] };
@@ -57,14 +70,19 @@ interface RestVaultRoot {
 }
 
 const VAULT_ROOT_PATH: Record<Erc4626VaultProtocol, string> = {
-  [Erc4626VaultProtocol.MorphoV1]: "/v0/vaults-v1",
-  [Erc4626VaultProtocol.MorphoV2]: "/v0/vaults-v2",
+  [Erc4626VaultProtocol.MorphoV1]: '/v0/vaults-v1',
+  [Erc4626VaultProtocol.MorphoV2]: '/v0/vaults-v2',
 };
 
-type Position = Pick<RestMarketSupplier, "supplyAssets" | "supplyShares" | "supplyCap">;
+type Position = Pick<RestMarketSupplier, 'supplyAssets' | 'supplyShares' | 'supplyCap'>;
 
-async function readVaultV1Position(selector: string, marketId: string): Promise<Position | null | undefined> {
-  const response = await fetchMorphoRestResource<RestVaultV1Allocations>(`/v0/vaults-v1/${selector}/allocations`);
+async function readVaultV1Position(
+  selector: string,
+  marketId: string,
+): Promise<Position | null | undefined> {
+  const response = await fetchMorphoRestResource<RestVaultV1Allocations>(
+    `/v0/vaults-v1/${selector}/allocations`,
+  );
   if (!response) return undefined;
   const row = response.data.allocations.find((entry) => entry.market_id.toLowerCase() === marketId);
   if (!row) return null;
@@ -80,33 +98,42 @@ async function readVaultV1Position(selector: string, marketId: string): Promise<
  * cap on it. The amount is the one accrued to now, or the stored one when REST serves an expected 0
  * for a position its accrual state predates (as the vault page reads it).
  */
-async function readVaultV2Position(selector: string, marketId: string): Promise<Position | null | undefined> {
-  const response = await fetchMorphoRestResource<RestVaultV2Allocations>(`/v0/vaults-v2/${selector}/allocations`);
+async function readVaultV2Position(
+  selector: string,
+  marketId: string,
+): Promise<Position | null | undefined> {
+  const response = await fetchMorphoRestResource<RestVaultV2Allocations>(
+    `/v0/vaults-v2/${selector}/allocations`,
+  );
   if (!response) return undefined;
   let supplyAssets = 0n;
   let supplyCap = 0n;
   for (const cap of response.data.allocations.flatMap((allocation) => allocation.caps)) {
-    if (cap.cap_type !== "market_v1" || cap.market_id.toLowerCase() !== marketId) continue;
-    const expected = cap.expected_supply_assets == null ? null : toBigInt(cap.expected_supply_assets);
+    if (cap.cap_type !== 'market_v1' || cap.market_id.toLowerCase() !== marketId) continue;
+    const expected =
+      cap.expected_supply_assets == null ? null : toBigInt(cap.expected_supply_assets);
     const allocated = toBigInt(cap.allocated_assets);
     supplyAssets += expected === null || (expected === 0n && allocated > 0n) ? allocated : expected;
     supplyCap += toBigInt(cap.absolute_cap);
   }
   // A cap left on a market the vault holds nothing in is not a supplier row (as with GraphQL).
-  return supplyAssets === 0n ? null : { supplyAssets, supplyShares: "0", supplyCap };
+  return supplyAssets === 0n ? null : { supplyAssets, supplyShares: '0', supplyCap };
 }
 
 /**
  * Every Vault V2 supplying the market, from the Blueprint API. `null` when the API is off or the
  * read fails (logged as a warning): the caller keeps the configured vaults only.
  */
-async function getBlueprintSupplyingVaultsV2(chainId: SupportedChainId, marketId: Hex): Promise<Address[] | null> {
+async function getBlueprintSupplyingVaultsV2(
+  chainId: SupportedChainId,
+  marketId: Hex,
+): Promise<Address[] | null> {
   if (!isBlueprintApiEnabled()) return null;
   const { data } = await tryCatch(
     fetchAllMorphoRestPages<BlueprintSupplyingVault>(
       `/v0/blueprint-app-api/blue/markets/${restSelector(chainId, marketId)}/supplying-vaults`,
       {},
-      { api: "blueprint", quiet: true },
+      { api: 'blueprint', quiet: true },
     ),
   );
   return data ? [...new Set(data.map((row) => getAddress(row.vault_address)))] : null;
@@ -116,7 +143,11 @@ async function getBlueprintSupplyingVaultsV2(chainId: SupportedChainId, marketId
 async function getChainCurators(chainId: SupportedChainId): Promise<Map<string, CuratorInfo>> {
   const curators = new Map<string, CuratorInfo>();
   const { data } = await tryCatch(
-    fetchAllMorphoRestPages<RestCuratorListRow>("/v0/curators", { chain_ids: [chainId] }, { quiet: true }),
+    fetchAllMorphoRestPages<RestCuratorListRow>(
+      '/v0/curators',
+      { chain_ids: [chainId] },
+      { quiet: true },
+    ),
   );
   for (const curator of data ?? []) {
     const info = toCuratorInfo({ name: curator.name, image: curator.image_url, socials: [] });
@@ -143,7 +174,7 @@ async function readOtherVaultsV2(
 ): Promise<RestMarketSupplier[]> {
   if (addresses.length === 0) return [];
   const list = await fetchAllMorphoRestPages<RestVaultV2ListRow>(
-    "/v0/vaults-v2",
+    '/v0/vaults-v2',
     { chain_ids: [chainId], asset_addresses: [loanAsset] },
     { quiet: true },
   );
@@ -155,8 +186,12 @@ async function readOtherVaultsV2(
   if (vaults.length === 0) return [];
 
   const [positions, curators] = await Promise.all([
-    Promise.all(vaults.map(({ address }) => readVaultV2Position(restSelector(chainId, address), marketId))),
-    vaults.some(({ curatorAddress }) => curatorAddress) ? getChainCurators(chainId) : new Map<string, CuratorInfo>(),
+    Promise.all(
+      vaults.map(({ address }) => readVaultV2Position(restSelector(chainId, address), marketId)),
+    ),
+    vaults.some(({ curatorAddress }) => curatorAddress)
+      ? getChainCurators(chainId)
+      : new Map<string, CuratorInfo>(),
   ]);
 
   return vaults.flatMap(({ address, name, curatorAddress }, index): RestMarketSupplier[] => {
@@ -212,14 +247,20 @@ export async function getMarketSupplyingVaults(
           ? readVaultV1Position(selector, id)
           : readVaultV2Position(selector, id));
         if (position === undefined) {
-          console.warn(`Vault not returned by the API, left out of the market's suppliers: ${selector}`);
+          console.warn(
+            `Vault not returned by the API, left out of the market's suppliers: ${selector}`,
+          );
           return null;
         }
         if (position === null) return null;
 
-        const root = await fetchMorphoRestResource<RestVaultRoot>(`${VAULT_ROOT_PATH[protocol]}/${selector}`);
+        const root = await fetchMorphoRestResource<RestVaultRoot>(
+          `${VAULT_ROOT_PATH[protocol]}/${selector}`,
+        );
         if (!root) {
-          console.warn(`Vault not returned by the API, left out of the market's suppliers: ${selector}`);
+          console.warn(
+            `Vault not returned by the API, left out of the market's suppliers: ${selector}`,
+          );
           return null;
         }
         // A cleared curator comes back as the zero address. A V1 vault falls back to its owner, as the
@@ -249,7 +290,9 @@ export async function getMarketSupplyingVaults(
       )
       // The extra rows are optional: a failed read keeps the configured ones.
       .catch((error): RestMarketSupplier[] => {
-        console.warn(`Other supplying vaults left out for ${restSelector(chainId, marketId)} - ${error}`);
+        console.warn(
+          `Other supplying vaults left out for ${restSelector(chainId, marketId)} - ${error}`,
+        );
         return [];
       }),
   ]);

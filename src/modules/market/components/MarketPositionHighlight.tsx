@@ -1,21 +1,26 @@
-"use client";
-import Image from "next/image";
-import type { Hex } from "viem";
-import { useAccount } from "wagmi";
+'use client';
+import type { Hex } from 'viem';
 
-import { MetricWithTooltip } from "@/common/components/Metric";
-import { NumberFlowWithLoading } from "@/common/components/ui/number-flow";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import type { SupportedChainId } from "@/config/types";
-import type { Market } from "@/modules/market/data/getMarket";
-import { useMarketPosition } from "@/modules/market/hooks/useMarketPositions";
+import Image from 'next/image';
+import { useAccount } from 'wagmi';
+
+import type { SupportedChainId } from '@/config/types';
+import type { Market } from '@/modules/market/data/getMarket';
+
+import { MetricWithTooltip } from '@/common/components/Metric';
+import { NumberFlowWithLoading } from '@/common/components/ui/number-flow';
+import { Skeleton } from '@/common/components/ui/skeleton';
+import { useMarketPosition } from '@/modules/market/hooks/useMarketPositions';
 
 interface MarketPositionHighlightProps {
   market: Market;
 }
 
 export function MarketPositionHighlight({ market }: MarketPositionHighlightProps) {
-  const { data, isLoading } = useMarketPosition(market.chain.id as SupportedChainId, market.marketId as Hex);
+  const { data, isLoading } = useMarketPosition(
+    market.chain.id as SupportedChainId,
+    market.marketId as Hex,
+  );
   const { address } = useAccount();
 
   if (!address) {
@@ -24,13 +29,17 @@ export function MarketPositionHighlight({ market }: MarketPositionHighlightProps
   }
 
   return (
-    <MetricWithTooltip label="Borrowing" className="md:items-end" tooltip="Your borrow balance in this market.">
+    <MetricWithTooltip
+      label="Borrowing"
+      className="md:items-end"
+      tooltip="Your borrow balance in this market."
+    >
       <div className="flex flex-col md:items-end">
         <NumberFlowWithLoading
           value={data?.borrowAmount.usd ?? undefined}
           loadingContent={<Skeleton className="mb-1 h-[25px] w-[60px]" />}
           isLoading={isLoading}
-          format={{ currency: "USD" }}
+          format={{ currency: 'USD' }}
           className="heading-5"
         />
         <div className="flex items-center gap-1">

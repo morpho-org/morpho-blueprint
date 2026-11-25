@@ -1,13 +1,15 @@
-import type { ReactNode } from "react";
-import { getAddress } from "viem";
+import type { ReactNode } from 'react';
 
-import { LinkExternalBlockExplorer } from "@/common/components/LinkExternal";
-import { MetricWithTooltip } from "@/common/components/Metric";
-import NumberFlow from "@/common/components/ui/number-flow";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import { formatNumber } from "@/common/utils/format";
-import type { Market } from "@/modules/market/data/getMarket";
-import { TokenIcon } from "@/modules/token/components/TokenIcon";
+import { getAddress } from 'viem';
+
+import type { Market } from '@/modules/market/data/getMarket';
+
+import { LinkExternalBlockExplorer } from '@/common/components/LinkExternal';
+import { MetricWithTooltip } from '@/common/components/Metric';
+import NumberFlow from '@/common/components/ui/number-flow';
+import { Skeleton } from '@/common/components/ui/skeleton';
+import { formatNumber } from '@/common/utils/format';
+import { TokenIcon } from '@/modules/token/components/TokenIcon';
 
 interface MarketInfoProps {
   market: Market;
@@ -16,9 +18,19 @@ interface MarketInfoProps {
 export function MarketInfo({ market }: MarketInfoProps) {
   return (
     <MarketInfoLayout
-      lltv={<NumberFlow value={Number(market.lltv.formatted)} format={{ style: "percent" }} className="heading-6" />}
+      lltv={
+        <NumberFlow
+          value={Number(market.lltv.formatted)}
+          format={{ style: 'percent' }}
+          className="heading-6"
+        />
+      }
       liquidationPenality={
-        <NumberFlow value={market.liquidationPenalty} format={{ style: "percent" }} className="heading-6" />
+        <NumberFlow
+          value={market.liquidationPenalty}
+          format={{ style: 'percent' }}
+          className="heading-6"
+        />
       }
       oracleAddress={
         <LinkExternalBlockExplorer
@@ -45,7 +57,7 @@ export function MarketInfo({ market }: MarketInfoProps) {
             <p className="truncate">{market.collateralAsset.symbol}</p>
           </LinkExternalBlockExplorer>
         ) : (
-          "None"
+          'None'
         )
       }
       loanAsset={
@@ -55,7 +67,12 @@ export function MarketInfo({ market }: MarketInfoProps) {
           address={getAddress(market.loanAsset.address)}
           className="heading-6"
         >
-          <TokenIcon token={market.loanAsset} chain={market.chain} chainClassName="border-card bg-card" size="sm" />
+          <TokenIcon
+            token={market.loanAsset}
+            chain={market.chain}
+            chainClassName="border-card bg-card"
+            size="sm"
+          />
           <p className="truncate">{market.loanAsset.symbol}</p>
         </LinkExternalBlockExplorer>
       }
@@ -129,7 +146,10 @@ function MarketInfoLayout({
       >
         {collateralAsset}
       </MetricWithTooltip>
-      <MetricWithTooltip label="Loan Asset" tooltip="The loan asset of the market that can be borrowed.">
+      <MetricWithTooltip
+        label="Loan Asset"
+        tooltip="The loan asset of the market that can be borrowed."
+      >
         {loanAsset}
       </MetricWithTooltip>
       <MetricWithTooltip label="Oracle Price" tooltip="The current price from the markets oracle.">

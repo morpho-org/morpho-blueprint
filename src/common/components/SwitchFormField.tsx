@@ -1,25 +1,31 @@
-"use client";
-import type { ComponentProps, ReactNode } from "react";
-import type { FieldPath, FieldValues } from "react-hook-form";
-import { FormControl, FormField, FormItem } from "@/common/components/ui/form";
-import { Switch } from "@/common/components/ui/switch";
+'use client';
+import type { ComponentProps, ReactNode } from 'react';
+import type { FieldPath, FieldValues } from 'react-hook-form';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { FormControl, FormField, FormItem } from '@/common/components/ui/form';
+import { Switch } from '@/common/components/ui/switch';
+
 interface SwitchFormFieldProps<
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
   TTransformedValues extends FieldValues | undefined = undefined,
-> extends Omit<ComponentProps<typeof FormField<TFieldValues, TName, TTransformedValues>>, "render"> {
+> extends Omit<
+  ComponentProps<typeof FormField<TFieldValues, TName, TTransformedValues>>,
+  'render'
+> {
   labelContent: ReactNode;
   switchLabel?: ReactNode;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export default function SwitchFormField<
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
   TTransformedValues extends FieldValues | undefined = undefined,
->({ labelContent, switchLabel, ...props }: SwitchFormFieldProps<TFieldValues, TName, TTransformedValues>) {
+>({
+  labelContent,
+  switchLabel,
+  ...props
+}: SwitchFormFieldProps<TFieldValues, TName, TTransformedValues>) {
   return (
     <FormField
       {...props}

@@ -1,32 +1,38 @@
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { useModal } from "connectkit";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { type UseFormReturn, useForm } from "react-hook-form";
-import { useDebounce } from "use-debounce";
-import { getAddress, maxUint256 } from "viem";
-import { useAccount, usePublicClient } from "wagmi";
-import { UserFacingError, type VaultAction } from "@/actions";
-import { erc4626WithdrawAction } from "@/actions/erc4626/withdraw/erc4626WithdrawAction";
-import { DEBOUNCE_TIME_MS } from "@/common/utils/constants";
-import { parseOnchainAmount } from "@/common/utils/schemas";
-import { tryCatch } from "@/common/utils/tryCatch";
-import type { SupportedChainId } from "@/config/types";
-import type { Vault } from "@/modules/vault/data/getVault";
-import type { VaultPosition } from "@/modules/vault/data/getVaultPositions";
-import { useVaultPosition } from "@/modules/vault/hooks/useVaultPositions";
-import { computeVaultPositionChange } from "@/modules/vault/utils/computeVaultPositionChange";
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
+import { useModal } from 'connectkit';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type UseFormReturn, useForm } from 'react-hook-form';
+import { useDebounce } from 'use-debounce';
+import { getAddress, maxUint256 } from 'viem';
+import { useAccount, usePublicClient } from 'wagmi';
+
+import type { SupportedChainId } from '@/config/types';
+import type { Vault } from '@/modules/vault/data/getVault';
+import type { VaultPosition } from '@/modules/vault/data/getVaultPositions';
+
+import { UserFacingError, type VaultAction } from '@/actions';
+import { erc4626WithdrawAction } from '@/actions/erc4626/withdraw/erc4626WithdrawAction';
+import { DEBOUNCE_TIME_MS } from '@/common/utils/constants';
+import { parseOnchainAmount } from '@/common/utils/schemas';
+import { tryCatch } from '@/common/utils/tryCatch';
+import { useVaultPosition } from '@/modules/vault/hooks/useVaultPositions';
+import { computeVaultPositionChange } from '@/modules/vault/utils/computeVaultPositionChange';
+
 import {
   createVaultWithdrawFormSchema,
   type VaultWithdrawFormSchemaInput,
   type VaultWithdrawFormSchemaOutput,
-} from "./schema";
+} from './schema';
 
 interface UseVaultWithdrawFormParamters {
   vault: Vault;
   onSuccessfulActionSimulation: (action: VaultAction) => void;
 }
 
-export function useVaultWithdrawForm({ vault, onSuccessfulActionSimulation }: UseVaultWithdrawFormParamters) {
+export function useVaultWithdrawForm({
+  vault,
+  onSuccessfulActionSimulation,
+}: UseVaultWithdrawFormParamters) {
   const { address } = useAccount();
   const publicClient = usePublicClient({ chainId: vault.chain.id });
   const { setOpen: setConnectKitOpen } = useModal();
@@ -45,17 +51,21 @@ export function useVaultWithdrawForm({ vault, onSuccessfulActionSimulation }: Us
   }, [vault.asset.decimals, position]);
 
   const form = useForm<VaultWithdrawFormSchemaInput, undefined, VaultWithdrawFormSchemaOutput>({
-    mode: "onChange",
+    mode: 'onChange',
     resolver: standardSchemaResolver(formSchema),
     defaultValues: {
-      withdrawAmount: "",
+      withdrawAmount: '',
       isMaxWithdraw: false,
       unwrapNativeAssets: false,
     },
   });
 
   const handleSubmit = useCallback(
-    async ({ withdrawAmount, isMaxWithdraw, unwrapNativeAssets }: VaultWithdrawFormSchemaOutput) => {
+    async ({
+      withdrawAmount,
+      isMaxWithdraw,
+      unwrapNativeAssets,
+    }: VaultWithdrawFormSchemaOutput) => {
       // Clear any root errors we set in the previous submit
       setSubmitErrorMsg(null);
 
@@ -80,7 +90,9 @@ export function useVaultWithdrawForm({ vault, onSuccessfulActionSimulation }: Us
       );
 
       if (error) {
-        setSubmitErrorMsg(error instanceof UserFacingError ? error.message : "An unknown error occurred");
+        setSubmitErrorMsg(
+          error instanceof UserFacingError ? error.message : 'An unknown error occurred',
+        );
       } else {
         onSuccessfulActionSimulation(action);
       }
@@ -91,19 +103,20 @@ export function useVaultWithdrawForm({ vault, onSuccessfulActionSimulation }: Us
   const derivedFormValues = useDerivedFormValues({ vault, position, form });
 
   // Trigger revalidation on position change
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Allow position to trigger reval
   useEffect(() => {
     if (form.formState.isDirty) {
-      form.trigger();
+      void form.trigger();
     }
+    // oxlint-disable-next-line react/exhaustive-deps -- Revalidate on position changes, not when the form becomes dirty.
   }, [position, form.trigger]);
 
   // Reset isMax when a new account connects
+  const { setValue } = form;
   useEffect(() => {
     if (address) {
-      form.setValue("isMaxWithdraw", false);
+      setValue('isMaxWithdraw', false);
     }
-  }, [address, form.setValue]);
+  }, [address, setValue]);
 
   return {
     form,
@@ -112,7 +125,7 @@ export function useVaultWithdrawForm({ vault, onSuccessfulActionSimulation }: Us
     position,
     isPositionLoading,
     submitErrorMsg,
-    nativeAssetSymbol: publicClient?.chain.nativeCurrency.symbol ?? "native assets",
+    nativeAssetSymbol: publicClient?.chain.nativeCurrency.symbol ?? 'native assets',
   };
 }
 
@@ -125,7 +138,10 @@ function useDerivedFormValues({
   position?: VaultPosition;
   form: UseFormReturn<VaultWithdrawFormSchemaInput, undefined, VaultWithdrawFormSchemaOutput>;
 }) {
-  const [formInputWithdrawAmount, formInputIsMaxWithdraw] = form.watch(["withdrawAmount", "isMaxWithdraw"]);
+  const [formInputWithdrawAmount, formInputIsMaxWithdraw] = form.watch([
+    'withdrawAmount',
+    'isMaxWithdraw',
+  ]);
 
   const [debouncedFormInputWithdrawAmount] = useDebounce(formInputWithdrawAmount, DEBOUNCE_TIME_MS);
 
@@ -134,7 +150,12 @@ function useDerivedFormValues({
       return BigInt(position.assets.raw);
     }
     return parseOnchainAmount(debouncedFormInputWithdrawAmount, vault.asset.decimals) ?? 0n;
-  }, [debouncedFormInputWithdrawAmount, vault.asset.decimals, formInputIsMaxWithdraw, position?.assets.raw]);
+  }, [
+    debouncedFormInputWithdrawAmount,
+    vault.asset.decimals,
+    formInputIsMaxWithdraw,
+    position?.assets.raw,
+  ]);
 
   const positionChange = useMemo(() => {
     return computeVaultPositionChange({

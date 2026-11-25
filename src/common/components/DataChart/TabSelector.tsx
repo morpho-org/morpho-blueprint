@@ -1,13 +1,16 @@
-import type { ComponentProps } from "react";
-import { cn } from "@/common/utils/shadcn";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
-import type { DataChart } from "./DataChart";
-import type { DataRange } from "./DateSelector";
-import type { DataEntry } from "./types";
+import type { ComponentProps } from 'react';
+
+import { cn } from '@/common/utils/shadcn';
+
+import type { DataChart } from './DataChart';
+import type { DataRange } from './DateSelector';
+import type { DataEntry } from './types';
+
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 
 type TokenAmountOption<T> = {
-  type: "tokenAmount";
-  key: Exclude<keyof T, "bucketTimestamp">;
+  type: 'tokenAmount';
+  key: Exclude<keyof T, 'bucketTimestamp'>;
   title: string;
   description?: string;
   usdValue: number;
@@ -16,8 +19,8 @@ type TokenAmountOption<T> = {
 };
 
 type ApyOption<T> = {
-  type: "apy";
-  key: Exclude<keyof T, "bucketTimestamp">;
+  type: 'apy';
+  key: Exclude<keyof T, 'bucketTimestamp'>;
   title: string;
   description?: string;
   /** Current-state net APY, shown as the headline above the series. */
@@ -32,9 +35,9 @@ type ApyOption<T> = {
 export type TabOptions<T> = TokenAmountOption<T> | ApyOption<T>;
 
 type Props<T extends DataEntry> = {
-  tabs: ComponentProps<typeof DataChart<T>>["tabOptions"] | TokenAmountOption<T>[];
-  selected: Exclude<keyof T, "bucketTimestamp">;
-  setSelected: (tab: Exclude<keyof T, "bucketTimestamp">) => void;
+  tabs: ComponentProps<typeof DataChart<T>>['tabOptions'] | TokenAmountOption<T>[];
+  selected: Exclude<keyof T, 'bucketTimestamp'>;
+  setSelected: (tab: Exclude<keyof T, 'bucketTimestamp'>) => void;
   className?: string;
 };
 
@@ -47,8 +50,8 @@ export function TabSelector<T extends DataEntry>(props: Props<T>) {
     <Tabs
       value={selected.toString()}
       variant="default"
-      onValueChange={(v) => setSelected(v as Exclude<keyof T, "bucketTimestamp">)}
-      className={cn("md:w-fit", className)}
+      onValueChange={(v) => setSelected(v as Exclude<keyof T, 'bucketTimestamp'>)}
+      className={cn('md:w-fit', className)}
     >
       <TabsList>
         {tabs.map((tab) => (

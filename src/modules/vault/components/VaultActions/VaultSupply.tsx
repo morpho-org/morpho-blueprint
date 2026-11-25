@@ -1,11 +1,12 @@
-"use client";
+'use client';
 
-import { useRef, useState } from "react";
+import { useRef, useState } from 'react';
 
-import type { VaultAction } from "@/actions";
-import { VaultActionFlow } from "@/modules/action-flow/components/VaultActionFlow";
-import { VaultSupplyForm } from "@/modules/vault/components/VaultSupplyForm/VaultSupplyForm";
-import type { Vault } from "@/modules/vault/data/getVault";
+import type { VaultAction } from '@/actions';
+import type { Vault } from '@/modules/vault/data/getVault';
+
+import { VaultActionFlow } from '@/modules/action-flow/components/VaultActionFlow';
+import { VaultSupplyForm } from '@/modules/vault/components/VaultSupplyForm/VaultSupplyForm';
 
 export default function VaultSupply({
   vault,

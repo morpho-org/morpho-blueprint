@@ -1,29 +1,37 @@
-"use client";
-import { useCallback, useMemo, useState } from "react";
-import { useAccount } from "wagmi";
-import { type Action, UserFacingError } from "@/actions";
-import { claimMerklRewardsAction } from "@/actions/claimMerklRewardsAction";
-import { Button } from "@/common/components/ui/button";
+'use client';
+import { useCallback, useMemo, useState } from 'react';
+import { useAccount } from 'wagmi';
+
+import type { SupportedChainId } from '@/config/types';
+import type {
+  MerklAccountReward,
+  MerklAccountRewardsMap,
+} from '@/modules/reward/data/getAccountRewards';
+
+import { type Action, UserFacingError } from '@/actions';
+import { claimMerklRewardsAction } from '@/actions/claimMerklRewardsAction';
+import { Button } from '@/common/components/ui/button';
 import {
   DialogDrawer,
   DialogDrawerContent,
   DialogDrawerTitle,
   DialogDrawerTrigger,
-} from "@/common/components/ui/dialog-drawer";
-import { PoweredByMerkl } from "@/common/components/ui/icons/PoweredByMerkl";
-import { Sparkles } from "@/common/components/ui/icons/Sparkles";
-import NumberFlow from "@/common/components/ui/number-flow";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import { SUPPORTED_CHAIN_IDS } from "@/config";
-import type { SupportedChainId } from "@/config/types";
-import { RewardsClaim } from "@/modules/reward/components/RewardsClaim";
-import { RewardsSelector } from "@/modules/reward/components/RewardsSelector";
-import type { MerklAccountReward, MerklAccountRewardsMap } from "@/modules/reward/data/getAccountRewards";
-import { useAccountRewards } from "@/modules/reward/hooks/useAccountRewards";
+} from '@/common/components/ui/dialog-drawer';
+import { PoweredByMerkl } from '@/common/components/ui/icons/PoweredByMerkl';
+import { Sparkles } from '@/common/components/ui/icons/Sparkles';
+import NumberFlow from '@/common/components/ui/number-flow';
+import { Skeleton } from '@/common/components/ui/skeleton';
+import { SUPPORTED_CHAIN_IDS } from '@/config';
+import { RewardsClaim } from '@/modules/reward/components/RewardsClaim';
+import { RewardsSelector } from '@/modules/reward/components/RewardsSelector';
+import { useAccountRewards } from '@/modules/reward/hooks/useAccountRewards';
 
 export function Rewards() {
   const [selectOpen, setSelectOpen] = useState(false);
-  const [claimAction, setClaimAction] = useState<{ action: Action; rewards: MerklAccountReward[] } | null>(null);
+  const [claimAction, setClaimAction] = useState<{
+    action: Action;
+    rewards: MerklAccountReward[];
+  } | null>(null);
 
   const { isConnected, address } = useAccount();
   const { data: rewardsMap, isLoading } = useAccountRewards();
@@ -56,7 +64,9 @@ export function Rewards() {
 
       if (rewardsMap) {
         // Close select if no more chains are left to claim
-        const hasRemainingChains = Object.keys(rewardsMap).some((id) => !next.includes(Number(id) as SupportedChainId));
+        const hasRemainingChains = Object.keys(rewardsMap).some(
+          (id) => !next.includes(Number(id) as SupportedChainId),
+        );
         if (!hasRemainingChains) {
           setSelectOpen(false);
         }
@@ -73,11 +83,11 @@ export function Rewards() {
   const handleBuildAction = useCallback(
     (chainId: SupportedChainId, rewards: MerklAccountReward[]): { error: string | null } => {
       if (!address) {
-        return { error: "No account connected" };
+        return { error: 'No account connected' };
       }
 
       if (rewards.length === 0) {
-        return { error: "No rewards to claim" };
+        return { error: 'No rewards to claim' };
       }
 
       try {
@@ -91,7 +101,9 @@ export function Rewards() {
         setClaimAction({ action, rewards });
         return { error: null };
       } catch (error) {
-        return { error: error instanceof UserFacingError ? error.message : "An unknown error occurred" };
+        return {
+          error: error instanceof UserFacingError ? error.message : 'An unknown error occurred',
+        };
       }
     },
     [address],
@@ -115,12 +127,14 @@ export function Rewards() {
         <DialogDrawerTrigger asChild>
           <Button variant="secondary" className="body-medium-plus gap-1.5" size="sm">
             <Sparkles className="size-4 fill-primary" />
-            <NumberFlow value={totalUsdAcrossAllChains} format={{ currency: "USD" }} />
+            <NumberFlow value={totalUsdAcrossAllChains} format={{ currency: 'USD' }} />
           </Button>
         </DialogDrawerTrigger>
         <DialogDrawerContent className="flex flex-col p-0">
           <div className="px-6 pt-6 pb-4">
-            <DialogDrawerTitle>Claimable tokens {SUPPORTED_CHAIN_IDS.length > 1 ? "per chain" : ""}</DialogDrawerTitle>
+            <DialogDrawerTitle>
+              Claimable tokens {SUPPORTED_CHAIN_IDS.length > 1 ? 'per chain' : ''}
+            </DialogDrawerTitle>
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 pt-4">

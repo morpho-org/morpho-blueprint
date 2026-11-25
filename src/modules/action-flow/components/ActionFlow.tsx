@@ -1,22 +1,28 @@
-"use client";
-import { X } from "lucide-react";
-import { motion } from "motion/react";
-import { type ComponentProps, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { zeroHash } from "viem";
+'use client';
+import { X } from 'lucide-react';
+import { motion } from 'motion/react';
+import { type ComponentProps, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { zeroHash } from 'viem';
 
-import type { Action } from "@/actions";
-import { Button } from "@/common/components/ui/button";
-import { DialogDrawer, DialogDrawerContent, DialogDrawerTitle } from "@/common/components/ui/dialog-drawer";
-import { ErrorMessage } from "@/common/components/ui/error-message";
-import { Popover, PopoverContent, PopoverTrigger } from "@/common/components/ui/popover";
-import { Separator } from "@/common/components/ui/seperator";
-import { capitalizeFirstLetter } from "@/common/utils/format";
-import { APP_CONFIG } from "@/config";
-import { ActionFlowProvider, useActionFlowContext } from "@/modules/action-flow/ActionFlowProvider";
-import { useAcknowledgeTermsContext } from "@/modules/compliance/AcknowledgeTermsProvider";
-import { AcknowledgeTerms } from "@/modules/compliance/components/AcknowledgeTerms";
-import { ActionFlowCompletion } from "./ActionFlowCompletion";
-import { ActionFlowSteps } from "./ActionFlowSteps";
+import type { Action } from '@/actions';
+
+import { Button } from '@/common/components/ui/button';
+import {
+  DialogDrawer,
+  DialogDrawerContent,
+  DialogDrawerTitle,
+} from '@/common/components/ui/dialog-drawer';
+import { ErrorMessage } from '@/common/components/ui/error-message';
+import { Popover, PopoverContent, PopoverTrigger } from '@/common/components/ui/popover';
+import { Separator } from '@/common/components/ui/seperator';
+import { capitalizeFirstLetter } from '@/common/utils/format';
+import { APP_CONFIG } from '@/config';
+import { ActionFlowProvider, useActionFlowContext } from '@/modules/action-flow/ActionFlowProvider';
+import { useAcknowledgeTermsContext } from '@/modules/compliance/AcknowledgeTermsProvider';
+import { AcknowledgeTerms } from '@/modules/compliance/components/AcknowledgeTerms';
+
+import { ActionFlowCompletion } from './ActionFlowCompletion';
+import { ActionFlowSteps } from './ActionFlowSteps';
 
 interface ActionFlowDialogProps {
   open: boolean;
@@ -27,7 +33,8 @@ interface ActionFlowDialogProps {
 }
 
 export interface ActionFlowProps
-  extends Omit<ComponentProps<typeof ActionFlowProvider>, "children" | "action">,
+  extends
+    Omit<ComponentProps<typeof ActionFlowProvider>, 'children' | 'action'>,
     ActionFlowDialogProps {
   action: Action | null;
 }
@@ -44,7 +51,6 @@ export function ActionFlow({
   const [render, setRender] = useState<boolean>(open);
 
   // Falling edge delay so we get the nice close animation
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Need to re-render on action change
   useEffect(() => {
     if (open) {
       setRender(true);
@@ -75,16 +81,21 @@ export function ActionFlow({
   );
 }
 
-function ActionFlowDialog({ open, onOpenChange, actionName, summary, metrics }: ActionFlowDialogProps) {
+function ActionFlowDialog({
+  open,
+  onOpenChange,
+  actionName,
+  summary,
+  metrics,
+}: ActionFlowDialogProps) {
   const { flowState, lastTransactionHash, error, startFlow } = useActionFlowContext();
-  const preventClose = useMemo(() => flowState === "active", [flowState]);
+  const preventClose = useMemo(() => flowState === 'active', [flowState]);
   const { acknowledgedTerms } = useAcknowledgeTermsContext();
 
   // useMeasure caused issues getting accurate height on initial render of dialog, this works instead
   const measureRef = useRef<HTMLDivElement>(null);
   const [measuredHeight, setMeasuredHeight] = useState<number | undefined>();
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Need to re-measure on flow state change
   useEffect(() => {
     if (!open) return;
 
@@ -100,7 +111,7 @@ function ActionFlowDialog({ open, onOpenChange, actionName, summary, metrics }: 
 
   const content = useMemo(() => {
     switch (flowState) {
-      case "review":
+      case 'review':
         return (
           <>
             <DialogDrawerTitle>Review</DialogDrawerTitle>
@@ -116,7 +127,7 @@ function ActionFlowDialog({ open, onOpenChange, actionName, summary, metrics }: 
           </>
         );
 
-      case "active":
+      case 'active':
         return (
           <>
             <DialogDrawerTitle>Confirm</DialogDrawerTitle>
@@ -126,21 +137,37 @@ function ActionFlowDialog({ open, onOpenChange, actionName, summary, metrics }: 
           </>
         );
 
-      case "success":
-      case "failed":
+      case 'success':
+      case 'failed':
         return (
           <>
             <DialogDrawerTitle>{capitalizeFirstLetter(flowState)}</DialogDrawerTitle>
-            <ActionFlowCompletion status={flowState} transactionHash={lastTransactionHash ?? zeroHash} />
+            <ActionFlowCompletion
+              status={flowState}
+              transactionHash={lastTransactionHash ?? zeroHash}
+            />
             <Button variant="secondary" onClick={() => onOpenChange(false)}>
               Close
             </Button>
           </>
         );
     }
-  }, [startFlow, flowState, error, actionName, metrics, summary, lastTransactionHash, onOpenChange]);
+  }, [
+    startFlow,
+    flowState,
+    error,
+    actionName,
+    metrics,
+    summary,
+    lastTransactionHash,
+    onOpenChange,
+  ]);
 
-  if (!acknowledgedTerms && APP_CONFIG.compliance.requireTermsOfUseAcceptance && APP_CONFIG.compliance.termsOfUse) {
+  if (
+    !acknowledgedTerms &&
+    APP_CONFIG.compliance.requireTermsOfUseAcceptance &&
+    APP_CONFIG.compliance.termsOfUse
+  ) {
     return <AcknowledgeTerms open={open} onOpenChange={onOpenChange} />;
   }
 
@@ -149,7 +176,7 @@ function ActionFlowDialog({ open, onOpenChange, actionName, summary, metrics }: 
       <DialogDrawerContent hideCloseButton className="p-0 lg:max-w-[420px]">
         <motion.div
           animate={{ height: measuredHeight }}
-          transition={{ duration: 0.4, type: "spring", bounce: 0 }}
+          transition={{ duration: 0.4, type: 'spring', bounce: 0 }}
           className="min-w-0 overflow-hidden"
         >
           <div className="absolute top-2 right-2">
@@ -167,7 +194,7 @@ function ActionFlowDialog({ open, onOpenChange, actionName, summary, metrics }: 
 
 function ActionFlowDialogCloseButton({ close }: { close: () => void }) {
   const { flowState } = useActionFlowContext();
-  const preventClose = useMemo(() => flowState === "active", [flowState]);
+  const preventClose = useMemo(() => flowState === 'active', [flowState]);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   return (
@@ -177,7 +204,8 @@ function ActionFlowDialogCloseButton({ close }: { close: () => void }) {
         <PopoverContent className="flex max-w-[256px] flex-col gap-6 text-center" side="top">
           <div className="heading-6 w-full">Cancel transaction</div>
           <p className="text-muted-foreground">
-            If you close this modal, your transaction will be canceled, and you&apos;ll need to start over.
+            If you close this modal, your transaction will be canceled, and you&apos;ll need to
+            start over.
           </p>
           <div className="flex flex-col gap-3">
             <Button

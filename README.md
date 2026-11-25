@@ -18,15 +18,15 @@ pnpm dev
 
 All configuration happens via files in the [config folder](src/config/), which should be the only folder you need to touch to create a custom deployment. The config files are:
 
--   [index.ts](src/config/index.ts): App configuration controlling things like:
-    -   Which chains your app supports
-    -   Which vaults your app supports
-    -   Action parameters
-    -   App metadata
-    -   Feature flags
-    -   ...
-    -   Check out the [`AppConfig` type definition](src/config/types.ts) for full parameter documentation
--   [theme.css](src/config/theme.css): Customize all colors and typography to match your brand. This closely follows the standard [shadcn theming](https://ui.shadcn.com/themes).
+- [index.ts](src/config/index.ts): App configuration controlling things like:
+  - Which chains your app supports
+  - Which vaults your app supports
+  - Action parameters
+  - App metadata
+  - Feature flags
+  - ...
+  - Check out the [`AppConfig` type definition](src/config/types.ts) for full parameter documentation
+- [theme.css](src/config/theme.css): Customize all colors and typography to match your brand. This closely follows the standard [shadcn theming](https://ui.shadcn.com/themes).
 
 > If the provided customization parameters are insufficient for your use case, you can modify code outside the `/config` folder, but this will be harder to pick up additional future features and patches from this canonical template repo.
 
@@ -34,16 +34,16 @@ All configuration happens via files in the [config folder](src/config/), which s
 
 Read-only data comes from Morpho's Core REST API through one server-only chokepoint, [fetchMorphoRest](src/common/utils/fetchMorphoRest.ts), plus the Blueprint API routes (vault descriptions, USD price history) and Merkl for reward APRs. The browser only ever talks to the app's own `/api/*` routes. [morphoApiConfig](src/common/utils/morphoApiConfig.ts) picks the host:
 
--   With `MORPHO_INTERNAL_API_KEY` set, every read, Core REST and Blueprint API routes alike, goes to Morpho's internal deployment at `MORPHO_INTERNAL_API_URL` with that key (sent as an `x-api-key` header). A key without the URL fails every read.
--   Without it, the Blueprint API routes are off (descriptions come from the config, USD history is hidden), and Core REST goes to `MORPHO_REST_API_URL`, else the host of `MORPHO_API_URL` (legacy: the former GraphQL endpoint, use `MORPHO_REST_API_URL` instead), else the public API (`https://api.morpho.org`), with `MORPHO_API_KEY` when set. Keyless access to the public API ends after Feb 28, so set `MORPHO_API_KEY`.
--   `morphoApi.requireInternal` in [the config](src/config/index.ts) (`false` here) makes the internal deployment mandatory: with it `true` and either internal variable unset, every server read throws instead of using another host. `next build` prerenders the pages, so a build without the variables fails; a running server fails the affected pages and API routes. Set it for deployments that must never read the public or a partner API.
+- With `MORPHO_INTERNAL_API_KEY` set, every read, Core REST and Blueprint API routes alike, goes to Morpho's internal deployment at `MORPHO_INTERNAL_API_URL` with that key (sent as an `x-api-key` header). A key without the URL fails every read.
+- Without it, the Blueprint API routes are off (descriptions come from the config, USD history is hidden), and Core REST goes to `MORPHO_REST_API_URL`, else the host of `MORPHO_API_URL` (legacy: the former GraphQL endpoint, use `MORPHO_REST_API_URL` instead), else the public API (`https://api.morpho.org`), with `MORPHO_API_KEY` when set. Keyless access to the public API ends after Feb 28, so set `MORPHO_API_KEY`.
+- `morphoApi.requireInternal` in [the config](src/config/index.ts) (`false` here) makes the internal deployment mandatory: with it `true` and either internal variable unset, every server read throws instead of using another host. `next build` prerenders the pages, so a build without the variables fails; a running server fails the affected pages and API routes. Set it for deployments that must never read the public or a partner API.
 
 The app does not call Morpho's GraphQL API. [no-graphql.test.ts](test/unit/no-graphql.test.ts) fails if a GraphQL endpoint, client, query, dependency or schema comes back.
 
 Two things the API does not serve are sourced elsewhere:
 
--   Wallet ERC-20 balances are joined in server-side with a multicall `balanceOf` against the configured RPC URLs.
--   Chain icons come from the Morpho CDN (`https://cdn.morpho.org/assets/chains/<slug>.svg`), configured per chain via `iconSlug` in the chain config; a chain without a slug renders without an icon.
+- Wallet ERC-20 balances are joined in server-side with a multicall `balanceOf` against the configured RPC URLs.
+- Chain icons come from the Morpho CDN (`https://cdn.morpho.org/assets/chains/<slug>.svg`), configured per chain via `iconSlug` in the chain config; a chain without a slug renders without an icon.
 
 Every chain in `SUPPORTED_CHAIN_IDS` must be indexed by the configured API instance: reads for a chain it does not serve fail.
 
@@ -51,9 +51,9 @@ Every chain in `SUPPORTED_CHAIN_IDS` must be indexed by the configured API insta
 
 See [.env.example](.env.example) for the full list. Notes:
 
--   The Morpho API variables are all optional; the [Data](#data) section explains which host each one selects.
--   A mainnet RPC URL (`MAINNET_RPC_URL_1`) is **required for all deployments, even ones that don't serve mainnet vaults or markets**: the OFAC sanctions screening reads Chainalysis's on-chain oracle on mainnet and fails closed, so without a mainnet RPC every transaction flow is blocked.
--   Each supported chain needs its RPC URLs (`<CHAIN>_RPC_URL_1`, optionally `<CHAIN>_RPC_URL_2`).
+- The Morpho API variables are all optional; the [Data](#data) section explains which host each one selects.
+- A mainnet RPC URL (`MAINNET_RPC_URL_1`) is **required for all deployments, even ones that don't serve mainnet vaults or markets**: the OFAC sanctions screening reads Chainalysis's on-chain oracle on mainnet and fails closed, so without a mainnet RPC every transaction flow is blocked.
+- Each supported chain needs its RPC URLs (`<CHAIN>_RPC_URL_1`, optionally `<CHAIN>_RPC_URL_2`).
 
 ## Local Development
 
@@ -104,11 +104,11 @@ node scripts/verify/parity-dump.mjs --app ../morpho-blueprint-main --out /tmp/pa
 node scripts/verify/parity-dump.mjs --app . --out /tmp/parity/head.json
 ```
 
--   `--providers`: `summaries` (`getVaultSummaries`) and `vaults` (`getVault` for every configured vault) by default; `market-summaries` (`getMarketSummaries`, the borrow table); `vault-positions` and `market-positions` need `--account 0x...`. The request count is also split by the Next data-cache lifetime each call asks for (`none` is read on every render).
--   `--vaults 1:0xabc,1:0xdef`: only these configured vaults.
--   `--markets 1:0xid,8453:0xid`: the market pages (`getMarket`) the `markets` provider dumps.
--   `--max-requests` (default 50): every `fetch` counts, retries included. A request past the cap is refused and the run fails without writing a dump. The public API locks a client out for 10 minutes above 750 requests a minute. Raise the cap for a large provider such as `market-positions`, and run it on its own.
--   The upstream follows the app's host rules (see [Data](#data)) with whatever the shell sets: the internal deployment with `MORPHO_INTERNAL_API_URL`/`MORPHO_INTERNAL_API_KEY`, else `MORPHO_REST_API_URL`, `MORPHO_API_URL` and `MORPHO_API_KEY`, else the public API. Positions read wallet balances from `MAINNET_RPC_URL_1`.
+- `--providers`: `summaries` (`getVaultSummaries`) and `vaults` (`getVault` for every configured vault) by default; `market-summaries` (`getMarketSummaries`, the borrow table); `vault-positions` and `market-positions` need `--account 0x...`. The request count is also split by the Next data-cache lifetime each call asks for (`none` is read on every render).
+- `--vaults 1:0xabc,1:0xdef`: only these configured vaults.
+- `--markets 1:0xid,8453:0xid`: the market pages (`getMarket`) the `markets` provider dumps.
+- `--max-requests` (default 50): every `fetch` counts, retries included. A request past the cap is refused and the run fails without writing a dump. The public API locks a client out for 10 minutes above 750 requests a minute. Raise the cap for a large provider such as `market-positions`, and run it on its own.
+- The upstream follows the app's host rules (see [Data](#data)) with whatever the shell sets: the internal deployment with `MORPHO_INTERNAL_API_URL`/`MORPHO_INTERNAL_API_KEY`, else `MORPHO_REST_API_URL`, `MORPHO_API_URL` and `MORPHO_API_KEY`, else the public API. Positions read wallet balances from `MAINNET_RPC_URL_1`.
 
 ### Parity compare
 

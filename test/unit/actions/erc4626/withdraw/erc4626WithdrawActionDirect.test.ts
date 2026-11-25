@@ -1,12 +1,12 @@
-import { describe, expect } from "vitest";
+import { describe, expect } from 'vitest';
 
-import { erc4626WithdrawActionDirect } from "@/actions/erc4626/withdraw/erc4626WithdrawActionDirect";
+import { erc4626WithdrawActionDirect } from '@/actions/erc4626/withdraw/erc4626WithdrawActionDirect';
 
-import { test } from "../../../../config";
-import { failureTestCases, runErc4626WithdrawTest, successTestCases } from "./shared";
+import { test } from '../../../../config';
+import { failureTestCases, runErc4626WithdrawTest, successTestCases } from './shared';
 
-describe("erc4626WithdrawActionDirect", () => {
-  describe("happy path", () => {
+describe('erc4626WithdrawActionDirect', () => {
+  describe('happy path', () => {
     successTestCases.map((testCase) => {
       test(testCase.name, async ({ client }) => {
         await runErc4626WithdrawTest({
@@ -20,7 +20,7 @@ describe("erc4626WithdrawActionDirect", () => {
     });
   });
 
-  describe("sad path", () => {
+  describe('sad path', () => {
     failureTestCases.map((testCase) => {
       test(testCase.name, async ({ client }) => {
         await expect(

@@ -1,7 +1,9 @@
-"use client";
-import { useMemo } from "react";
-import { Step } from "@/common/components/ui/step";
-import { useActionFlowContext } from "../ActionFlowProvider";
+'use client';
+import { useMemo } from 'react';
+
+import { Step } from '@/common/components/ui/step';
+
+import { useActionFlowContext } from '../ActionFlowProvider';
 
 export function ActionFlowSteps() {
   const { activeStep, actionState, action } = useActionFlowContext();
@@ -9,7 +11,7 @@ export function ActionFlowSteps() {
   const metadatas = useMemo(() => {
     return [...action.signatureRequests, ...action.transactionRequests].map((request, i) => ({
       name: request.name,
-      type: i < action.signatureRequests.length ? "signature" : "transaction",
+      type: i < action.signatureRequests.length ? 'signature' : 'transaction',
     }));
   }, [action]);
 
@@ -18,21 +20,26 @@ export function ActionFlowSteps() {
       {metadatas.map((metadata, i) => {
         const status =
           i === activeStep
-            ? actionState === "pending-wallet"
-              ? "active"
-              : "pending"
+            ? actionState === 'pending-wallet'
+              ? 'active'
+              : 'pending'
             : i < activeStep
-              ? "complete"
-              : "upcoming";
+              ? 'complete'
+              : 'upcoming';
         const labelPostfix =
-          status === "active" ? "(pending wallet)" : status === "pending" ? "(pending transaction)" : "";
+          status === 'active'
+            ? '(pending wallet)'
+            : status === 'pending'
+              ? '(pending transaction)'
+              : '';
         return (
           <Step
             number={i + 1}
             status={status}
             label={
               <>
-                {metadata.name} <span className="body-small text-muted-foreground">{labelPostfix}</span>
+                {metadata.name}{' '}
+                <span className="body-small text-muted-foreground">{labelPostfix}</span>
               </>
             }
             key={metadata.name}

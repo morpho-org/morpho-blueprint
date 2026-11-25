@@ -1,19 +1,20 @@
-import "server-only";
+import 'server-only';
+import { cache } from 'react';
+import { z } from 'zod';
 
-import { cache } from "react";
-import { z } from "zod";
-import { fetchJsonResponse } from "@/common/utils/fetch";
-import { trackEvent } from "@/common/utils/trackEvent";
-import { tryCatch } from "@/common/utils/tryCatch";
-import { withDeadline } from "./deadline";
+import { fetchJsonResponse } from '@/common/utils/fetch';
+import { trackEvent } from '@/common/utils/trackEvent';
+import { tryCatch } from '@/common/utils/tryCatch';
+
+import { withDeadline } from './deadline';
 import {
   emptyMerklRewardIndex,
   indexMerklRewards,
   type MerklRewardIndex,
   merklOpportunitiesPageSchema,
-} from "./merklRewardApys";
+} from './merklRewardApys';
 
-const MERKL_OPPORTUNITIES_URL = "https://api.merkl.xyz/v4/opportunities";
+const MERKL_OPPORTUNITIES_URL = 'https://api.merkl.xyz/v4/opportunities';
 const PAGE_SIZE = 100;
 // Mainnet lists about 40 Morpho opportunities: five pages leave ample room before truncating.
 const MAX_PAGES = 5;
@@ -28,21 +29,22 @@ async function fetchOpportunities(chainId: number): Promise<unknown[]> {
   const signal = AbortSignal.timeout(TIMEOUT_MS);
   for (let page = 0; page < MAX_PAGES; page++) {
     const url = new URL(MERKL_OPPORTUNITIES_URL);
-    url.searchParams.set("mainProtocolId", "morpho");
-    url.searchParams.set("chainId", String(chainId));
-    url.searchParams.set("status", "LIVE");
-    url.searchParams.set("campaigns", "true");
-    url.searchParams.set("items", String(PAGE_SIZE));
-    url.searchParams.set("page", String(page));
+    url.searchParams.set('mainProtocolId', 'morpho');
+    url.searchParams.set('chainId', String(chainId));
+    url.searchParams.set('status', 'LIVE');
+    url.searchParams.set('campaigns', 'true');
+    url.searchParams.set('items', String(PAGE_SIZE));
+    url.searchParams.set('page', String(page));
 
     const response = await fetchJsonResponse<unknown>(url, {
       requestOptions: { signal, next: { revalidate: REVALIDATE_SECONDS } },
-      retryOptionOverrides: "disabled",
+      retryOptionOverrides: 'disabled',
       // The handled fallback reports once, below.
       suppressFailureEvent: true,
     });
     const parsed = merklOpportunitiesPageSchema.safeParse(response);
-    if (!parsed.success) throw new Error(`Unexpected Merkl opportunities shape: ${z.prettifyError(parsed.error)}`);
+    if (!parsed.success)
+      throw new Error(`Unexpected Merkl opportunities shape: ${z.prettifyError(parsed.error)}`);
     opportunities.push(...parsed.data);
     if (parsed.data.length < PAGE_SIZE) return opportunities;
   }
@@ -55,10 +57,18 @@ async function fetchOpportunities(chainId: number): Promise<unknown[]> {
  * error: the index is empty, so pages show native APYs with no reward chips.
  */
 export const getMerklRewardIndex = cache(async (chainId: number): Promise<MerklRewardIndex> => {
-  const { data, error } = await tryCatch(withDeadline(fetchOpportunities(chainId), TIMEOUT_MS, "Merkl"));
+  const { data, error } = await tryCatch(
+    withDeadline(fetchOpportunities(chainId), TIMEOUT_MS, 'Merkl'),
+  );
   if (error) {
-    console.error(`Merkl reward APRs request failed on chain ${chainId}, rendering native APYs - ${error}`);
-    trackEvent("data-fetch-error", { url: MERKL_OPPORTUNITIES_URL, chainId, error: `${error}` }).catch(() => {});
+    console.error(
+      `Merkl reward APRs request failed on chain ${chainId}, rendering native APYs - ${error}`,
+    );
+    trackEvent('data-fetch-error', {
+      url: MERKL_OPPORTUNITIES_URL,
+      chainId,
+      error: `${error}`,
+    }).catch(() => {});
     return emptyMerklRewardIndex();
   }
   return indexMerklRewards(data, Math.floor(Date.now() / 1000));

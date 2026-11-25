@@ -1,12 +1,14 @@
-import type { MarketId } from "@morpho-org/blue-sdk";
-import { fetchMarket } from "@morpho-org/blue-sdk-viem";
-import { morphoViemExtension } from "@morpho-org/morpho-sdk";
-import { type Address, erc20Abi, maxUint256 } from "viem";
-import { readContract } from "viem/actions";
-import { type ClientWithChain, type MarketAction, UserFacingError } from "../types";
-import { getMarketBorrowReallocations } from "../utils/getMarketBorrowReallocations";
-import { transactionRequestsFromMorphoAction } from "../utils/morphoAction";
-import { computeMarketPositionChange } from "../utils/positionChange";
+import type { MarketId } from '@morpho-org/blue-sdk';
+
+import { fetchMarket } from '@morpho-org/blue-sdk-viem';
+import { morphoViemExtension } from '@morpho-org/morpho-sdk';
+import { type Address, erc20Abi, maxUint256 } from 'viem';
+import { readContract } from 'viem/actions';
+
+import { type ClientWithChain, type MarketAction, UserFacingError } from '../types';
+import { getMarketBorrowReallocations } from '../utils/getMarketBorrowReallocations';
+import { transactionRequestsFromMorphoAction } from '../utils/morphoAction';
+import { computeMarketPositionChange } from '../utils/positionChange';
 
 interface MarketSupplyCollateralAndBorrowActionParameters {
   publicClient: ClientWithChain;
@@ -26,10 +28,10 @@ export async function marketSupplyCollateralAndBorrowAction({
   borrowAmount,
 }: MarketSupplyCollateralAndBorrowActionParameters): Promise<MarketAction> {
   if (collateralAmount < 0n || borrowAmount < 0n) {
-    throw new UserFacingError("Collateral and borrow amounts cannot be negative.");
+    throw new UserFacingError('Collateral and borrow amounts cannot be negative.');
   }
   if (collateralAmount === 0n && borrowAmount === 0n) {
-    throw new UserFacingError("Collateral and borrow amounts cannot both be 0.");
+    throw new UserFacingError('Collateral and borrow amounts cannot both be 0.');
   }
   const marketData = await fetchMarket(marketId, publicClient);
   const market = publicClient
@@ -39,12 +41,12 @@ export async function marketSupplyCollateralAndBorrowAction({
   const collateralBalance = await readContract(publicClient, {
     address: marketData.params.collateralToken,
     abi: erc20Abi,
-    functionName: "balanceOf",
+    functionName: 'balanceOf',
     args: [accountAddress],
   });
   const collateralAssets = collateralAmount === maxUint256 ? collateralBalance : collateralAmount;
   if (collateralAssets > collateralBalance) {
-    throw new UserFacingError("Collateral amount exceeds the account balance.");
+    throw new UserFacingError('Collateral amount exceeds the account balance.');
   }
   const reallocations = await getMarketBorrowReallocations({
     publicClient,
@@ -66,8 +68,13 @@ export async function marketSupplyCollateralAndBorrowAction({
     signatureRequests: [],
     transactionRequests: await transactionRequestsFromMorphoAction(
       output,
-      `Confirm ${collateralAssets > 0n ? "Supply" : ""}${collateralAssets > 0n && borrowAmount > 0n ? " & " : ""}${borrowAmount > 0n ? "Borrow" : ""}`,
+      `Confirm ${collateralAssets > 0n ? 'Supply' : ''}${collateralAssets > 0n && borrowAmount > 0n ? ' & ' : ''}${borrowAmount > 0n ? 'Borrow' : ''}`,
     ),
-    positionChange: computeMarketPositionChange(marketData, positionData, collateralAssets, borrowAmount),
+    positionChange: computeMarketPositionChange(
+      marketData,
+      positionData,
+      collateralAssets,
+      borrowAmount,
+    ),
   };
 }

@@ -1,4 +1,4 @@
-import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
+import { Analytics as VercelAnalytics } from '@vercel/analytics/next';
 
 export function Analytics() {
   // Can use any analytics you prefer

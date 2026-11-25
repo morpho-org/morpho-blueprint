@@ -1,11 +1,12 @@
-"use client";
+'use client';
 
-import { useRef, useState } from "react";
+import { useRef, useState } from 'react';
 
-import type { VaultAction } from "@/actions";
-import { VaultActionFlow } from "@/modules/action-flow/components/VaultActionFlow";
-import { VaultWithdrawForm } from "@/modules/vault/components/VaultWithdrawForm/VaultWithdrawForm";
-import type { Vault } from "@/modules/vault/data/getVault";
+import type { VaultAction } from '@/actions';
+import type { Vault } from '@/modules/vault/data/getVault';
+
+import { VaultActionFlow } from '@/modules/action-flow/components/VaultActionFlow';
+import { VaultWithdrawForm } from '@/modules/vault/components/VaultWithdrawForm/VaultWithdrawForm';
 
 export default function VaultWithdraw({
   vault,

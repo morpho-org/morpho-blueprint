@@ -1,21 +1,23 @@
-"use client";
-import clsx from "clsx";
-import type { ReactNode } from "react";
+'use client';
+import type { ReactNode } from 'react';
 
-import { MetricWithTooltip } from "@/common/components/Metric";
-import { NumberFlowWithLoading } from "@/common/components/ui/number-flow";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import { rateLabel } from "@/common/utils/timeframe";
-import { APP_CONFIG } from "@/config";
-import type { MarketSummary } from "@/modules/market/data/getMarketSummaries";
-import { useBorrowSummaryMetrics } from "@/modules/market/hooks/useBorrowSummaryMetrics";
+import clsx from 'clsx';
+
+import type { MarketSummary } from '@/modules/market/data/getMarketSummaries';
+
+import { MetricWithTooltip } from '@/common/components/Metric';
+import { NumberFlowWithLoading } from '@/common/components/ui/number-flow';
+import { Skeleton } from '@/common/components/ui/skeleton';
+import { rateLabel } from '@/common/utils/timeframe';
+import { APP_CONFIG } from '@/config';
+import { useBorrowSummaryMetrics } from '@/modules/market/hooks/useBorrowSummaryMetrics';
 
 interface BorrowSummaryMetricsProps {
   marketSummaries: MarketSummary[];
 }
 
-function MetricSkeleton({ className, ...props }: React.ComponentProps<"div">) {
-  return <Skeleton className={clsx("mt-[2px] h-[34px]", className)} {...props} />;
+function MetricSkeleton({ className, ...props }: React.ComponentProps<'div'>) {
+  return <Skeleton className={clsx('mt-[2px] h-[34px]', className)} {...props} />;
 }
 
 export function BorrowSummaryMetrics({ marketSummaries }: BorrowSummaryMetricsProps) {
@@ -28,7 +30,7 @@ export function BorrowSummaryMetrics({ marketSummaries }: BorrowSummaryMetricsPr
           isLoading={isPositionsLoading}
           loadingContent={<MetricSkeleton className="w-[90px]" />}
           value={data.totalBorrowedUsd}
-          format={{ currency: "USD" }}
+          format={{ currency: 'USD' }}
           className="heading-4"
         />
       }
@@ -37,7 +39,7 @@ export function BorrowSummaryMetrics({ marketSummaries }: BorrowSummaryMetricsPr
           isLoading={isPositionsLoading}
           loadingContent={<MetricSkeleton className="w-[90px]" />}
           value={data.userBorrowsUsd}
-          format={{ currency: "USD" }}
+          format={{ currency: 'USD' }}
           className="heading-4"
         />
       }
@@ -46,7 +48,7 @@ export function BorrowSummaryMetrics({ marketSummaries }: BorrowSummaryMetricsPr
           isLoading={isPositionsLoading}
           loadingContent={<MetricSkeleton className="w-[90px]" />}
           value={data.userBorrowApy}
-          format={{ style: "percent" }}
+          format={{ style: 'percent' }}
           className="heading-4"
         />
       }
@@ -97,7 +99,7 @@ function BorrowSummaryMetricsLayout({
           {userBorrowed}
         </MetricWithTooltip>
         <MetricWithTooltip
-          label={rateLabel("Your borrow rate")}
+          label={rateLabel('Your borrow rate')}
           tooltip={`Your net borrow rate across all markets in the table, after fees and including rewards, from a ${APP_CONFIG.apyWindow} rolling average.`}
           className="flex-1 md:items-end"
         >

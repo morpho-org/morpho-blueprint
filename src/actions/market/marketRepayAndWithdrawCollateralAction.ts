@@ -1,11 +1,13 @@
-import type { MarketId } from "@morpho-org/blue-sdk";
-import { fetchMarket } from "@morpho-org/blue-sdk-viem";
-import { morphoViemExtension } from "@morpho-org/morpho-sdk";
-import { type Address, erc20Abi, maxUint256 } from "viem";
-import { readContract } from "viem/actions";
-import { type ClientWithChain, type MarketAction, UserFacingError } from "../types";
-import { transactionRequestsFromMorphoAction } from "../utils/morphoAction";
-import { computeMarketPositionChange } from "../utils/positionChange";
+import type { MarketId } from '@morpho-org/blue-sdk';
+
+import { fetchMarket } from '@morpho-org/blue-sdk-viem';
+import { morphoViemExtension } from '@morpho-org/morpho-sdk';
+import { type Address, erc20Abi, maxUint256 } from 'viem';
+import { readContract } from 'viem/actions';
+
+import { type ClientWithChain, type MarketAction, UserFacingError } from '../types';
+import { transactionRequestsFromMorphoAction } from '../utils/morphoAction';
+import { computeMarketPositionChange } from '../utils/positionChange';
 
 interface MarketRepayAndWithdrawCollateralActionParameters {
   publicClient: ClientWithChain;
@@ -23,10 +25,10 @@ export async function marketRepayAndWithdrawCollateralAction({
   withdrawCollateralAmount,
 }: MarketRepayAndWithdrawCollateralActionParameters): Promise<MarketAction> {
   if (repayAmount < 0n || withdrawCollateralAmount < 0n) {
-    throw new UserFacingError("Repay and withdraw collateral amounts cannot be negative.");
+    throw new UserFacingError('Repay and withdraw collateral amounts cannot be negative.');
   }
   if (repayAmount === 0n && withdrawCollateralAmount === 0n) {
-    throw new UserFacingError("Repay and withdraw collateral amounts cannot both be 0.");
+    throw new UserFacingError('Repay and withdraw collateral amounts cannot both be 0.');
   }
   const marketData = await fetchMarket(marketId, publicClient);
   const market = publicClient
@@ -34,7 +36,8 @@ export async function marketRepayAndWithdrawCollateralAction({
     .morpho.blue(marketData.params, publicClient.chain.id);
   const positionData = await market.getPositionData(accountAddress);
   const isMaxRepay = repayAmount === maxUint256;
-  const collateralAssets = withdrawCollateralAmount === maxUint256 ? positionData.collateral : withdrawCollateralAmount;
+  const collateralAssets =
+    withdrawCollateralAmount === maxUint256 ? positionData.collateral : withdrawCollateralAmount;
   const output = market.repayWithdrawCollateral({
     userAddress: accountAddress,
     positionData,
@@ -45,19 +48,21 @@ export async function marketRepayAndWithdrawCollateralAction({
   const loanBalance = await readContract(publicClient, {
     address: marketData.params.loanToken,
     abi: erc20Abi,
-    functionName: "balanceOf",
+    functionName: 'balanceOf',
     args: [accountAddress],
   });
-  const repayAssets = isMaxRepay ? marketData.toBorrowAssets(positionData.borrowShares) : repayAmount;
+  const repayAssets = isMaxRepay
+    ? marketData.toBorrowAssets(positionData.borrowShares)
+    : repayAmount;
   if (repayAssets > loanBalance) {
-    throw new UserFacingError("Repay amount exceeds the account balance.");
+    throw new UserFacingError('Repay amount exceeds the account balance.');
   }
   return {
     chainId: publicClient.chain.id,
     signatureRequests: [],
     transactionRequests: await transactionRequestsFromMorphoAction(
       output,
-      `Confirm ${repayAmount > 0n ? "Repay" : ""}${repayAmount > 0n && collateralAssets > 0n ? " & " : ""}${collateralAssets > 0n ? "Withdraw" : ""}`,
+      `Confirm ${repayAmount > 0n ? 'Repay' : ''}${repayAmount > 0n && collateralAssets > 0n ? ' & ' : ''}${collateralAssets > 0n ? 'Withdraw' : ''}`,
     ),
     positionChange: computeMarketPositionChange(
       marketData,

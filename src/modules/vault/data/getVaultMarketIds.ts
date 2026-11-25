@@ -1,12 +1,15 @@
-import "server-only";
+import 'server-only';
+import type { Hex } from 'viem';
 
-import { cache } from "react";
-import type { Hex } from "viem";
-import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
-import { APP_CONFIG } from "@/config";
-import type { SupportedChainId } from "@/config/types";
-import { Erc4626VaultProtocol } from "@/config/vault-protocol";
-import { type RestVaultV1Allocation, withdrawQueueAllocations } from "./adapters";
+import { cache } from 'react';
+
+import type { SupportedChainId } from '@/config/types';
+
+import { fetchMorphoRestResource, restSelector } from '@/common/utils/fetchMorphoRest';
+import { APP_CONFIG } from '@/config';
+import { Erc4626VaultProtocol } from '@/config/vault-protocol';
+
+import { type RestVaultV1Allocation, withdrawQueueAllocations } from './adapters';
 
 // The markets the app can show are whatever the configured vaults allocate to. For a vault V2 that
 // means its MarketV1 caps plus whatever its adapters hold: a vault V1 through a vault V1 adapter, or
@@ -26,18 +29,18 @@ interface RestVaultV1Allocations {
 }
 
 type RestVaultV2Target =
-  | { type: "blue_market" }
-  | { type: "vault_v1"; vault_address: string }
-  | { type: "vault_v2"; vault_address: string }
-  | { type: "unknown"; target_address: string };
+  | { type: 'blue_market' }
+  | { type: 'vault_v1'; vault_address: string }
+  | { type: 'vault_v2'; vault_address: string }
+  | { type: 'unknown'; target_address: string };
 
 interface RestVaultV2Allocations {
   data: {
     allocations: {
       caps: (
-        | { cap_type: "market_v1"; market_id: Hex; absolute_cap: string; allocated_assets: string }
+        | { cap_type: 'market_v1'; market_id: Hex; absolute_cap: string; allocated_assets: string }
         | {
-            cap_type: "adapter";
+            cap_type: 'adapter';
           }
       )[];
       target: RestVaultV2Target;
@@ -76,7 +79,12 @@ async function collectVaultV1Markets(refs: VaultRef[], add: AddMarket): Promise<
   );
 }
 
-async function collectVaultV2Markets(refs: VaultRef[], add: AddMarket, visited: Set<string>, depth = 0): Promise<void> {
+async function collectVaultV2Markets(
+  refs: VaultRef[],
+  add: AddMarket,
+  visited: Set<string>,
+  depth = 0,
+): Promise<void> {
   // A vault reached twice (a diamond, or a cycle through adapters) contributes nothing new.
   const pending = refs.filter((ref) => !visited.has(refKey(ref)));
   if (pending.length === 0) return;
@@ -101,7 +109,7 @@ async function collectVaultV2Markets(refs: VaultRef[], add: AddMarket, visited: 
           // pending (served as 0 until it executes); with nothing allocated, the vault cannot reach
           // that market. GraphQL omitted both.
           if (
-            cap.cap_type !== "market_v1" ||
+            cap.cap_type !== 'market_v1' ||
             (BigInt(cap.absolute_cap) === 0n && BigInt(cap.allocated_assets) === 0n)
           ) {
             continue;
@@ -111,10 +119,10 @@ async function collectVaultV2Markets(refs: VaultRef[], add: AddMarket, visited: 
 
         const { target } = allocation;
         switch (target.type) {
-          case "vault_v1":
+          case 'vault_v1':
             innerV1Vaults.push({ chainId: ref.chainId, address: target.vault_address });
             break;
-          case "vault_v2":
+          case 'vault_v2':
             innerV2Vaults.push({ chainId: ref.chainId, address: target.vault_address });
             break;
           // A market adapter's markets are its MarketV1 caps, already added above. An unknown
@@ -147,8 +155,12 @@ export const getVaultMarketIds = cache(async (): Promise<Record<SupportedChainId
     vaults.map((vault) => ({ chainId: Number.parseInt(chainId) as SupportedChainId, ...vault })),
   );
 
-  const v2Refs = configuredVaults.filter((vault) => vault.protocol === Erc4626VaultProtocol.MorphoV2);
-  const v1Refs = configuredVaults.filter((vault) => vault.protocol === Erc4626VaultProtocol.MorphoV1);
+  const v2Refs = configuredVaults.filter(
+    (vault) => vault.protocol === Erc4626VaultProtocol.MorphoV2,
+  );
+  const v1Refs = configuredVaults.filter(
+    (vault) => vault.protocol === Erc4626VaultProtocol.MorphoV1,
+  );
 
   const marketWhitelist = {} as Record<SupportedChainId, Set<Hex>>;
   const add: AddMarket = (chainId, marketId) => {

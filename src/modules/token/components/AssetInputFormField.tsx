@@ -1,21 +1,33 @@
-"use client";
+'use client';
 
-import clsx from "clsx";
-import type { FieldPath, FieldValues } from "react-hook-form";
-import { formatUnits } from "viem";
-import { Button } from "@/common/components/ui/button";
-import { DecimalInput } from "@/common/components/ui/decimal-input/decimal-input";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/common/components/ui/form";
-import NumberFlow from "@/common/components/ui/number-flow";
-import type { ChainInfo, TokenInfo } from "@/common/data/types";
-import { descaleBigIntToNumber } from "@/common/utils/format";
-import { TokenIcon } from "@/modules/token/components/TokenIcon";
+import type { FieldPath, FieldValues } from 'react-hook-form';
+
+import clsx from 'clsx';
+import { formatUnits } from 'viem';
+
+import type { ChainInfo, TokenInfo } from '@/common/data/types';
+
+import { Button } from '@/common/components/ui/button';
+import { DecimalInput } from '@/common/components/ui/decimal-input/decimal-input';
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/common/components/ui/form';
+import NumberFlow from '@/common/components/ui/number-flow';
+import { descaleBigIntToNumber } from '@/common/utils/format';
+import { TokenIcon } from '@/modules/token/components/TokenIcon';
 
 interface AssetInputFormFieldProps<
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
   TTransformedValues extends FieldValues | undefined = undefined,
-> extends Omit<React.ComponentProps<typeof FormField<TFieldValues, TName, TTransformedValues>>, "render"> {
+> extends Omit<
+  React.ComponentProps<typeof FormField<TFieldValues, TName, TTransformedValues>>,
+  'render'
+> {
   header: string;
   chain: ChainInfo;
   asset: TokenInfo & { priceUsd: number | null };
@@ -50,10 +62,10 @@ function AssetInputFormField<
                 <DecimalInput
                   autoComplete="off"
                   className={clsx(
-                    "!heading-2 h-12 rounded-none border-none bg-transparent p-0 shadow-none focus:ring-0 focus:ring-offset-0",
+                    '!heading-2 h-12 rounded-none border-none bg-transparent p-0 shadow-none focus:ring-0 focus:ring-offset-0',
                     fieldState.error && !!field.value && fieldState.isDirty
-                      ? "text-destructive-foreground"
-                      : "placeholder:text-muted-foreground/80",
+                      ? 'text-destructive-foreground'
+                      : 'placeholder:text-muted-foreground/80',
                   )}
                   decimals={asset.decimals}
                   {...field}
@@ -66,7 +78,12 @@ function AssetInputFormField<
               </FormControl>
               {!!asset && (
                 <div className="flex max-w-1/2 items-center gap-2 px-2">
-                  <TokenIcon token={asset} chain={chain} size="sm" chainClassName="border-muted bg-muted" />
+                  <TokenIcon
+                    token={asset}
+                    chain={chain}
+                    size="sm"
+                    chainClassName="border-muted bg-muted"
+                  />
                   <span className="body-large-plus truncate">{asset.symbol}</span>
                 </div>
               )}
@@ -75,7 +92,7 @@ function AssetInputFormField<
               {asset.priceUsd != null && (
                 <NumberFlow
                   value={(Number.isNaN(field.value) ? 0 : field.value) * asset.priceUsd}
-                  format={{ currency: "USD" }}
+                  format={{ currency: 'USD' }}
                 />
               )}
               {maxValue !== undefined && (

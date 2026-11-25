@@ -1,32 +1,42 @@
-import AvatarGroup from "@/common/components/AvatarGroup";
-import { LinkExternalBlockExplorer } from "@/common/components/LinkExternal";
-import NumberFlow from "@/common/components/ui/number-flow";
-import { getAvatarForAddress } from "@/common/utils/getAvatarForAddress";
-import { TokenIcon } from "@/modules/token/components/TokenIcon";
-import type { MorphoVaultV2 } from "@/modules/vault/vault.types";
-import { VaultInfoMetric, type VaultMetric } from "../VaultInfo";
+import type { MorphoVaultV2 } from '@/modules/vault/vault.types';
 
-export const MorphoV2VaultMetrics: Array<VaultMetric["id"]> = [
-  "performance-fee",
-  "management-fee",
-  "vault-address",
-  "underlying-asset",
-  "curator",
-  "sentinel",
+import AvatarGroup from '@/common/components/AvatarGroup';
+import { LinkExternalBlockExplorer } from '@/common/components/LinkExternal';
+import NumberFlow from '@/common/components/ui/number-flow';
+import { getAvatarForAddress } from '@/common/utils/getAvatarForAddress';
+import { TokenIcon } from '@/modules/token/components/TokenIcon';
+
+import { VaultInfoMetric, type VaultMetric } from '../VaultInfo';
+
+export const MorphoV2VaultMetrics: Array<VaultMetric['id']> = [
+  'performance-fee',
+  'management-fee',
+  'vault-address',
+  'underlying-asset',
+  'curator',
+  'sentinel',
 ] as const;
 
 export async function MorphoV2VaultInfo(props: { vaultPromise: Promise<MorphoVaultV2> }) {
   const vault = await props.vaultPromise;
-  const { performanceFee, managementFee, vaultAddress, asset, chain, curatorAddress, sentinelAddresses } = vault;
+  const {
+    performanceFee,
+    managementFee,
+    vaultAddress,
+    asset,
+    chain,
+    curatorAddress,
+    sentinelAddresses,
+  } = vault;
 
   return (
     <>
       <VaultInfoMetric id="performance-fee">
-        <NumberFlow value={Number(performanceFee.formatted)} format={{ style: "percent" }} />
+        <NumberFlow value={Number(performanceFee.formatted)} format={{ style: 'percent' }} />
       </VaultInfoMetric>
 
       <VaultInfoMetric id="management-fee">
-        <NumberFlow value={Number(managementFee.formatted)} format={{ style: "percent" }} />
+        <NumberFlow value={Number(managementFee.formatted)} format={{ style: 'percent' }} />
       </VaultInfoMetric>
 
       <VaultInfoMetric id="vault-address">

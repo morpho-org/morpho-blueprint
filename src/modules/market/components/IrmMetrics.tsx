@@ -1,11 +1,13 @@
-import type { ReactNode } from "react";
-import { getAddress } from "viem";
+import type { ReactNode } from 'react';
 
-import { LinkExternalBlockExplorer } from "@/common/components/LinkExternal";
-import { MetricWithTooltip } from "@/common/components/Metric";
-import NumberFlow from "@/common/components/ui/number-flow";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import type { Market } from "@/modules/market/data/getMarket";
+import { getAddress } from 'viem';
+
+import type { Market } from '@/modules/market/data/getMarket';
+
+import { LinkExternalBlockExplorer } from '@/common/components/LinkExternal';
+import { MetricWithTooltip } from '@/common/components/Metric';
+import NumberFlow from '@/common/components/ui/number-flow';
+import { Skeleton } from '@/common/components/ui/skeleton';
 
 interface IrmMetricsProps {
   market: Market;
@@ -15,9 +17,19 @@ export function IrmMetrics({ market }: IrmMetricsProps) {
   return (
     <IrmMetricsLayout
       targetUtilization={
-        <NumberFlow value={market.irm.targetUtilization} format={{ style: "percent" }} className="heading-6" />
+        <NumberFlow
+          value={market.irm.targetUtilization}
+          format={{ style: 'percent' }}
+          className="heading-6"
+        />
       }
-      currentUtilization={<NumberFlow value={market.utilization} format={{ style: "percent" }} className="heading-6" />}
+      currentUtilization={
+        <NumberFlow
+          value={market.utilization}
+          format={{ style: 'percent' }}
+          className="heading-6"
+        />
+      }
       irmAddress={
         <LinkExternalBlockExplorer
           type="address"
@@ -32,7 +44,13 @@ export function IrmMetrics({ market }: IrmMetricsProps) {
 
 export function IrmMetricsSkeleton() {
   const skeleton = <Skeleton className="mt-0.5 h-[25px] w-[140px]" />;
-  return <IrmMetricsLayout targetUtilization={skeleton} currentUtilization={skeleton} irmAddress={skeleton} />;
+  return (
+    <IrmMetricsLayout
+      targetUtilization={skeleton}
+      currentUtilization={skeleton}
+      irmAddress={skeleton}
+    />
+  );
 }
 
 interface IrmMetricsLayoutProps {
@@ -41,7 +59,11 @@ interface IrmMetricsLayoutProps {
   irmAddress: ReactNode;
 }
 
-function IrmMetricsLayout({ targetUtilization, currentUtilization, irmAddress }: IrmMetricsLayoutProps) {
+function IrmMetricsLayout({
+  targetUtilization,
+  currentUtilization,
+  irmAddress,
+}: IrmMetricsLayoutProps) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       <MetricWithTooltip

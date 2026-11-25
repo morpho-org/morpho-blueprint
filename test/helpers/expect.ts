@@ -1,6 +1,6 @@
-import { expect } from "vitest";
+import { expect } from 'vitest';
 
-declare module "vitest" {
+declare module 'vitest' {
   interface Assertion {
     toBeWithinRange<T extends bigint | number>(floor: T, ceiling: T): void;
   }

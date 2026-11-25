@@ -1,9 +1,11 @@
-import type { NextFontWithVariable } from "next/dist/compiled/@next/font";
-import type { ReactNode } from "react";
-import type { Address, Chain } from "viem";
-import type { EventName } from "@/common/utils/trackEvent";
-import type { SUPPORTED_CHAIN_IDS, VAULT_TAG_OPTIONS } from "@/config";
-import type { Erc4626VaultProtocol } from "./vault-protocol";
+import type { NextFontWithVariable } from 'next/dist/compiled/@next/font';
+import type { ReactNode } from 'react';
+import type { Address, Chain } from 'viem';
+
+import type { EventName } from '@/common/utils/trackEvent';
+import type { SUPPORTED_CHAIN_IDS, VAULT_TAG_OPTIONS } from '@/config';
+
+import type { Erc4626VaultProtocol } from './vault-protocol';
 
 // You shouldn't modify this file unless deploying a fully custom fork (otherwise the app will likely break)
 
@@ -11,7 +13,7 @@ import type { Erc4626VaultProtocol } from "./vault-protocol";
 export type SupportedChainId = (typeof SUPPORTED_CHAIN_IDS)[number];
 
 // Windows available for native apy smoothing (6 hours, 1 day, 7 days, 30 days)
-export type ApyWindow = "6h" | "1d" | "7d" | "30d";
+export type ApyWindow = '6h' | '1d' | '7d' | '30d';
 
 export type VaultTag = (typeof VAULT_TAG_OPTIONS)[number];
 
@@ -42,9 +44,9 @@ export interface AppConfig {
       // App icon images - should all be the same image but different formats / sizes
       readonly icons: {
         readonly ico: string; // Legacy favicon
-        readonly "png-64x64": string; // 64x64px png modern favicon
-        readonly "png-192x192": string; // 192x192px png PWA manifest and apple touch icon
-        readonly "png-512x512": string; // 512x512px png PWA manifest
+        readonly 'png-64x64': string; // 64x64px png modern favicon
+        readonly 'png-192x192': string; // 192x192px png PWA manifest and apple touch icon
+        readonly 'png-512x512': string; // 512x512px png PWA manifest
         readonly svg: string; // 64x64px viewbox svg url for modern browsers
       };
     };
@@ -80,7 +82,9 @@ export interface AppConfig {
     readonly privacyPolicy?: ReactNode; // (optional) Privacy policy content, will be displayed on the /privacy page
 
     readonly requireTermsOfUseAcceptance?: boolean; // (optional) Controls if the terms of use acceptance is required before a user sends their first transaction. Must also provide compliance.termsOfUse otherwise this is ignored. Defaults to false.
-    readonly countrySpecificDisclaimer?: Partial<Record<string, { readonly title: string; readonly text: string }>>; // (optional) Map of ISO 3166-2 country code to the country's disclaimer info. This will be shown as a banner at the top of the app above the nav bar (below the infoBanner) with a button that opens a modal with the full text content.
+    readonly countrySpecificDisclaimer?: Partial<
+      Record<string, { readonly title: string; readonly text: string }>
+    >; // (optional) Map of ISO 3166-2 country code to the country's disclaimer info. This will be shown as a banner at the top of the app above the nav bar (below the infoBanner) with a button that opens a modal with the full text content.
   };
 
   readonly reownProjectId: string; // Reown/wallet connect project ID. Get this from https://cloud.reown.com

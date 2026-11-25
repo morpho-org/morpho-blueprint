@@ -1,16 +1,17 @@
-import { type MarketId, MathLib } from "@morpho-org/blue-sdk";
-import { fetchMarket } from "@morpho-org/blue-sdk-viem";
-import type { AnvilTestClient } from "@morpho-org/test";
-import { createViemTest } from "@morpho-org/test/vitest";
-import { type Address, erc20Abi, parseUnits } from "viem";
-import { readContract } from "viem/actions";
-import { mainnet } from "viem/chains";
-import { describe, expect } from "vitest";
+import type { AnvilTestClient } from '@morpho-org/test';
 
-import { marketSupplyCollateralAndBorrowAction } from "@/actions";
+import { type MarketId, MathLib } from '@morpho-org/blue-sdk';
+import { fetchMarket } from '@morpho-org/blue-sdk-viem';
+import { createViemTest } from '@morpho-org/test/vitest';
+import { type Address, erc20Abi, parseUnits } from 'viem';
+import { readContract } from 'viem/actions';
+import { mainnet } from 'viem/chains';
+import { describe, expect } from 'vitest';
 
-import { executeAction } from "../../helpers/executeAction";
-import { createMarketPosition } from "../../helpers/morpho";
+import { marketSupplyCollateralAndBorrowAction } from '@/actions';
+
+import { executeAction } from '../../helpers/executeAction';
+import { createMarketPosition } from '../../helpers/morpho';
 
 /**
  * "Available to Borrow" is Core's `market_liquidity` + `reallocatable_liquidity`, with the vaults
@@ -18,28 +19,35 @@ import { createMarketPosition } from "../../helpers/morpho";
  * indexed when these figures were read (2026-11-05), so Core and the chain describe the same state.
  */
 const BLOCK = 26348902n;
-const test = createViemTest(mainnet, { forkUrl: process.env.MAINNET_RPC_URL_1!, forkBlockNumber: BLOCK });
+const test = createViemTest(mainnet, {
+  forkUrl: process.env.MAINNET_RPC_URL_1!,
+  forkBlockNumber: BLOCK,
+});
 
-const ONE_USDC = parseUnits("1", 6);
+const ONE_USDC = parseUnits('1', 6);
 
 const CASES = {
   // A market whose extra liquidity sits behind a vault V2 Public Allocator.
   v2: {
-    marketId: "0xb25c41cd266fa6cb9c581d526ac9d8c0137c92cd06847f7e1ee511764ee3d42f" as MarketId,
-    candidates: ["0x069662D2588fcaC24B5c209456Db965D151556f0"] as Address[],
+    marketId: '0xb25c41cd266fa6cb9c581d526ac9d8c0137c92cd06847f7e1ee511764ee3d42f' as MarketId,
+    candidates: ['0x069662D2588fcaC24B5c209456Db965D151556f0'] as Address[],
     marketLiquidity: 36_746_958265n,
     reallocatableLiquidity: 1_580_549_417593n,
   },
   // mF-ONE/USDC: Core lists a vault V2 candidate but reports nothing to reallocate.
   mfOne: {
-    marketId: "0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba" as MarketId,
-    candidates: ["0xbeeff2C5bF38f90e3482a8b19F12E5a6D2FCa757"] as Address[],
+    marketId: '0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba' as MarketId,
+    candidates: ['0xbeeff2C5bF38f90e3482a8b19F12E5a6D2FCa757'] as Address[],
     marketLiquidity: 2_923_152_592672n,
     reallocatableLiquidity: 0n,
   },
 };
 
-async function borrow(client: AnvilTestClient, c: (typeof CASES)[keyof typeof CASES], amount: bigint) {
+async function borrow(
+  client: AnvilTestClient,
+  c: (typeof CASES)[keyof typeof CASES],
+  amount: bigint,
+) {
   return marketSupplyCollateralAndBorrowAction({
     publicClient: client,
     marketId: c.marketId,
@@ -58,7 +66,7 @@ async function fundCollateral(client: AnvilTestClient, marketId: MarketId, borro
   return market;
 }
 
-describe("Available to Borrow through the Public Allocator V2", () => {
+describe('Available to Borrow through the Public Allocator V2', () => {
   test("Core's market liquidity matches the fork", async ({ client }) => {
     for (const c of Object.values(CASES)) {
       const market = await fetchMarket(c.marketId, client);
@@ -71,7 +79,9 @@ describe("Available to Borrow through the Public Allocator V2", () => {
     }
   });
 
-  test("a borrow at direct + V2 reallocatable liquidity executes through morpho-sdk", async ({ client }) => {
+  test('a borrow at direct + V2 reallocatable liquidity executes through morpho-sdk', async ({
+    client,
+  }) => {
     const c = CASES.v2;
     const cap = c.marketLiquidity + c.reallocatableLiquidity;
     const before = await fundCollateral(client, c.marketId, cap);
@@ -85,13 +95,15 @@ describe("Available to Borrow through the Public Allocator V2", () => {
     const usdc = await readContract(client, {
       address: before.params.loanToken,
       abi: erc20Abi,
-      functionName: "balanceOf",
+      functionName: 'balanceOf',
       args: [client.account.address],
     });
     expect(usdc).toBe(cap);
   });
 
-  test("1 USDC above it fails before signing: the SDK reaches exactly Core's figure", async ({ client }) => {
+  test("1 USDC above it fails before signing: the SDK reaches exactly Core's figure", async ({
+    client,
+  }) => {
     const c = CASES.v2;
     const cap = c.marketLiquidity + c.reallocatableLiquidity;
     await fundCollateral(client, c.marketId, cap * 2n);
@@ -100,7 +112,9 @@ describe("Available to Borrow through the Public Allocator V2", () => {
     );
   });
 
-  test("mF-ONE/USDC: Available to Borrow is direct liquidity, and a borrow at it executes", async ({ client }) => {
+  test('mF-ONE/USDC: Available to Borrow is direct liquidity, and a borrow at it executes', async ({
+    client,
+  }) => {
     const c = CASES.mfOne;
     const cap = c.marketLiquidity + c.reallocatableLiquidity;
     expect(cap).toBe(c.marketLiquidity);

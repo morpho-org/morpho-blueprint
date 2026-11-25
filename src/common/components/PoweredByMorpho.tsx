@@ -1,12 +1,16 @@
-"use client";
+'use client';
 
-import clsx from "clsx";
+import clsx from 'clsx';
 
-import { TooltipPopover, TooltipPopoverContent, TooltipPopoverTrigger } from "@/common/components/ui/tooltip-popover";
+import {
+  TooltipPopover,
+  TooltipPopoverContent,
+  TooltipPopoverTrigger,
+} from '@/common/components/ui/tooltip-popover';
 
-type PoweredByMorphoProps = { showTooltip?: boolean } & React.ComponentProps<"svg">;
+type PoweredByMorphoProps = { showTooltip?: boolean } & React.ComponentProps<'svg'>;
 
-function MorphoLogo({ className, ...props }: React.ComponentProps<"svg">) {
+function MorphoLogo({ className, ...props }: React.ComponentProps<'svg'>) {
   return (
     <svg
       width="140"
@@ -14,7 +18,7 @@ function MorphoLogo({ className, ...props }: React.ComponentProps<"svg">) {
       viewBox="0 0 265 38"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={clsx(["fill-current"], className)}
+      className={clsx(['fill-current'], className)}
       {...props}
     >
       <title>Morpho</title>
@@ -42,14 +46,15 @@ function PoweredByMorpho({ showTooltip = true, ...props }: PoweredByMorphoProps)
       </TooltipPopoverTrigger>
       <TooltipPopoverContent className="flex flex-col gap-2" side="bottom">
         <p className="body-small text-center">
-          This application provides access to decentralized protocols governed by the Morpho DAO. When you perform
-          actions—such as supplying assets to a vault—you are directly interacting with permissionless and immutable
-          smart contracts deployed on the blockchain.
+          This application provides access to decentralized protocols governed by the Morpho DAO.
+          When you perform actions—such as supplying assets to a vault—you are directly interacting
+          with permissionless and immutable smart contracts deployed on the blockchain.
         </p>
         <p className="text-center text-[10px] text-muted-foreground leading-[1.4]">
-          Disclaimer: This application is independently developed and maintained by a third party. It is not operated,
-          maintained, or audited by the Morpho DAO or any related entity. As such, no Morpho entity bears responsibility
-          or liability for the functionality, security, or reliability of this application.
+          Disclaimer: This application is independently developed and maintained by a third party.
+          It is not operated, maintained, or audited by the Morpho DAO or any related entity. As
+          such, no Morpho entity bears responsibility or liability for the functionality, security,
+          or reliability of this application.
         </p>
       </TooltipPopoverContent>
     </TooltipPopover>

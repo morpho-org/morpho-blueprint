@@ -1,5 +1,5 @@
-import type { ChartResolution } from "@/common/utils/chart-ranges";
-import type { BigIntish } from "@/morpho-types";
+import type { ChartResolution } from '@/common/utils/chart-ranges';
+import type { BigIntish } from '@/morpho-types';
 
 export interface DataPoint {
   x: number;
@@ -12,7 +12,11 @@ export interface BigIntDataPoint {
 }
 
 export type HistoryRange = ChartResolution;
-export const HISTORY_RANGE_KEYS = ["hourly", "daily", "weekly"] as const satisfies readonly HistoryRange[];
+export const HISTORY_RANGE_KEYS = [
+  'hourly',
+  'daily',
+  'weekly',
+] as const satisfies readonly HistoryRange[];
 
 type SeriesMap = Record<string, readonly DataPoint[]>;
 type ZippedValues<S extends SeriesMap> = { [K in keyof S]: number | null };

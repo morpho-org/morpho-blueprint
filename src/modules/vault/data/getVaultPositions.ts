@@ -1,15 +1,21 @@
-import "server-only";
+import 'server-only';
+import { type Address, getAddress } from 'viem';
 
-import { type Address, getAddress } from "viem";
-import { toAmountWithPrice } from "@/common/data/adapters/amount";
-import { getTokenPriceUsd, getVaultAssetDecimals } from "@/common/data/rest/tokens";
-import { getWalletTokenBalances } from "@/common/data/rpc/getWalletTokenBalances";
-import { SECONDS_PER_DAY } from "@/common/utils/constants";
-import { chunk, fetchAllMorphoRestPages, fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
-import { APP_CONFIG } from "@/config";
-import type { SupportedChainId } from "@/config/types";
-import { Erc4626VaultProtocol } from "@/config/vault-protocol";
-import type { VaultPosition, VaultPositionMap } from "@/modules/vault/vault.types";
+import type { SupportedChainId } from '@/config/types';
+import type { VaultPosition, VaultPositionMap } from '@/modules/vault/vault.types';
+
+import { toAmountWithPrice } from '@/common/data/adapters/amount';
+import { getTokenPriceUsd, getVaultAssetDecimals } from '@/common/data/rest/tokens';
+import { getWalletTokenBalances } from '@/common/data/rpc/getWalletTokenBalances';
+import { SECONDS_PER_DAY } from '@/common/utils/constants';
+import {
+  chunk,
+  fetchAllMorphoRestPages,
+  fetchMorphoRestResource,
+  restSelector,
+} from '@/common/utils/fetchMorphoRest';
+import { APP_CONFIG } from '@/config';
+import { Erc4626VaultProtocol } from '@/config/vault-protocol';
 
 export type { VaultPosition, VaultPositionMap };
 
@@ -24,8 +30,8 @@ interface RestVaultRoot {
 }
 
 const ROUTE_PREFIX = {
-  [Erc4626VaultProtocol.MorphoV2]: "/v0/vaults-v2",
-  [Erc4626VaultProtocol.MorphoV1]: "/v0/vaults-v1",
+  [Erc4626VaultProtocol.MorphoV2]: '/v0/vaults-v2',
+  [Erc4626VaultProtocol.MorphoV1]: '/v0/vaults-v1',
 } as const;
 
 export const getVaultPositions = async (accountAddress: Address): Promise<VaultPositionMap> => {
@@ -34,7 +40,10 @@ export const getVaultPositions = async (accountAddress: Address): Promise<VaultP
   );
 
   const perChain = await Promise.all(
-    chainIds.map(async (chainId) => [chainId, await getVaultPositionsForChain(chainId, accountAddress)] as const),
+    chainIds.map(
+      async (chainId) =>
+        [chainId, await getVaultPositionsForChain(chainId, accountAddress)] as const,
+    ),
   );
 
   const data = {} as VaultPositionMap;
@@ -55,12 +64,18 @@ async function getVaultPositionsForChain(chainId: SupportedChainId, accountAddre
   const [positions, assets] = await Promise.all([
     Promise.all(
       [Erc4626VaultProtocol.MorphoV2, Erc4626VaultProtocol.MorphoV1].flatMap((protocol) =>
-        chunk(configuredVaults.filter((vault) => vault.protocol === protocol).map((vault) => vault.address)).map(
-          (vaultAddresses) =>
-            fetchAllMorphoRestPages<RestVaultPosition>(`${ROUTE_PREFIX[protocol]}/users/${accountAddress}/positions`, {
+        chunk(
+          configuredVaults
+            .filter((vault) => vault.protocol === protocol)
+            .map((vault) => vault.address),
+        ).map((vaultAddresses) =>
+          fetchAllMorphoRestPages<RestVaultPosition>(
+            `${ROUTE_PREFIX[protocol]}/users/${accountAddress}/positions`,
+            {
               chain_ids: [chainId],
               vault_addresses: vaultAddresses,
-            }),
+            },
+          ),
         ),
       ),
     ),
@@ -90,16 +105,22 @@ async function getVaultPositionsForChain(chainId: SupportedChainId, accountAddre
 
   const assetsByVault = new Map<Address, string>();
   for (const position of positions.flat()) {
-    if (position.chain_id === chainId) assetsByVault.set(getAddress(position.vault_address), position.assets);
+    if (position.chain_id === chainId)
+      assetsByVault.set(getAddress(position.vault_address), position.assets);
   }
 
-  const assetAddresses = Array.from(new Set(Array.from(assetByVault.values(), (asset) => asset.address)));
+  const assetAddresses = Array.from(
+    new Set(Array.from(assetByVault.values(), (asset) => asset.address)),
+  );
   const [prices, walletBalances] = await Promise.all([
     // No page to fall back to here: a rate-limited price shows no USD value.
     Promise.all(
       assetAddresses.map(
         async (address) =>
-          [address, await getTokenPriceUsd(chainId, address, { throwWhenRateLimited: false })] as const,
+          [
+            address,
+            await getTokenPriceUsd(chainId, address, { throwWhenRateLimited: false }),
+          ] as const,
       ),
     ),
     getWalletTokenBalances(chainId, accountAddress, assetAddresses),
@@ -130,7 +151,9 @@ async function getVaultPositionsForChain(chainId: SupportedChainId, accountAddre
       // REST serves positions in asset units only; USD is priced here from the asset's price.
       assets: toAmountWithPrice(assetsByVault.get(vaultAddress) ?? 0, asset.decimals, priceUsd),
       walletAssetHolding:
-        walletBalance === undefined ? null : { balance: toAmountWithPrice(walletBalance, asset.decimals, priceUsd) },
+        walletBalance === undefined
+          ? null
+          : { balance: toAmountWithPrice(walletBalance, asset.decimals, priceUsd) },
     };
   }
 

@@ -1,16 +1,18 @@
-"use client";
+'use client';
 
-import { forwardRef, useImperativeHandle } from "react";
+import { forwardRef, useImperativeHandle } from 'react';
 
-import type { MarketAction } from "@/actions";
-import { Button } from "@/common/components/ui/button";
-import { ErrorMessage } from "@/common/components/ui/error-message";
-import { Form } from "@/common/components/ui/form";
-import { Separator } from "@/common/components/ui/seperator";
-import { MarketActionSimulationMetrics } from "@/modules/action-flow/components/MarketActionFlow";
-import type { MarketNonIdle } from "@/modules/market/data/getMarket";
-import { AssetInputFormField } from "@/modules/token/components/AssetInputFormField";
-import { useMarketSupplyCollateralAndBorrowForm } from "./useMarketSupplyCollateralAndBorrowForm";
+import type { MarketAction } from '@/actions';
+import type { MarketNonIdle } from '@/modules/market/data/getMarket';
+
+import { Button } from '@/common/components/ui/button';
+import { ErrorMessage } from '@/common/components/ui/error-message';
+import { Form } from '@/common/components/ui/form';
+import { Separator } from '@/common/components/ui/seperator';
+import { MarketActionSimulationMetrics } from '@/modules/action-flow/components/MarketActionFlow';
+import { AssetInputFormField } from '@/modules/token/components/AssetInputFormField';
+
+import { useMarketSupplyCollateralAndBorrowForm } from './useMarketSupplyCollateralAndBorrowForm';
 
 interface MarketSupplyCollateralAndBorrowFormProps {
   market: MarketNonIdle;
@@ -34,7 +36,7 @@ export const MarketSupplyCollateralAndBorrowForm = forwardRef<
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)}>
-        <fieldset disabled={form.formState.isSubmitting} style={{ all: "unset", width: "100%" }}>
+        <fieldset disabled={form.formState.isSubmitting} style={{ all: 'unset', width: '100%' }}>
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-1">
               <AssetInputFormField
@@ -43,9 +45,13 @@ export const MarketSupplyCollateralAndBorrowForm = forwardRef<
                 header={`Add ${market.collateralAsset.symbol}`}
                 chain={market.chain}
                 asset={market.collateralAsset}
-                maxValue={position ? BigInt(position.walletCollateralAssetHolding?.balance.raw ?? 0) : undefined}
+                maxValue={
+                  position
+                    ? BigInt(position.walletCollateralAssetHolding?.balance.raw ?? 0)
+                    : undefined
+                }
                 setIsMax={(isMax) => {
-                  form.setValue("isMaxSupplyCollateral", isMax);
+                  form.setValue('isMaxSupplyCollateral', isMax);
                 }}
               />
               <AssetInputFormField
@@ -74,7 +80,7 @@ export const MarketSupplyCollateralAndBorrowForm = forwardRef<
                 size="lg"
                 type="submit"
               >
-                {derivedFormValues.missingAmount ? "Enter an amount" : "Review"}
+                {derivedFormValues.missingAmount ? 'Enter an amount' : 'Review'}
               </Button>
               <ErrorMessage message={submitErrorMsg} />
             </div>
@@ -84,4 +90,4 @@ export const MarketSupplyCollateralAndBorrowForm = forwardRef<
     </Form>
   );
 });
-MarketSupplyCollateralAndBorrowForm.displayName = "MarketSupplyCollateralAndBorrowForm";
+MarketSupplyCollateralAndBorrowForm.displayName = 'MarketSupplyCollateralAndBorrowForm';

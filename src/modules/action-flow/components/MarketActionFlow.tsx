@@ -1,21 +1,22 @@
-import { clsx } from "clsx";
+import { clsx } from 'clsx';
 
-import type { MarketAction, MarketPositionChange } from "@/actions";
-import { MetricChange, MetricChangeValues } from "@/common/components/MetricChange";
-import { NumberFlowWithLoading } from "@/common/components/ui/number-flow";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import { descaleBigIntToNumber, formatNumber } from "@/common/utils/format";
-import type { Market, MarketNonIdle } from "@/modules/market/data/getMarket";
-import { AssetChangeSummary } from "@/modules/token/components/AssetChangeSummary";
+import type { MarketAction, MarketPositionChange } from '@/actions';
+import type { Market, MarketNonIdle } from '@/modules/market/data/getMarket';
 
-import { ActionFlow, type ActionFlowProps } from "./ActionFlow";
+import { MetricChange, MetricChangeValues } from '@/common/components/MetricChange';
+import { NumberFlowWithLoading } from '@/common/components/ui/number-flow';
+import { Skeleton } from '@/common/components/ui/skeleton';
+import { descaleBigIntToNumber, formatNumber } from '@/common/utils/format';
+import { AssetChangeSummary } from '@/modules/token/components/AssetChangeSummary';
+
+import { ActionFlow, type ActionFlowProps } from './ActionFlow';
 
 export function MarketActionFlow({
   market,
   action,
   trackingTag,
   ...props
-}: Omit<ActionFlowProps, "summary" | "metrics" | "chainId" | "actionName" | "trackingPayload"> & {
+}: Omit<ActionFlowProps, 'summary' | 'metrics' | 'chainId' | 'actionName' | 'trackingPayload'> & {
   market: MarketNonIdle;
   action: MarketAction | null;
   trackingTag: string;
@@ -23,9 +24,17 @@ export function MarketActionFlow({
   return (
     <ActionFlow
       action={action}
-      summary={action && <MarketActionSummary market={market} positionChange={action.positionChange} />}
-      metrics={action && <MarketActionSimulationMetrics market={market} positionChange={action.positionChange} />}
-      actionName={action ? marketPositionChangeToActionName(action.positionChange) : "Send Transaction"} // Fallback won't occur
+      summary={
+        action && <MarketActionSummary market={market} positionChange={action.positionChange} />
+      }
+      metrics={
+        action && (
+          <MarketActionSimulationMetrics market={market} positionChange={action.positionChange} />
+        )
+      }
+      actionName={
+        action ? marketPositionChangeToActionName(action.positionChange) : 'Send Transaction'
+      } // Fallback won't occur
       trackingPayload={getTrackingPayload(market, action, trackingTag)}
       {...props}
     />
@@ -42,11 +51,14 @@ function getTrackingPayload(market: Market, action: MarketAction | null, tag: st
     return basePayload;
   }
 
-  const collateralDelta = action.positionChange.collateral.after - action.positionChange.collateral.before;
+  const collateralDelta =
+    action.positionChange.collateral.after - action.positionChange.collateral.before;
   const loanDelta = action.positionChange.loan.after - action.positionChange.loan.before;
   return {
     ...basePayload,
-    collateralAmount: Math.abs(descaleBigIntToNumber(collateralDelta, market.collateralAsset?.decimals ?? 18)),
+    collateralAmount: Math.abs(
+      descaleBigIntToNumber(collateralDelta, market.collateralAsset?.decimals ?? 18),
+    ),
     loanAmount: Math.abs(descaleBigIntToNumber(loanDelta, market.loanAsset.decimals)),
   };
 }
@@ -58,18 +70,22 @@ export function MarketActionSummary({
   market: MarketNonIdle;
   positionChange: MarketPositionChange;
 }) {
-  const collateralDeltaAmountRaw = positionChange.collateral.after - positionChange.collateral.before;
-  const collateralDeltaAmount = descaleBigIntToNumber(collateralDeltaAmountRaw, market.collateralAsset.decimals);
+  const collateralDeltaAmountRaw =
+    positionChange.collateral.after - positionChange.collateral.before;
+  const collateralDeltaAmount = descaleBigIntToNumber(
+    collateralDeltaAmountRaw,
+    market.collateralAsset.decimals,
+  );
   const collateralDeltaAmountUsd = collateralDeltaAmount * (market.collateralAsset.priceUsd ?? 0);
-  const collateralAction = collateralDeltaAmount > 0 ? "Add" : "Withdraw";
+  const collateralAction = collateralDeltaAmount > 0 ? 'Add' : 'Withdraw';
 
   const loanDeltaAmountRaw = positionChange.loan.after - positionChange.loan.before;
   const loanDeltaAmount = descaleBigIntToNumber(loanDeltaAmountRaw, market.loanAsset.decimals);
   const loanDeltaAmountUsd = loanDeltaAmount * (market.loanAsset?.priceUsd ?? 0);
-  const loanAction = loanDeltaAmount > 0 ? "Borrow" : "Repay";
+  const loanAction = loanDeltaAmount > 0 ? 'Borrow' : 'Repay';
 
   return (
-    <div className={clsx("flex gap-1", loanDeltaAmount > 0 ? "flex-col" : "flex-col-reverse")}>
+    <div className={clsx('flex gap-1', loanDeltaAmount > 0 ? 'flex-col' : 'flex-col-reverse')}>
       {collateralDeltaAmount !== 0 && (
         <AssetChangeSummary
           amount={collateralDeltaAmount}
@@ -107,7 +123,10 @@ export function MarketActionSimulationMetrics({
           className="gap-1"
           initialValue={
             <NumberFlowWithLoading
-              value={descaleBigIntToNumber(positionChange.collateral.before, market.collateralAsset.decimals)}
+              value={descaleBigIntToNumber(
+                positionChange.collateral.before,
+                market.collateralAsset.decimals,
+              )}
               isLoading={isLoading}
               loadingContent={<Skeleton className="h-[21px] w-8" />}
             />
@@ -115,7 +134,10 @@ export function MarketActionSimulationMetrics({
           finalValue={
             positionChange.collateral.after === positionChange.collateral.before ? undefined : (
               <NumberFlowWithLoading
-                value={descaleBigIntToNumber(positionChange.collateral.after, market.collateralAsset.decimals)}
+                value={descaleBigIntToNumber(
+                  positionChange.collateral.after,
+                  market.collateralAsset.decimals,
+                )}
                 isLoading={isLoading}
                 loadingContent={<Skeleton className="h-[21px] w-8" />}
               />
@@ -147,15 +169,22 @@ export function MarketActionSimulationMetrics({
         name="Available to borrow"
         initialValue={
           <NumberFlowWithLoading
-            value={descaleBigIntToNumber(positionChange.availableToBorrow.before, market.loanAsset.decimals)}
+            value={descaleBigIntToNumber(
+              positionChange.availableToBorrow.before,
+              market.loanAsset.decimals,
+            )}
             isLoading={isLoading}
             loadingContent={<Skeleton className="h-[21px] w-8" />}
           />
         }
         finalValue={
-          positionChange.availableToBorrow.after === positionChange.availableToBorrow.before ? undefined : (
+          positionChange.availableToBorrow.after ===
+          positionChange.availableToBorrow.before ? undefined : (
             <NumberFlowWithLoading
-              value={descaleBigIntToNumber(positionChange.availableToBorrow.after, market.loanAsset.decimals)}
+              value={descaleBigIntToNumber(
+                positionChange.availableToBorrow.after,
+                market.loanAsset.decimals,
+              )}
               isLoading={isLoading}
               loadingContent={<Skeleton className="h-[21px] w-8" />}
             />
@@ -168,11 +197,11 @@ export function MarketActionSimulationMetrics({
           <MetricChangeValues
             initialValue={
               <div className="inline-flex">
-                {positionChange.ltv.after !== positionChange.ltv.before && "("}
+                {positionChange.ltv.after !== positionChange.ltv.before && '('}
                 <NumberFlowWithLoading
                   value={descaleBigIntToNumber(positionChange.ltv.before, 18)}
                   isLoading={isLoading}
-                  format={{ style: "percent" }}
+                  format={{ style: 'percent' }}
                   loadingContent={<Skeleton className="h-[21px] w-8" />}
                 />
               </div>
@@ -183,15 +212,15 @@ export function MarketActionSimulationMetrics({
                   <NumberFlowWithLoading
                     value={descaleBigIntToNumber(positionChange.ltv.after, 18)}
                     isLoading={isLoading}
-                    format={{ style: "percent" }}
+                    format={{ style: 'percent' }}
                     loadingContent={<Skeleton className="h-[21px] w-8" />}
                   />
                   )
                 </div>
               )
             }
-          />{" "}
-          / {formatNumber(Number(market.lltv.formatted), { style: "percent" })}
+          />{' '}
+          / {formatNumber(Number(market.lltv.formatted), { style: 'percent' })}
         </div>
       </div>
     </div>
@@ -202,10 +231,14 @@ function marketPositionChangeToActionName(positonChange: MarketPositionChange) {
   const collateralDelta = positonChange.collateral.after - positonChange.collateral.before;
   const loanDelta = positonChange.loan.after - positonChange.loan.before;
   const collateralActionName =
-    collateralDelta === 0n ? "" : collateralDelta > 0n ? "Supply Collateral" : "Withdraw Collateral";
-  const loanActionName = loanDelta === 0n ? "" : loanDelta > 0n ? "Borrow" : "Repay";
+    collateralDelta === 0n
+      ? ''
+      : collateralDelta > 0n
+        ? 'Supply Collateral'
+        : 'Withdraw Collateral';
+  const loanActionName = loanDelta === 0n ? '' : loanDelta > 0n ? 'Borrow' : 'Repay';
 
-  const middleCopy = collateralActionName !== "" && loanActionName !== "" ? " and " : "";
+  const middleCopy = collateralActionName !== '' && loanActionName !== '' ? ' and ' : '';
   const actionName =
     loanDelta > 0n
       ? collateralActionName + middleCopy + loanActionName

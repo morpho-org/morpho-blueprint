@@ -1,8 +1,7 @@
-import "server-only";
-
-import { promiseWithRetry } from "@/common/utils/fetch";
-import { getMorphoApiHost, type MorphoApi } from "@/common/utils/morphoApiConfig";
-import { trackEvent } from "@/common/utils/trackEvent";
+import 'server-only';
+import { promiseWithRetry } from '@/common/utils/fetch';
+import { getMorphoApiHost, type MorphoApi } from '@/common/utils/morphoApiConfig';
+import { trackEvent } from '@/common/utils/trackEvent';
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -68,7 +67,7 @@ export class MorphoRestError extends Error {
     readonly detail: string,
   ) {
     super(`Morpho REST ${status} on ${path}: ${detail}`);
-    this.name = "MorphoRestError";
+    this.name = 'MorphoRestError';
   }
 }
 
@@ -89,8 +88,9 @@ function buildUrl(baseUrl: string, path: string, query: RestQuery = {}): URL {
     if (value === undefined) continue;
     if (Array.isArray(value)) {
       // An omitted filter means "every row", so an empty list must never reach the API as one.
-      if (value.length === 0) throw new Error(`Empty "${key}" filter for ${path}; skip the request instead.`);
-      url.searchParams.set(key, value.join(","));
+      if (value.length === 0)
+        throw new Error(`Empty "${key}" filter for ${path}; skip the request instead.`);
+      url.searchParams.set(key, value.join(','));
     } else {
       url.searchParams.set(key, String(value));
     }
@@ -99,10 +99,10 @@ function buildUrl(baseUrl: string, path: string, query: RestQuery = {}): URL {
 }
 
 function errorMessage(body: unknown, fallback: string): string {
-  if (body && typeof body === "object" && "message" in body) {
+  if (body && typeof body === 'object' && 'message' in body) {
     const { message } = body;
-    if (Array.isArray(message)) return message.join("; ");
-    if (typeof message === "string") return message;
+    if (Array.isArray(message)) return message.join('; ');
+    if (typeof message === 'string') return message;
   }
   return fallback;
 }
@@ -110,7 +110,11 @@ function errorMessage(body: unknown, fallback: string): string {
 // Nest answers a path no controller serves with `Cannot GET <path>`; a known route reports the
 // missing resource in its own words. Only the latter means "not found".
 function isMissingResource(error: unknown): boolean {
-  return error instanceof MorphoRestError && error.status === 404 && !error.detail.startsWith("Cannot GET ");
+  return (
+    error instanceof MorphoRestError &&
+    error.status === 404 &&
+    !error.detail.startsWith('Cannot GET ')
+  );
 }
 
 // Only failures a second attempt can fix: the network, a timeout, a 5xx or a 429. A 4xx is the
@@ -125,21 +129,28 @@ async function readMorphoRest<T, M>(
   options: RestRequestOptions,
   missing?: { value: M },
 ): Promise<T | M> {
-  const host = getMorphoApiHost(options.api ?? "core");
-  if (!host) throw new Error(`Blueprint API is off (MORPHO_INTERNAL_API_KEY unset); check before reading ${path}.`);
+  const host = getMorphoApiHost(options.api ?? 'core');
+  if (!host)
+    throw new Error(
+      `Blueprint API is off (MORPHO_INTERNAL_API_KEY unset); check before reading ${path}.`,
+    );
   const url = buildUrl(host.baseUrl, path, query);
   const { apiKey } = host;
 
   const attempt = async (): Promise<T> => {
     const response = await fetch(url, {
-      headers: { Accept: "application/json", ...(apiKey ? { "x-api-key": apiKey } : {}) },
+      headers: { Accept: 'application/json', ...(apiKey ? { 'x-api-key': apiKey } : {}) },
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       ...(options.revalidate === undefined ? {} : { next: { revalidate: options.revalidate } }),
     });
 
     if (!response.ok) {
       const body = await response.json().catch(() => null);
-      throw new MorphoRestError(response.status, url.pathname, errorMessage(body, response.statusText));
+      throw new MorphoRestError(
+        response.status,
+        url.pathname,
+        errorMessage(body, response.statusText),
+      );
     }
     return (await response.json()) as T;
   };
@@ -149,10 +160,12 @@ async function readMorphoRest<T, M>(
   } catch (error) {
     if (missing && isMissingResource(error)) return missing.value;
     if (options.quiet) {
-      console.warn(`Morpho REST read failed for ${url.pathname}${url.search}, using the fallback - ${error}`);
+      console.warn(
+        `Morpho REST read failed for ${url.pathname}${url.search}, using the fallback - ${error}`,
+      );
     } else {
       console.error(`Morpho REST read failed for ${url.pathname}${url.search} - ${error}`);
-      trackEvent("data-fetch-error", { url: url.toString(), error: `${error}` }).catch(() => {});
+      trackEvent('data-fetch-error', { url: url.toString(), error: `${error}` }).catch(() => {});
     }
     throw error;
   }
@@ -163,7 +176,11 @@ async function readMorphoRest<T, M>(
  * API routes). Returns the parsed body. Any non-2xx response throws a `MorphoRestError`, after
  * retrying the transient ones; a 404 too, so lists and unknown routes never read as empty.
  */
-export function fetchMorphoRest<T>(path: string, query?: RestQuery, options: RestRequestOptions = {}): Promise<T> {
+export function fetchMorphoRest<T>(
+  path: string,
+  query?: RestQuery,
+  options: RestRequestOptions = {},
+): Promise<T> {
   return readMorphoRest<T, never>(path, query, options);
 }
 

@@ -1,13 +1,8 @@
-import { formatUnits, getAddress, type Hex } from "viem";
-import { descale, toAmount, toAmountWithPrice, toBigInt } from "@/common/data/adapters/amount";
-import { assembleApyWithRewards } from "@/common/data/adapters/apy";
-import { toChainInfoById, toTokenInfo } from "@/common/data/adapters/entity";
-import { type DataPoint, descaleSeries, zipTimeseries } from "@/common/data/adapters/timeseries";
-import type { RestToken } from "@/common/data/rest/tokens";
-import type { ChainInfo, CuratorInfo, RewardApy, TokenInfo } from "@/common/data/types";
-import { numberToString } from "@/common/utils/format";
-import { APP_CONFIG } from "@/config";
-import type { MarketInfo } from "@/modules/market/market.types";
+import { formatUnits, getAddress, type Hex } from 'viem';
+
+import type { RestToken } from '@/common/data/rest/tokens';
+import type { ChainInfo, CuratorInfo, RewardApy, TokenInfo } from '@/common/data/types';
+import type { MarketInfo } from '@/modules/market/market.types';
 import type {
   MorphoVaultV1,
   MorphoVaultV1Summary,
@@ -16,18 +11,30 @@ import type {
   VaultCollateralAllocation,
   VaultHistoricalEntry,
   VaultMarketAllocation,
-} from "@/modules/vault/vault.types";
-import type { BigIntish } from "@/morpho-types";
-import type { VaultV1Details } from "./getVaultV1Details";
-import type { VaultV2Details } from "./getVaultV2Details";
+} from '@/modules/vault/vault.types';
+import type { BigIntish } from '@/morpho-types';
+
+import { descale, toAmount, toAmountWithPrice, toBigInt } from '@/common/data/adapters/amount';
+import { assembleApyWithRewards } from '@/common/data/adapters/apy';
+import { toChainInfoById, toTokenInfo } from '@/common/data/adapters/entity';
+import { type DataPoint, descaleSeries, zipTimeseries } from '@/common/data/adapters/timeseries';
+import { numberToString } from '@/common/utils/format';
+import { APP_CONFIG } from '@/config';
+
+import type { VaultV1Details } from './getVaultV1Details';
+import type { VaultV2Details } from './getVaultV2Details';
 
 /**
  * The shape an adapter produces, before `normalizeVault` applies the vault config: `isHidden` is
  * not known yet and the chain id has not been narrowed to a configured chain.
  */
-export type Adapted<T> = Omit<T, "isHidden" | "chain"> & { chain: ChainInfo };
+export type Adapted<T> = Omit<T, 'isHidden' | 'chain'> & { chain: ChainInfo };
 
-function usdOf(raw: BigIntish | null | undefined, decimals: number, priceUsd: number | null): number | null {
+function usdOf(
+  raw: BigIntish | null | undefined,
+  decimals: number,
+  priceUsd: number | null,
+): number | null {
   return priceUsd == null ? null : descale(raw, decimals) * priceUsd;
 }
 
@@ -51,7 +58,9 @@ export interface RestVaultV1Allocation {
  */
 export function withdrawQueueAllocations<T extends RestVaultV1Allocation>(rows: readonly T[]): T[] {
   return rows
-    .flatMap((row) => (row.withdraw_queue_index == null ? [] : [{ row, index: row.withdraw_queue_index }]))
+    .flatMap((row) =>
+      row.withdraw_queue_index == null ? [] : [{ row, index: row.withdraw_queue_index }],
+    )
     .sort((a, b) => a.index - b.index)
     .map(({ row }) => row);
 }
@@ -106,7 +115,11 @@ export function toRestVaultCollateralAllocations(
         vaultSupplyShare: total > 0 ? descale(row.supply_assets, decimals) / total : 0,
         position: { supplyAmount: { usd: usdOf(row.supply_assets, decimals, priceUsd) } },
         market: {
-          collateralAsset: collateral && { icon: collateral.icon, name: collateral.name, symbol: collateral.symbol },
+          collateralAsset: collateral && {
+            icon: collateral.icon,
+            name: collateral.name,
+            symbol: collateral.symbol,
+          },
         },
       },
     ];
@@ -140,7 +153,7 @@ export interface RestVaultSummarySource {
   description: string | null;
 }
 
-type RestVaultSummaryBase = Omit<Adapted<MorphoVaultV2Summary>, "__typename" | "allocations">;
+type RestVaultSummaryBase = Omit<Adapted<MorphoVaultV2Summary>, '__typename' | 'allocations'>;
 
 /**
  * The fields both protocols' summaries share. `total` is the native APY plus the current Merkl
@@ -151,7 +164,7 @@ function toRestVaultSummaryBase(source: RestVaultSummarySource): RestVaultSummar
   const { root, token, decimals, priceUsd } = source;
   // The earn page calls string methods on these: a null would fail the whole page, not one row.
   const assetName = token?.name ?? root.asset.name;
-  const assetSymbol = token?.symbol ?? root.asset.symbol ?? assetName ?? "UNKNOWN";
+  const assetSymbol = token?.symbol ?? root.asset.symbol ?? assetName ?? 'UNKNOWN';
   return {
     chain: toChainInfoById(source.chainId),
     vaultAddress: getAddress(root.address),
@@ -167,7 +180,11 @@ function toRestVaultSummaryBase(source: RestVaultSummarySource): RestVaultSummar
       }),
       priceUsd,
     },
-    totalAssets: toAmount(source.totalAssets, decimals, usdOf(source.totalAssets, decimals, priceUsd)),
+    totalAssets: toAmount(
+      source.totalAssets,
+      decimals,
+      usdOf(source.totalAssets, decimals, priceUsd),
+    ),
     apy: assembleApyWithRewards(source.apy, source.rewards),
     metadata: { description: source.description, curator: source.curator },
     curatorAum: undefined,
@@ -183,7 +200,7 @@ export function toRestVaultV1Summary(
   source: RestVaultSummarySource,
   marketAllocations: VaultCollateralAllocation[],
 ): Adapted<MorphoVaultV1Summary> {
-  return { __typename: "MorphoVault", ...toRestVaultSummaryBase(source), marketAllocations };
+  return { __typename: 'MorphoVault', ...toRestVaultSummaryBase(source), marketAllocations };
 }
 
 /**
@@ -193,7 +210,7 @@ export function toRestVaultV1Summary(
 export function toMorphoVaultV1Details(
   summary: Adapted<MorphoVaultV1Summary>,
   details: VaultV1Details,
-): Adapted<Omit<MorphoVaultV1, "historical">> {
+): Adapted<Omit<MorphoVaultV1, 'historical'>> {
   return { ...summary, ...details };
 }
 
@@ -205,8 +222,10 @@ export function toMorphoVaultV1Details(
  * The exposure tooltip only expands MetaMorpho adapters, which REST summaries do not read, so
  * `allocations` is empty.
  */
-export function toRestVaultV2Summary(source: RestVaultSummarySource): Adapted<MorphoVaultV2Summary> {
-  return { __typename: "MorphoVaultV2", ...toRestVaultSummaryBase(source), allocations: [] };
+export function toRestVaultV2Summary(
+  source: RestVaultSummarySource,
+): Adapted<MorphoVaultV2Summary> {
+  return { __typename: 'MorphoVaultV2', ...toRestVaultSummaryBase(source), allocations: [] };
 }
 
 /**
@@ -216,7 +235,7 @@ export function toRestVaultV2Summary(source: RestVaultSummarySource): Adapted<Mo
 export function toMorphoVaultV2Details(
   summary: Adapted<MorphoVaultV2Summary>,
   details: VaultV2Details,
-): Adapted<Omit<MorphoVaultV2, "historical">> {
+): Adapted<Omit<MorphoVaultV2, 'historical'>> {
   return { ...summary, ...details };
 }
 
@@ -232,7 +251,7 @@ interface VaultHistorySeries {
    * protocol that serves every window natively fills all four; one that fetches only the configured
    * window fills that key alone.
    */
-  netApy: Partial<Record<"6h" | "1d" | "7d" | "30d", readonly DataPoint[]>>;
+  netApy: Partial<Record<'6h' | '1d' | '7d' | '30d', readonly DataPoint[]>>;
 }
 
 /**
@@ -245,7 +264,10 @@ interface VaultHistorySeries {
  * A null sample stays null: the chart connects across gaps, whereas coercing to 0 would draw a
  * spurious drop to 0%.
  */
-export function toVaultHistoricalEntries(series: VaultHistorySeries, decimals: number): VaultHistoricalEntry[] {
+export function toVaultHistoricalEntries(
+  series: VaultHistorySeries,
+  decimals: number,
+): VaultHistoricalEntry[] {
   const netApy = series.netApy[APP_CONFIG.apyWindow] ?? [];
 
   return zipTimeseries(

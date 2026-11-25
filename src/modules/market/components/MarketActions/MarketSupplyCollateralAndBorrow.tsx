@@ -1,11 +1,12 @@
-"use client";
+'use client';
 
-import { useRef, useState } from "react";
+import { useRef, useState } from 'react';
 
-import type { MarketAction } from "@/actions";
-import { MarketActionFlow } from "@/modules/action-flow/components/MarketActionFlow";
-import { MarketSupplyCollateralAndBorrowForm } from "@/modules/market/components/MarketSupplyCollateralAndBorrowForm/MarketSupplyCollateralAndBorrowForm";
-import type { MarketNonIdle } from "@/modules/market/data/getMarket";
+import type { MarketAction } from '@/actions';
+import type { MarketNonIdle } from '@/modules/market/data/getMarket';
+
+import { MarketActionFlow } from '@/modules/action-flow/components/MarketActionFlow';
+import { MarketSupplyCollateralAndBorrowForm } from '@/modules/market/components/MarketSupplyCollateralAndBorrowForm/MarketSupplyCollateralAndBorrowForm';
 
 export default function MarketSupplyCollateralAndBorrow({
   market,

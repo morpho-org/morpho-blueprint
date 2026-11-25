@@ -1,5 +1,10 @@
-import { cn } from "@/common/utils/shadcn";
-import { TooltipPopover, TooltipPopoverContent, TooltipPopoverTrigger } from "../ui/tooltip-popover";
+import { cn } from '@/common/utils/shadcn';
+
+import {
+  TooltipPopover,
+  TooltipPopoverContent,
+  TooltipPopoverTrigger,
+} from '../ui/tooltip-popover';
 
 type Props = {
   label: string;
@@ -15,11 +20,11 @@ export function ChartHeader(props: Props) {
 
   const Label = () => (
     <dt
-      className={cn("body-small-plus text-muted-foreground", {
-        "underline decoration-dashed underline-offset-3": !!hasTooltip,
+      className={cn('body-small-plus text-muted-foreground', {
+        'underline decoration-dashed underline-offset-3': !!hasTooltip,
       })}
     >
-      {label} {currency ? `(${currency})` : ""}
+      {label} {currency ? `(${currency})` : ''}
     </dt>
   );
 

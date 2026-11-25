@@ -1,5 +1,5 @@
-import { formatUnits, maxUint256, parseUnits } from "viem";
-import { z } from "zod";
+import { formatUnits, maxUint256, parseUnits } from 'viem';
+import { z } from 'zod';
 
 export function parseOnchainAmount(value: string, decimals: number): bigint | null {
   try {
@@ -13,7 +13,9 @@ export function parseOnchainAmount(value: string, decimals: number): bigint | nu
 export function createOnchainAmountSchema({
   decimals,
   min = 1n, // 1n is equivalent to positive (0n is not valid)
-  minErrorMessage = min === 1n ? "Amount required" : `Must be greater than ${formatUnits(min, decimals)}.`,
+  minErrorMessage = min === 1n
+    ? 'Amount required'
+    : `Must be greater than ${formatUnits(min, decimals)}.`,
   max = maxUint256,
   maxErrorMessage = `Must be less than ${formatUnits(max, decimals)}.`,
 }: {
@@ -30,8 +32,8 @@ export function createOnchainAmountSchema({
 
       if (parsed === null) {
         ctx.addIssue({
-          code: "custom",
-          message: "Invalid number",
+          code: 'custom',
+          message: 'Invalid number',
         });
         return z.NEVER;
       }

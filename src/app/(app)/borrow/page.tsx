@@ -1,16 +1,22 @@
-import type { Metadata } from "next";
-import Image from "next/image";
-import { Suspense } from "react";
-import type { MultiSelectOption } from "@/common/components/MultiSelect/MultiSelect";
-import { Avatar } from "@/common/components/ui/avatar";
-import { Card, CardHeader } from "@/common/components/ui/card";
-import { Skeleton, Skeletons } from "@/common/components/ui/skeleton";
-import { APP_CONFIG } from "@/config";
-import { BorrowSummaryMetrics, BorrowSummaryMetricsSkeleton } from "@/modules/market/components/BorrowSummaryMetrics";
-import { MarketFilters } from "@/modules/market/components/MarketFilters";
-import { MarketTable } from "@/modules/market/components/MarketTable";
-import { getMarketSummaries } from "@/modules/market/data/getMarketSummaries";
-import { AccountFilters } from "@/modules/wallet/components/AccountFilters";
+import type { Metadata } from 'next';
+
+import Image from 'next/image';
+import { Suspense } from 'react';
+
+import type { MultiSelectOption } from '@/common/components/MultiSelect/MultiSelect';
+
+import { Avatar } from '@/common/components/ui/avatar';
+import { Card, CardHeader } from '@/common/components/ui/card';
+import { Skeleton, Skeletons } from '@/common/components/ui/skeleton';
+import { APP_CONFIG } from '@/config';
+import {
+  BorrowSummaryMetrics,
+  BorrowSummaryMetricsSkeleton,
+} from '@/modules/market/components/BorrowSummaryMetrics';
+import { MarketFilters } from '@/modules/market/components/MarketFilters';
+import { MarketTable } from '@/modules/market/components/MarketTable';
+import { getMarketSummaries } from '@/modules/market/data/getMarketSummaries';
+import { AccountFilters } from '@/modules/wallet/components/AccountFilters';
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.metadata.name} | Borrow`,
@@ -90,7 +96,11 @@ async function MarketFiltersWrapper() {
         value: marketSummary.collateralAsset.symbol,
         component: (
           <>
-            <Avatar src={marketSummary.collateralAsset.icon} size="sm" alt={marketSummary.collateralAsset.symbol} />
+            <Avatar
+              src={marketSummary.collateralAsset.icon}
+              size="sm"
+              alt={marketSummary.collateralAsset.symbol}
+            />
             {marketSummary.collateralAsset.symbol}
           </>
         ),
@@ -102,7 +112,11 @@ async function MarketFiltersWrapper() {
       value: marketSummary.loanAsset.symbol,
       component: (
         <>
-          <Avatar src={marketSummary.loanAsset.icon} size="sm" alt={marketSummary.loanAsset.symbol} />
+          <Avatar
+            src={marketSummary.loanAsset.icon}
+            size="sm"
+            alt={marketSummary.loanAsset.symbol}
+          />
           {marketSummary.loanAsset.symbol}
         </>
       ),

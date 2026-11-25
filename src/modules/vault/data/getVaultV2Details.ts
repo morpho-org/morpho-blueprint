@@ -1,28 +1,30 @@
-import "server-only";
+import 'server-only';
+import { Time } from '@morpho-org/morpho-ts';
+import { type Address, formatUnits, getAddress, type Hex, zeroAddress } from 'viem';
 
-import { Time } from "@morpho-org/morpho-ts";
-import { type Address, formatUnits, getAddress, type Hex, zeroAddress } from "viem";
-import { toAmountWithPrice, toBigInt, toRatio } from "@/common/data/adapters/amount";
-import { assembleApyWithRewards } from "@/common/data/adapters/apy";
-import { toRoleAddress } from "@/common/data/adapters/entity";
-import { getTokenInfo } from "@/common/data/rest/tokens";
-import type { ChainInfo, RewardApy, TokenInfo } from "@/common/data/types";
-import { fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
-import { restApyLookback } from "@/common/utils/timeframe";
-import { getMarketInfos } from "@/modules/market/data/getMarketInfos";
-import type { MarketInfo } from "@/modules/market/market.types";
-import { type MerklRewardIndex, vaultRewardApys } from "@/modules/reward/data/merklRewardApys";
-import { withRewardTokenMetadata } from "@/modules/reward/data/rewardTokenMetadata";
+import type { ChainInfo, RewardApy, TokenInfo } from '@/common/data/types';
+import type { MarketInfo } from '@/modules/market/market.types';
 import type {
   MorphoVaultV2,
   UnderlyingMorphoVaultV1,
   VaultV2AdapterCap,
   VaultV2Allocation,
   VaultV2MarketCap,
-} from "@/modules/vault/vault.types";
-import { type RestVaultV1Allocation, toRestVaultMarketAllocations } from "./adapters";
-import { fetchVaultApyAverages } from "./fetchVaultApyAverages";
-import { matchRestVaultV2Adapter, type RestVaultV2AdapterKind } from "./matchVaultV2Adapter";
+} from '@/modules/vault/vault.types';
+
+import { toAmountWithPrice, toBigInt, toRatio } from '@/common/data/adapters/amount';
+import { assembleApyWithRewards } from '@/common/data/adapters/apy';
+import { toRoleAddress } from '@/common/data/adapters/entity';
+import { getTokenInfo } from '@/common/data/rest/tokens';
+import { fetchMorphoRestResource, restSelector } from '@/common/utils/fetchMorphoRest';
+import { restApyLookback } from '@/common/utils/timeframe';
+import { getMarketInfos } from '@/modules/market/data/getMarketInfos';
+import { type MerklRewardIndex, vaultRewardApys } from '@/modules/reward/data/merklRewardApys';
+import { withRewardTokenMetadata } from '@/modules/reward/data/rewardTokenMetadata';
+
+import { type RestVaultV1Allocation, toRestVaultMarketAllocations } from './adapters';
+import { fetchVaultApyAverages } from './fetchVaultApyAverages';
+import { matchRestVaultV2Adapter, type RestVaultV2AdapterKind } from './matchVaultV2Adapter';
 
 interface RestSentinels {
   data: { role_address: Address }[];
@@ -34,14 +36,14 @@ interface RestApyAverage {
 
 type RestCap =
   | {
-      cap_type: "adapter";
+      cap_type: 'adapter';
       allocated_assets: string;
       absolute_cap: string;
       relative_cap_wad: string;
       real_assets?: string | null;
     }
   | {
-      cap_type: "market_v1";
+      cap_type: 'market_v1';
       market_id: Hex;
       allocated_assets: string;
       absolute_cap: string;
@@ -49,7 +51,7 @@ type RestCap =
       expected_supply_assets?: string | null;
     }
   // Other scopes (collateral, unknown) do not belong to one adapter row.
-  | { cap_type: "collateral" | "unknown" };
+  | { cap_type: 'collateral' | 'unknown' };
 
 interface RestVaultV2Allocations {
   data: {
@@ -70,18 +72,18 @@ interface RestVaultV1Allocations {
   data: { allocations: RestVaultV1Allocation[] };
 }
 
-type MarketCapRow = Extract<RestCap, { cap_type: "market_v1" }>;
-type AdapterCapRow = Extract<RestCap, { cap_type: "adapter" }>;
+type MarketCapRow = Extract<RestCap, { cap_type: 'market_v1' }>;
+type AdapterCapRow = Extract<RestCap, { cap_type: 'adapter' }>;
 
 export type VaultV2Details = Pick<
   MorphoVaultV2,
-  | "allocations"
-  | "totalAssets"
-  | "apyAverages"
-  | "curatorAddress"
-  | "sentinelAddresses"
-  | "performanceFee"
-  | "managementFee"
+  | 'allocations'
+  | 'totalAssets'
+  | 'apyAverages'
+  | 'curatorAddress'
+  | 'sentinelAddresses'
+  | 'performanceFee'
+  | 'managementFee'
 >;
 
 /** A WAD fee as the unitless fraction the UI formats. REST serves null for a fee never set: 0. */
@@ -113,7 +115,11 @@ export interface VaultV2DetailsContext {
   /** Decimals from `getVaultAssetDecimals`, the price from the summary's one price read. */
   asset: { address: Address; decimals: number; priceUsd: number | null };
   /** `/v0/vaults-v2/{vault}` as the summary read it. */
-  root: { curator: string | null; performance_fee_wad: string | null; management_fee_wad: string | null };
+  root: {
+    curator: string | null;
+    performance_fee_wad: string | null;
+    management_fee_wad: string | null;
+  };
   /** `/v1/vaults-v2/{vault}/state` as the summary read it. */
   state: { idle_assets: string };
 }
@@ -147,7 +153,7 @@ export async function getVaultV2Details(
   // A vault V1 held through an adapter expands into its own market allocations.
   const vaultV1Reads = await Promise.all(
     adapters.flatMap((adapter) =>
-      adapter.adapter_kind === "morpho_vault_v1" && adapter.target.vault_address
+      adapter.adapter_kind === 'morpho_vault_v1' && adapter.target.vault_address
         ? [readVaultV1(chainId, adapter.adapter_address, adapter.target.vault_address)]
         : [],
     ),
@@ -156,10 +162,12 @@ export async function getVaultV2Details(
   // Only markets the vault holds assets in are shown, so only those need a market read.
   const heldMarketIds = adapters.flatMap((adapter) =>
     adapter.caps.flatMap((cap) =>
-      cap.cap_type === "market_v1" && toBigInt(marketCapAssets(cap)) > 0n ? [cap.market_id] : [],
+      cap.cap_type === 'market_v1' && toBigInt(marketCapAssets(cap)) > 0n ? [cap.market_id] : [],
     ),
   );
-  const vaultV1MarketIds = vaultV1Reads.flatMap((read) => read?.allocations.map((row) => row.market_id) ?? []);
+  const vaultV1MarketIds = vaultV1Reads.flatMap(
+    (read) => read?.allocations.map((row) => row.market_id) ?? [],
+  );
   const [markets, vaultV1Assets, rewardIndex] = await Promise.all([
     // The vault asset is the loan token of its markets: its price is the one the summary read.
     getMarketInfos(
@@ -170,9 +178,11 @@ export async function getVaultV2Details(
       new Map([[getAddress(context.asset.address), price]]),
     ),
     Promise.all(
-      [...new Set(vaultV1Reads.flatMap((read) => (read ? [getAddress(read.vault.asset.address)] : [])))].map(
-        async (address) => [address, await getTokenInfo(chainId, address)] as const,
-      ),
+      [
+        ...new Set(
+          vaultV1Reads.flatMap((read) => (read ? [getAddress(read.vault.asset.address)] : [])),
+        ),
+      ].map(async (address) => [address, await getTokenInfo(chainId, address)] as const),
     ),
     rewardIndexPromise,
   ]);
@@ -183,7 +193,7 @@ export async function getVaultV2Details(
   });
   const vaultV1Rewards = await Promise.all(
     shownVaultV1s.map(({ read }) =>
-      withRewardTokenMetadata(rewardIndex, vaultRewardApys(rewardIndex, read.vaultAddress, "v1")),
+      withRewardTokenMetadata(rewardIndex, vaultRewardApys(rewardIndex, read.vaultAddress, 'v1')),
     ),
   );
   const vaultV1ByAdapter = new Map<string, UnderlyingMorphoVaultV1>();
@@ -196,7 +206,7 @@ export async function getVaultV2Details(
 
   const toMarketCaps = (caps: RestCap[]): VaultV2MarketCap[] =>
     caps.flatMap((cap): VaultV2MarketCap[] => {
-      if (cap.cap_type !== "market_v1") return [];
+      if (cap.cap_type !== 'market_v1') return [];
       const allocation = marketCapAssets(cap);
       // A curator can leave a cap on a market the vault has not allocated to; the table shows only
       // markets the vault is in, as before.
@@ -214,7 +224,7 @@ export async function getVaultV2Details(
     });
 
   const rows = adapters.map((adapter): VaultV2Allocation => {
-    const adapterCap = adapter.caps.find((cap): cap is AdapterCapRow => cap.cap_type === "adapter");
+    const adapterCap = adapter.caps.find((cap): cap is AdapterCapRow => cap.cap_type === 'adapter');
     const marketCaps = toMarketCaps(adapter.caps);
     const base = {
       adapterAddress: getAddress(adapter.adapter_address),
@@ -222,14 +232,34 @@ export async function getVaultV2Details(
     };
 
     return matchRestVaultV2Adapter<VaultV2Allocation>(adapter, {
-      marketV1: () => ({ ...base, __typename: "MarketV1Adapter", name: "Morpho Market Adapter", marketCaps }),
+      marketV1: () => ({
+        ...base,
+        __typename: 'MarketV1Adapter',
+        name: 'Morpho Market Adapter',
+        marketCaps,
+      }),
       vaultV1: () => {
         const vault = vaultV1ByAdapter.get(adapter.adapter_address.toLowerCase()) ?? null;
-        return { ...base, __typename: "Erc4626VaultAdapter", name: vault?.name ?? "Morpho Vault V1 Adapter", vault };
+        return {
+          ...base,
+          __typename: 'Erc4626VaultAdapter',
+          name: vault?.name ?? 'Morpho Vault V1 Adapter',
+          vault,
+        };
       },
       // REST serves no handle on the vault V2 an adapter wraps, so this row does not expand.
-      vaultV2: () => ({ ...base, __typename: "Erc4626VaultAdapter", name: "Morpho Vault V2 Adapter", vault: null }),
-      unknown: () => ({ ...base, __typename: "Erc4626VaultAdapter", name: "Vault Adapter", vault: null }),
+      vaultV2: () => ({
+        ...base,
+        __typename: 'Erc4626VaultAdapter',
+        name: 'Morpho Vault V2 Adapter',
+        vault: null,
+      }),
+      unknown: () => ({
+        ...base,
+        __typename: 'Erc4626VaultAdapter',
+        name: 'Vault Adapter',
+        vault: null,
+      }),
     });
   });
 
@@ -260,7 +290,10 @@ function toAdapterCap(
   if (!cap) {
     // Defensive: every adapter should carry an adapter cap. Fall back to what its markets hold so
     // the allocation column still renders, with no cap information.
-    const held = marketCaps.reduce((sum, marketCap) => sum + toBigInt(marketCap.allocation.raw), 0n);
+    const held = marketCaps.reduce(
+      (sum, marketCap) => sum + toBigInt(marketCap.allocation.raw),
+      0n,
+    );
     return {
       allocation: toAmountWithPrice(held, decimals, price),
       relativeCap: toRatio(0),
@@ -278,8 +311,8 @@ function toAdapterCap(
 type VaultV1Read = {
   adapterAddress: Address;
   vaultAddress: Address;
-  vault: RestVaultV1["data"];
-  allocations: RestVaultV1Allocations["data"]["allocations"];
+  vault: RestVaultV1['data'];
+  allocations: RestVaultV1Allocations['data']['allocations'];
   apy: number | null;
 };
 
@@ -297,7 +330,9 @@ async function readVaultV1(
     }),
   ]);
   if (!vault || !allocations) {
-    console.warn(`Vault V1 behind adapter ${adapterAddress} not returned by the API, row left unexpanded.`);
+    console.warn(
+      `Vault V1 behind adapter ${adapterAddress} not returned by the API, row left unexpanded.`,
+    );
     return null;
   }
   return {
@@ -321,13 +356,19 @@ function toUnderlyingVaultV1(
   const totalRaw = read.allocations.reduce((sum, row) => sum + toBigInt(row.supply_assets), 0n);
 
   return {
-    __typename: "MorphoVault",
+    __typename: 'MorphoVault',
     vaultAddress: getAddress(read.vaultAddress),
     name: read.vault.name ?? read.vaultAddress,
     chain,
     asset,
     apy: assembleApyWithRewards(read.apy, rewards),
     totalAssets: toAmountWithPrice(totalRaw, decimals, price),
-    marketAllocations: toRestVaultMarketAllocations(read.allocations, markets, decimals, price, totalRaw),
+    marketAllocations: toRestVaultMarketAllocations(
+      read.allocations,
+      markets,
+      decimals,
+      price,
+      totalRaw,
+    ),
   };
 }

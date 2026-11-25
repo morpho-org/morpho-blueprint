@@ -1,6 +1,6 @@
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes } from 'react';
 
-import { cn } from "@/common/utils/shadcn";
+import { cn } from '@/common/utils/shadcn';
 
 interface PercentRingProps extends HTMLAttributes<SVGElement> {
   percent: number;
@@ -46,7 +46,7 @@ export default function PercentRing({
         strokeDashoffset={strokeDashoffset}
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
         strokeLinecap="round"
-        className={cn("stroke-primary transition-all duration-300", innerClassName)}
+        className={cn('stroke-primary transition-all duration-300', innerClassName)}
       />
     </svg>
   );

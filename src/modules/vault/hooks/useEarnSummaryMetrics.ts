@@ -1,9 +1,10 @@
-"use client";
-import { useMemo } from "react";
-import { useAccount } from "wagmi";
+'use client';
+import { useMemo } from 'react';
+import { useAccount } from 'wagmi';
 
-import type { VaultSummary } from "@/modules/vault/data/getVaultSummaries";
-import { useVaultTableData } from "./useVaultTableData";
+import type { VaultSummary } from '@/modules/vault/data/getVaultSummaries';
+
+import { useVaultTableData } from './useVaultTableData';
 
 interface EarnSummaryMetrics {
   data: {
@@ -16,12 +17,19 @@ interface EarnSummaryMetrics {
   isPositionsLoading: boolean;
 }
 
-export function useEarnSummaryMetrics({ vaultSummaries }: { vaultSummaries: VaultSummary[] }): EarnSummaryMetrics {
+export function useEarnSummaryMetrics({
+  vaultSummaries,
+}: {
+  vaultSummaries: VaultSummary[];
+}): EarnSummaryMetrics {
   const { data: vaultTableData, isPositionsLoading } = useVaultTableData({ vaultSummaries });
   const { address } = useAccount();
 
   const earnSummaryMetrics = useMemo(() => {
-    const totalSuppliedUsd = vaultSummaries.reduce((acc, entry) => acc + (entry.totalAssets.usd ?? 0), 0);
+    const totalSuppliedUsd = vaultSummaries.reduce(
+      (acc, entry) => acc + (entry.totalAssets.usd ?? 0),
+      0,
+    );
 
     let userDepositsUsd: number | undefined;
     let userEarnApy: number | undefined;

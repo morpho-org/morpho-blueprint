@@ -1,8 +1,17 @@
-import type { Address, Hex } from "viem";
-import type { Amount, Apy, ApyAverages, ChainInfo, CuratorInfo, Ratio, TokenInfo } from "@/common/data/types";
-import type { SupportedChainId } from "@/config/types";
-import type { Erc4626VaultProtocol } from "@/config/vault-protocol";
-import type { MarketInfo } from "@/modules/market/market.types";
+import type { Address, Hex } from 'viem';
+
+import type {
+  Amount,
+  Apy,
+  ApyAverages,
+  ChainInfo,
+  CuratorInfo,
+  Ratio,
+  TokenInfo,
+} from '@/common/data/types';
+import type { SupportedChainId } from '@/config/types';
+import type { Erc4626VaultProtocol } from '@/config/vault-protocol';
+import type { MarketInfo } from '@/modules/market/market.types';
 
 export interface VaultIdentifier {
   chainId: SupportedChainId;
@@ -56,7 +65,7 @@ export interface VaultV2MarketCap {
 
 /** A vault V1 held through a `MetaMorphoAdapter`, expanded under its adapter row. */
 export interface UnderlyingMorphoVaultV1 {
-  __typename: "MorphoVault";
+  __typename: 'MorphoVault';
   vaultAddress: Address;
   name: string;
   chain: ChainInfo;
@@ -74,12 +83,12 @@ interface VaultV2AllocationBase {
 }
 
 export interface Erc4626VaultAdapter extends VaultV2AllocationBase {
-  __typename: "Erc4626VaultAdapter";
+  __typename: 'Erc4626VaultAdapter';
   vault: UnderlyingMorphoVaultV1 | null;
 }
 
 export interface MarketV1Adapter extends VaultV2AllocationBase {
-  __typename: "MarketV1Adapter";
+  __typename: 'MarketV1Adapter';
   marketCaps: VaultV2MarketCap[];
 }
 
@@ -88,16 +97,16 @@ export type VaultV2Allocation = Erc4626VaultAdapter | MarketV1Adapter;
 /** Summary-only counterparts, carrying just what the exposure tooltip reads. */
 export type VaultV2CollateralAllocation =
   | {
-      __typename: "Erc4626VaultAdapter";
+      __typename: 'Erc4626VaultAdapter';
       adapterCap: { allocation: { formatted: string } } | null;
       vault: {
-        __typename: "MorphoVault";
+        __typename: 'MorphoVault';
         totalAssets: { formatted: string };
         marketAllocations: VaultCollateralAllocation[];
       } | null;
     }
   | {
-      __typename: "MarketV1Adapter";
+      __typename: 'MarketV1Adapter';
       adapterCap: { allocation: { formatted: string } } | null;
     };
 
@@ -142,12 +151,12 @@ interface VaultSummaryBase {
 }
 
 export interface MorphoVaultV1Summary extends VaultSummaryBase {
-  __typename: "MorphoVault";
+  __typename: 'MorphoVault';
   marketAllocations: VaultCollateralAllocation[];
 }
 
 export interface MorphoVaultV2Summary extends VaultSummaryBase {
-  __typename: "MorphoVaultV2";
+  __typename: 'MorphoVaultV2';
   allocations: VaultV2CollateralAllocation[];
 }
 
@@ -157,7 +166,7 @@ export type VaultSummary = MorphoVaultV1Summary | MorphoVaultV2Summary;
 /* Vault details (vault page)                                                                     */
 /* -------------------------------------------------------------------------------------------- */
 
-interface VaultDetailBase extends Omit<VaultSummaryBase, "chain"> {
+interface VaultDetailBase extends Omit<VaultSummaryBase, 'chain'> {
   chain: ChainInfo & { id: SupportedChainId };
   historical: VaultHistoricalData | null;
   /** One realized average per chart range; the chart's reference line reads these. */
@@ -165,7 +174,7 @@ interface VaultDetailBase extends Omit<VaultSummaryBase, "chain"> {
 }
 
 export interface MorphoVaultV1 extends VaultDetailBase {
-  __typename: "MorphoVault";
+  __typename: 'MorphoVault';
   totalLiquidity: { usd: number | null };
   /** Performance fee as a unitless fraction. */
   performanceFeeRaw: number;
@@ -177,7 +186,7 @@ export interface MorphoVaultV1 extends VaultDetailBase {
 }
 
 export interface MorphoVaultV2 extends VaultDetailBase {
-  __typename: "MorphoVaultV2";
+  __typename: 'MorphoVaultV2';
   allocations: VaultV2Allocation[];
   curatorAddress: Address;
   sentinelAddresses: Address[];

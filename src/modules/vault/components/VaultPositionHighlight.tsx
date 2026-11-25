@@ -1,21 +1,25 @@
-"use client";
-import Image from "next/image";
-import { getAddress } from "viem";
-import { useAccount } from "wagmi";
+'use client';
+import Image from 'next/image';
+import { getAddress } from 'viem';
+import { useAccount } from 'wagmi';
 
-import { MetricWithTooltip } from "@/common/components/Metric";
-import { NumberFlowWithLoading } from "@/common/components/ui/number-flow";
-import { Skeleton } from "@/common/components/ui/skeleton";
-import type { SupportedChainId } from "@/config/types";
-import type { Vault } from "@/modules/vault/data/getVault";
-import { useVaultPosition } from "@/modules/vault/hooks/useVaultPositions";
+import type { SupportedChainId } from '@/config/types';
+import type { Vault } from '@/modules/vault/data/getVault';
+
+import { MetricWithTooltip } from '@/common/components/Metric';
+import { NumberFlowWithLoading } from '@/common/components/ui/number-flow';
+import { Skeleton } from '@/common/components/ui/skeleton';
+import { useVaultPosition } from '@/modules/vault/hooks/useVaultPositions';
 
 interface VaultPositionHighlightProps {
   vault: Vault;
 }
 
 export function VaultPositionHighlight({ vault }: VaultPositionHighlightProps) {
-  const { data, isLoading } = useVaultPosition(vault.chain.id as SupportedChainId, getAddress(vault.vaultAddress));
+  const { data, isLoading } = useVaultPosition(
+    vault.chain.id as SupportedChainId,
+    getAddress(vault.vaultAddress),
+  );
   const { address } = useAccount();
 
   if (!address) {
@@ -24,13 +28,17 @@ export function VaultPositionHighlight({ vault }: VaultPositionHighlightProps) {
   }
 
   return (
-    <MetricWithTooltip label="Supplying" className="md:items-end" tooltip="Your supply balance in this vault.">
+    <MetricWithTooltip
+      label="Supplying"
+      className="md:items-end"
+      tooltip="Your supply balance in this vault."
+    >
       <div className="flex flex-col md:items-end">
         <NumberFlowWithLoading
           value={data?.assets.usd ?? undefined}
           loadingContent={<Skeleton className="mb-1 h-[25px] w-[60px]" />}
           isLoading={isLoading}
-          format={{ currency: "USD" }}
+          format={{ currency: 'USD' }}
           className="heading-5"
         />
         <div className="flex items-center gap-1">

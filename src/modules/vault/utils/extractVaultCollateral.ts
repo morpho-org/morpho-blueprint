@@ -1,4 +1,4 @@
-import type { VaultSummary } from "@/modules/vault/data/getVaultSummaries";
+import type { VaultSummary } from '@/modules/vault/data/getVaultSummaries';
 
 type VaultCollateral = {
   icon: string | null;
@@ -10,7 +10,7 @@ type VaultCollateral = {
 
 export function extractVaultCollateral(vault: VaultSummary): Array<VaultCollateral> {
   switch (vault.__typename) {
-    case "MorphoVault": {
+    case 'MorphoVault': {
       return vault.marketAllocations
         .filter(({ enabled, market }) => enabled && market.collateralAsset !== null)
         .map(({ market, position, vaultSupplyShare }) => ({
@@ -22,14 +22,14 @@ export function extractVaultCollateral(vault: VaultSummary): Array<VaultCollater
         }))
         .sort((a, b) => b.vaultSupplyShare - a.vaultSupplyShare);
     }
-    case "MorphoVaultV2": {
+    case 'MorphoVaultV2': {
       const allocationsBySymbol = new Map<string, VaultCollateral>();
       const vaultV2TotalAssetsUsd = vault.totalAssets?.usd ?? 0;
 
       for (const adapter of vault.allocations) {
-        if (adapter.__typename !== "Erc4626VaultAdapter") continue;
+        if (adapter.__typename !== 'Erc4626VaultAdapter') continue;
         const morphoVault = adapter.vault;
-        if (!morphoVault || morphoVault.__typename !== "MorphoVault") continue;
+        if (!morphoVault || morphoVault.__typename !== 'MorphoVault') continue;
 
         const totalAllocation = Number(adapter.adapterCap?.allocation.formatted ?? 0);
         const vaultV1TotalAssets = Number(morphoVault.totalAssets?.formatted ?? 0);
@@ -46,12 +46,15 @@ export function extractVaultCollateral(vault: VaultSummary): Array<VaultCollater
             name: market.collateralAsset.name,
             symbol: market.collateralAsset.symbol,
             supplyUsd: totalSupplyUsd,
-            vaultSupplyShare: vaultV2TotalAssetsUsd > 0 ? totalSupplyUsd / vaultV2TotalAssetsUsd : 0,
+            vaultSupplyShare:
+              vaultV2TotalAssetsUsd > 0 ? totalSupplyUsd / vaultV2TotalAssetsUsd : 0,
           });
         }
       }
 
-      return Array.from(allocationsBySymbol.values()).sort((a, b) => b.vaultSupplyShare - a.vaultSupplyShare);
+      return Array.from(allocationsBySymbol.values()).sort(
+        (a, b) => b.vaultSupplyShare - a.vaultSupplyShare,
+      );
     }
     default:
       return [];

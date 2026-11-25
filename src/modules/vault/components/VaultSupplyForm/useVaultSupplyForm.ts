@@ -1,38 +1,44 @@
-"use client";
+'use client';
 
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { useModal } from "connectkit";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { type UseFormReturn, useForm } from "react-hook-form";
-import { useDebounce } from "use-debounce";
-import { getAddress, parseUnits } from "viem";
-import { useAccount, useBalance, useEstimateFeesPerGas, usePublicClient } from "wagmi";
-import { UserFacingError, type VaultAction } from "@/actions";
-import { erc4626SupplyAction } from "@/actions/erc4626/supply/erc4626SupplyAction";
-import { DEBOUNCE_TIME_MS } from "@/common/utils/constants";
-import { parseOnchainAmount } from "@/common/utils/schemas";
-import { tryCatch } from "@/common/utils/tryCatch";
-import type { SupportedChainId } from "@/config/types";
-import type { Vault } from "@/modules/vault/data/getVault";
-import type { VaultPosition } from "@/modules/vault/data/getVaultPositions";
-import { useVaultPosition } from "@/modules/vault/hooks/useVaultPositions";
-import { computeVaultPositionChange } from "@/modules/vault/utils/computeVaultPositionChange";
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
+import { useModal } from 'connectkit';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type UseFormReturn, useForm } from 'react-hook-form';
+import { useDebounce } from 'use-debounce';
+import { getAddress, parseUnits } from 'viem';
+import { useAccount, useBalance, useEstimateFeesPerGas, usePublicClient } from 'wagmi';
+
+import type { SupportedChainId } from '@/config/types';
+import type { Vault } from '@/modules/vault/data/getVault';
+import type { VaultPosition } from '@/modules/vault/data/getVaultPositions';
+
+import { UserFacingError, type VaultAction } from '@/actions';
+import { erc4626SupplyAction } from '@/actions/erc4626/supply/erc4626SupplyAction';
+import { DEBOUNCE_TIME_MS } from '@/common/utils/constants';
+import { parseOnchainAmount } from '@/common/utils/schemas';
+import { tryCatch } from '@/common/utils/tryCatch';
+import { useVaultPosition } from '@/modules/vault/hooks/useVaultPositions';
+import { computeVaultPositionChange } from '@/modules/vault/utils/computeVaultPositionChange';
+
 import {
   createVaultSupplyFormSchema,
   type VaultSupplyFormSchemaInput,
   type VaultSupplyFormSchemaOutput,
-} from "./schema";
-import { computeAvailableBalance, isVaultUnderlyingAssetWrappedNativeAsset } from "./utils";
+} from './schema';
+import { computeAvailableBalance, isVaultUnderlyingAssetWrappedNativeAsset } from './utils';
 
 // Buffer to account for gas price fluctuations
-const LOW_NATIVE_ASSET_BALANCE_TOLERANCE = parseUnits("0.001", 18);
+const LOW_NATIVE_ASSET_BALANCE_TOLERANCE = parseUnits('0.001', 18);
 
 interface UseVaultSupplyFormParamters {
   vault: Vault;
   onSuccessfulActionSimulation: (action: VaultAction) => void;
 }
 
-export function useVaultSupplyForm({ vault, onSuccessfulActionSimulation }: UseVaultSupplyFormParamters) {
+export function useVaultSupplyForm({
+  vault,
+  onSuccessfulActionSimulation,
+}: UseVaultSupplyFormParamters) {
   const { address } = useAccount();
   const publicClient = usePublicClient({ chainId: vault.chain.id });
   const { setOpen: setConnectKitOpen } = useModal();
@@ -44,7 +50,10 @@ export function useVaultSupplyForm({ vault, onSuccessfulActionSimulation }: UseV
   );
 
   const { data: gasFeeEstimate } = useEstimateFeesPerGas({ chainId: vault.chain.id });
-  const { data: accountNativeAssetBalance } = useBalance({ address: address, chainId: vault.chain.id });
+  const { data: accountNativeAssetBalance } = useBalance({
+    address: address,
+    chainId: vault.chain.id,
+  });
 
   const formSchema = useMemo(() => {
     return createVaultSupplyFormSchema(
@@ -56,10 +65,10 @@ export function useVaultSupplyForm({ vault, onSuccessfulActionSimulation }: UseV
   }, [vault, position, accountNativeAssetBalance, gasFeeEstimate]);
 
   const form = useForm<VaultSupplyFormSchemaInput, undefined, VaultSupplyFormSchemaOutput>({
-    mode: "onChange",
+    mode: 'onChange',
     resolver: standardSchemaResolver(formSchema),
     defaultValues: {
-      supplyAmount: "",
+      supplyAmount: '',
       allowNativeAssetWrapping: false,
     },
   });
@@ -90,7 +99,9 @@ export function useVaultSupplyForm({ vault, onSuccessfulActionSimulation }: UseV
       );
 
       if (error) {
-        setSubmitErrorMsg(error instanceof UserFacingError ? error.message : "An unknown error occurred");
+        setSubmitErrorMsg(
+          error instanceof UserFacingError ? error.message : 'An unknown error occurred',
+        );
       } else {
         onSuccessfulActionSimulation(action);
       }
@@ -107,18 +118,18 @@ export function useVaultSupplyForm({ vault, onSuccessfulActionSimulation }: UseV
   });
 
   // Trigger revalidation on position change
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Allow position to trigger reval
   useEffect(() => {
     if (form.formState.isDirty) {
-      form.trigger();
+      void form.trigger();
     }
+    // oxlint-disable-next-line react/exhaustive-deps -- Revalidate on position changes, not when the form becomes dirty.
   }, [position, form.trigger]);
 
   // Trigger amount revalidation when allow native asset wrapping changes
   useEffect(() => {
     const subscription = form.watch((_value, { name }) => {
-      if (name === "allowNativeAssetWrapping") {
-        void form.trigger(["supplyAmount"]);
+      if (name === 'allowNativeAssetWrapping') {
+        void form.trigger(['supplyAmount']);
       }
     });
 
@@ -132,7 +143,7 @@ export function useVaultSupplyForm({ vault, onSuccessfulActionSimulation }: UseV
     position,
     isPositionLoading,
     submitErrorMsg,
-    nativeAssetSymbol: publicClient?.chain.nativeCurrency.symbol ?? "native assets",
+    nativeAssetSymbol: publicClient?.chain.nativeCurrency.symbol ?? 'native assets',
   };
 }
 
@@ -149,8 +160,8 @@ function useDerivedFormValues({
   nativeAssetBalance?: bigint;
   gasFeeEstimate?: bigint;
 }) {
-  const formInputSupplyAmount = form.watch("supplyAmount");
-  const formInputAllowNativeAssetWrapping = form.watch("allowNativeAssetWrapping");
+  const formInputSupplyAmount = form.watch('supplyAmount');
+  const formInputAllowNativeAssetWrapping = form.watch('allowNativeAssetWrapping');
 
   // Debounce inputs which can change rapidly
   const [debouncedFormInputSupplyAmount] = useDebounce(formInputSupplyAmount, DEBOUNCE_TIME_MS);
@@ -172,7 +183,9 @@ function useDerivedFormValues({
 
   const maxSupplyAmount = useMemo(() => {
     const accountLoanTokenBalance =
-      position?.walletAssetHolding?.balance.raw != null ? BigInt(position?.walletAssetHolding?.balance.raw) : undefined;
+      position?.walletAssetHolding?.balance.raw != null
+        ? BigInt(position?.walletAssetHolding?.balance.raw)
+        : undefined;
     return computeAvailableBalance({
       accountLoanTokenBalance,
       accountNativeAssetBalance: nativeAssetBalance,
@@ -182,7 +195,11 @@ function useDerivedFormValues({
   }, [nativeAssetBalance, gasFeeEstimate, position, includeNativeAssetWrapping]);
 
   const supplyWillLeaveLowNativeAssetBalance = useMemo(() => {
-    if (!includeNativeAssetWrapping || maxSupplyAmount === undefined || supplyAmount === undefined) {
+    if (
+      !includeNativeAssetWrapping ||
+      maxSupplyAmount === undefined ||
+      supplyAmount === undefined
+    ) {
       return false;
     }
     return supplyAmount > maxSupplyAmount - LOW_NATIVE_ASSET_BALANCE_TOLERANCE;

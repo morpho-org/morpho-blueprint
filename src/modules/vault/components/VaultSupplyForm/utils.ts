@@ -1,7 +1,9 @@
-import { getChainAddresses, MathLib } from "@morpho-org/blue-sdk";
-import { isAddressEqual } from "viem";
-import { NATIVE_ASSET_GAS_RESERVE_UNITS } from "@/common/utils/constants";
-import type { Vault } from "@/modules/vault/data/getVault";
+import { getChainAddresses, MathLib } from '@morpho-org/blue-sdk';
+import { isAddressEqual } from 'viem';
+
+import type { Vault } from '@/modules/vault/data/getVault';
+
+import { NATIVE_ASSET_GAS_RESERVE_UNITS } from '@/common/utils/constants';
 
 export function isVaultUnderlyingAssetWrappedNativeAsset(vault: Vault) {
   const { wNative: wrappedNativeAssetAddress } = getChainAddresses(vault.chain.id);
@@ -23,7 +25,11 @@ export function computeAvailableBalance({
   maxFeePerGas?: bigint;
   includeNativeAssetWrapping: boolean;
 }) {
-  if (accountLoanTokenBalance === undefined || maxFeePerGas === undefined || accountNativeAssetBalance === undefined) {
+  if (
+    accountLoanTokenBalance === undefined ||
+    maxFeePerGas === undefined ||
+    accountNativeAssetBalance === undefined
+  ) {
     return undefined;
   }
 
@@ -33,7 +39,10 @@ export function computeAvailableBalance({
   }
 
   const gasFeeReserveWei = NATIVE_ASSET_GAS_RESERVE_UNITS * maxFeePerGas;
-  const spendableNativeAssetBalance = MathLib.zeroFloorSub(accountNativeAssetBalance, gasFeeReserveWei);
+  const spendableNativeAssetBalance = MathLib.zeroFloorSub(
+    accountNativeAssetBalance,
+    gasFeeReserveWei,
+  );
 
   return accountLoanTokenBalance + spendableNativeAssetBalance;
 }

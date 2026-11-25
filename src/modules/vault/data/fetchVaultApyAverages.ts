@@ -1,13 +1,13 @@
-import "server-only";
+import 'server-only';
+import type { ApyAverages } from '@/common/data/types';
 
-import type { ApyAverages } from "@/common/data/types";
-import { fetchMorphoRestResource } from "@/common/utils/fetchMorphoRest";
+import { fetchMorphoRestResource } from '@/common/utils/fetchMorphoRest';
 
 const APY_AVERAGE_LOOKBACKS = {
-  sevenDays: "seven_days",
-  thirtyDays: "thirty_days",
-  ninetyDays: "ninety_days",
-  inception: "inception",
+  sevenDays: 'seven_days',
+  thirtyDays: 'thirty_days',
+  ninetyDays: 'ninety_days',
+  inception: 'inception',
 } as const satisfies Record<keyof ApyAverages, string>;
 
 /**
@@ -17,7 +17,9 @@ const APY_AVERAGE_LOOKBACKS = {
 export async function fetchVaultApyAverages(path: string): Promise<ApyAverages> {
   const entries = await Promise.all(
     Object.entries(APY_AVERAGE_LOOKBACKS).map(async ([key, lookback]) => {
-      const response = await fetchMorphoRestResource<{ data: { apy: number | null } }>(path, { lookback });
+      const response = await fetchMorphoRestResource<{ data: { apy: number | null } }>(path, {
+        lookback,
+      });
       return [key, response?.data.apy ?? null] as const;
     }),
   );

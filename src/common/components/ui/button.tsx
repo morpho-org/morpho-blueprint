@@ -1,39 +1,40 @@
-"use client";
+'use client';
 
-import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
-import { LoaderCircle } from "lucide-react";
-import type * as React from "react";
+import type * as React from 'react';
 
-import { cn } from "@/common/utils/shadcn";
+import { Slot } from '@radix-ui/react-slot';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { LoaderCircle } from 'lucide-react';
+
+import { cn } from '@/common/utils/shadcn';
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-button select-none transition-all active:not-disabled:scale-98 disabled:opacity-50 shrink-0 outline-none not-disabled:cursor-pointer",
+  'inline-flex items-center justify-center whitespace-nowrap rounded-button select-none transition-all active:not-disabled:scale-98 disabled:opacity-50 shrink-0 outline-none not-disabled:cursor-pointer',
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:not-disabled:bg-primary/90 shadow",
-        secondary: "bg-secondary text-secondary-foreground hover:not-disabled:bg-secondary/90",
-        outline: "bg-card border hover:not-disabled:bg-accent not-disabled:shadow-sm",
-        ghost: "hover:not-disabled:bg-accent",
-        accent: "bg-accent hover:not-disabled:bg-accent/90",
-        destructive: "bg-destructive text-primary-foreground hover:not-disabled:bg-destructive/90",
-        link: "text-primary hover:underline underline-offset-2 !px-0",
+        default: 'bg-primary text-primary-foreground hover:not-disabled:bg-primary/90 shadow',
+        secondary: 'bg-secondary text-secondary-foreground hover:not-disabled:bg-secondary/90',
+        outline: 'bg-card border hover:not-disabled:bg-accent not-disabled:shadow-sm',
+        ghost: 'hover:not-disabled:bg-accent',
+        accent: 'bg-accent hover:not-disabled:bg-accent/90',
+        destructive: 'bg-destructive text-primary-foreground hover:not-disabled:bg-destructive/90',
+        link: 'text-primary hover:underline underline-offset-2 !px-0',
       },
       size: {
-        lg: "body-large-plus px-4 h-12",
-        default: "body-medium-plus px-3 h-10",
-        sm: "body-medium-plus px-[10px] h-9",
-        xs: "body-small-plus px-1 h-6",
+        lg: 'body-large-plus px-4 h-12',
+        default: 'body-medium-plus px-3 h-10',
+        sm: 'body-medium-plus px-[10px] h-9',
+        xs: 'body-small-plus px-1 h-6',
       },
       icon: {
         false: null,
-        true: "aspect-square p-0",
+        true: 'aspect-square p-0',
       },
     },
     defaultVariants: {
-      variant: "default",
-      size: "default",
+      variant: 'default',
+      size: 'default',
     },
   },
 );
@@ -42,7 +43,7 @@ type ButtonProps = {
   asChild?: boolean;
   isLoading?: boolean;
   loadingMessage?: string;
-} & React.ComponentProps<"button"> &
+} & React.ComponentProps<'button'> &
   VariantProps<typeof buttonVariants>;
 
 function Button({
@@ -51,15 +52,19 @@ function Button({
   variant,
   icon,
   isLoading = false,
-  loadingMessage = "Loading",
+  loadingMessage = 'Loading',
   size,
   asChild = false,
   ...props
 }: ButtonProps) {
-  const Comp = asChild ? Slot : "button";
+  const Comp = asChild ? Slot : 'button';
 
   return (
-    <Comp data-slot="button" className={cn(buttonVariants({ variant, size, icon, className }))} {...props}>
+    <Comp
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size, icon, className }))}
+      {...props}
+    >
       {isLoading ? (
         <span className="flex items-center gap-1">
           <LoaderCircle className="size-[1.25em] animate-spin" />

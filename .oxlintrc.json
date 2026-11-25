@@ -1,0 +1,9 @@
+{
+  "extends": ["./node_modules/@morpho-org/lint-config/src/oxlint.jsonc"],
+  "plugins": ["eslint", "oxc", "typescript", "unicorn", "react"],
+  "env": { "browser": true, "node": true },
+  "rules": {
+    "react/exhaustive-deps": "error",
+    "react/rules-of-hooks": "error"
+  }
+}

@@ -1,30 +1,36 @@
-"use client";
+'use client';
 
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { type MarketId, MathLib } from "@morpho-org/blue-sdk";
-import { useModal } from "connectkit";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { type UseFormReturn, useForm } from "react-hook-form";
-import { useDebounce } from "use-debounce";
-import { type Hex, maxUint256 } from "viem";
-import { useAccount, usePublicClient } from "wagmi";
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
+import { type MarketId, MathLib } from '@morpho-org/blue-sdk';
+import { useModal } from 'connectkit';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type UseFormReturn, useForm } from 'react-hook-form';
+import { useDebounce } from 'use-debounce';
+import { type Hex, maxUint256 } from 'viem';
+import { useAccount, usePublicClient } from 'wagmi';
 
-import { type MarketAction, marketRepayAndWithdrawCollateralAction, UserFacingError } from "@/actions";
-import { DEBOUNCE_TIME_MS } from "@/common/utils/constants";
-import { parseOnchainAmount } from "@/common/utils/schemas";
-import { tryCatch } from "@/common/utils/tryCatch";
-import type { SupportedChainId } from "@/config/types";
-import type { MarketNonIdle } from "@/modules/market/data/getMarket";
-import type { MarketPosition } from "@/modules/market/data/getMarketPositions";
-import { useMarketPosition } from "@/modules/market/hooks/useMarketPositions";
-import { capAvailableToBorrowByLiquidity } from "@/modules/market/utils/capAvailableToBorrowByLiquidity";
-import { computeMarketPositonChange } from "@/modules/market/utils/computeMarketPositionChange";
-import { computeRequiredCollateral } from "@/modules/market/utils/computeRequiredCollateral";
+import type { SupportedChainId } from '@/config/types';
+import type { MarketNonIdle } from '@/modules/market/data/getMarket';
+import type { MarketPosition } from '@/modules/market/data/getMarketPositions';
+
+import {
+  type MarketAction,
+  marketRepayAndWithdrawCollateralAction,
+  UserFacingError,
+} from '@/actions';
+import { DEBOUNCE_TIME_MS } from '@/common/utils/constants';
+import { parseOnchainAmount } from '@/common/utils/schemas';
+import { tryCatch } from '@/common/utils/tryCatch';
+import { useMarketPosition } from '@/modules/market/hooks/useMarketPositions';
+import { capAvailableToBorrowByLiquidity } from '@/modules/market/utils/capAvailableToBorrowByLiquidity';
+import { computeMarketPositonChange } from '@/modules/market/utils/computeMarketPositionChange';
+import { computeRequiredCollateral } from '@/modules/market/utils/computeRequiredCollateral';
+
 import {
   createMarketRepayAndWithdrawCollateralFormSchema,
   type MarketRepayAndWithdrawCollateralFormSchemaInput,
   type MarketRepayAndWithdrawCollateralFormSchemaOutput,
-} from "./schema";
+} from './schema';
 
 interface UseMarketRepayAndWithdrawCollateralFormParams {
   market: MarketNonIdle;
@@ -55,12 +61,12 @@ export function useMarketRepayAndWithdrawCollateralForm({
     undefined,
     MarketRepayAndWithdrawCollateralFormSchemaOutput
   >({
-    mode: "onChange",
+    mode: 'onChange',
     resolver: standardSchemaResolver(formSchema),
     defaultValues: {
-      repayAmount: "",
+      repayAmount: '',
       isMaxRepay: false,
-      withdrawCollateralAmount: "",
+      withdrawCollateralAmount: '',
     },
   });
 
@@ -97,12 +103,16 @@ export function useMarketRepayAndWithdrawCollateralForm({
           marketId: market.marketId as MarketId,
           accountAddress: address,
           repayAmount: isMaxRepay ? maxUint256 : submittedValues.repayAmount,
-          withdrawCollateralAmount: isMaxWithdrawCollateral ? maxUint256 : submittedValues.withdrawCollateralAmount,
+          withdrawCollateralAmount: isMaxWithdrawCollateral
+            ? maxUint256
+            : submittedValues.withdrawCollateralAmount,
         }),
       );
 
       if (error) {
-        setSubmitErrorMsg(error instanceof UserFacingError ? error.message : "An unknown error occurred");
+        setSubmitErrorMsg(
+          error instanceof UserFacingError ? error.message : 'An unknown error occurred',
+        );
       } else {
         // The review dialog's "Available to borrow" uses the same liquidity cap as the form summary.
         onSuccessfulActionSimulation({
@@ -126,8 +136,8 @@ export function useMarketRepayAndWithdrawCollateralForm({
   // Trigger dependent field validation
   useEffect(() => {
     const subscription = form.watch((_value, { name }) => {
-      if (name === "repayAmount") {
-        void form.trigger(["withdrawCollateralAmount"]);
+      if (name === 'repayAmount') {
+        void form.trigger(['withdrawCollateralAmount']);
       }
     });
 
@@ -135,19 +145,20 @@ export function useMarketRepayAndWithdrawCollateralForm({
   }, [form]);
 
   // Trigger revalidation on position change
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Allow position to trigger reval
   useEffect(() => {
     if (form.formState.isDirty) {
-      form.trigger();
+      void form.trigger();
     }
+    // oxlint-disable-next-line react/exhaustive-deps -- Revalidate on position changes, not when the form becomes dirty.
   }, [position, form.trigger]);
 
   // Reset isMax when a new account connects
+  const { setValue } = form;
   useEffect(() => {
     if (address) {
-      form.setValue("isMaxRepay", false);
+      setValue('isMaxRepay', false);
     }
-  }, [address, form.setValue]);
+  }, [address, setValue]);
 
   return {
     form,
@@ -172,14 +183,15 @@ function useDerivedFormValues({
     MarketRepayAndWithdrawCollateralFormSchemaOutput
   >;
 }) {
-  const [formInputRepayAmount, formInputIsMaxRepay, formInputWithdrawCollateralAmount] = form.watch([
-    "repayAmount",
-    "isMaxRepay",
-    "withdrawCollateralAmount",
-  ]);
+  const [formInputRepayAmount, formInputIsMaxRepay, formInputWithdrawCollateralAmount] = form.watch(
+    ['repayAmount', 'isMaxRepay', 'withdrawCollateralAmount'],
+  );
 
   const [debouncedFormInputRepayAmount] = useDebounce(formInputRepayAmount, DEBOUNCE_TIME_MS);
-  const [debouncedFormInputWithdrawCollateralAmount] = useDebounce(formInputWithdrawCollateralAmount, DEBOUNCE_TIME_MS);
+  const [debouncedFormInputWithdrawCollateralAmount] = useDebounce(
+    formInputWithdrawCollateralAmount,
+    DEBOUNCE_TIME_MS,
+  );
 
   const repayAmount = useMemo(() => {
     if (formInputIsMaxRepay && position?.borrowAmount != null) {
@@ -189,7 +201,12 @@ function useDerivedFormValues({
   }, [debouncedFormInputRepayAmount, market.loanAsset.decimals, formInputIsMaxRepay, position]);
 
   const withdrawCollateralAmount = useMemo(() => {
-    return parseOnchainAmount(debouncedFormInputWithdrawCollateralAmount, market.collateralAsset.decimals) ?? 0n;
+    return (
+      parseOnchainAmount(
+        debouncedFormInputWithdrawCollateralAmount,
+        market.collateralAsset.decimals,
+      ) ?? 0n
+    );
   }, [debouncedFormInputWithdrawCollateralAmount, market.collateralAsset.decimals]);
 
   const maxWithdrawCollateralAmount = useMemo(() => {

@@ -1,4 +1,11 @@
-import type { Address, Chain, Client, Hex, Transport, TransactionRequest as ViemTransactionRequest } from "viem";
+import type {
+  Address,
+  Chain,
+  Client,
+  Hex,
+  Transport,
+  TransactionRequest as ViemTransactionRequest,
+} from 'viem';
 
 export type SignatureRequirementFunction = (client: Client) => Promise<unknown>;
 
@@ -7,7 +14,7 @@ export type ClientWithChain = Client<Transport, Chain>;
 export class UserFacingError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
-    this.name = "UserFacingError";
+    this.name = 'UserFacingError';
   }
 }
 

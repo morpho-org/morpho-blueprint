@@ -1,9 +1,9 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const cspHeader = `
     default-src 'self';
     script-src 'self'
-         ${process.env.NODE_ENV === "production" ? "" : "'unsafe-eval'"}
+         ${process.env.NODE_ENV === 'production' ? '' : "'unsafe-eval'"}
         'unsafe-inline'
         https://plausible.paperclip.xyz;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
@@ -64,36 +64,36 @@ const nextConfig: NextConfig = {
     // Fix MetaMask SDK React Native dependency warnings in web builds
     config.resolve.fallback = {
       ...config.resolve.fallback,
-      "@react-native-async-storage/async-storage": false,
+      '@react-native-async-storage/async-storage': false,
     };
     return config;
   },
   turbopack: {
     // Fix MetaMask SDK React Native dependency warnings in web builds
     resolveAlias: {
-      "@react-native-async-storage/async-storage": "./turbo-empty.ts",
+      '@react-native-async-storage/async-storage': './turbo-empty.ts',
     },
   },
   async headers() {
     return [
       {
-        source: "/(.*)",
+        source: '/(.*)',
         headers: [
           {
-            key: "Content-Security-Policy",
-            value: cspHeader.replace(/\s{2,}/g, " ").trim(),
+            key: 'Content-Security-Policy',
+            value: cspHeader.replace(/\s{2,}/g, ' ').trim(),
           },
           {
-            key: "Reporting-Endpoints",
+            key: 'Reporting-Endpoints',
             value: `csp-report-endpoint="${process.env.NEXT_PUBLIC_URL!}/api/csp-report"`,
           },
           {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
           },
           {
-            key: "X-Frame-Options",
-            value: "DENY",
+            key: 'X-Frame-Options',
+            value: 'DENY',
           },
         ],
       },
@@ -102,8 +102,8 @@ const nextConfig: NextConfig = {
   redirects: async () => {
     return [
       {
-        source: "/",
-        destination: "/earn",
+        source: '/',
+        destination: '/earn',
         permanent: false,
       },
     ];
@@ -113,17 +113,17 @@ const nextConfig: NextConfig = {
     // curated morpho-blue-api-metadata repo.
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "cdn.morpho.org",
-        port: "",
-        pathname: "**",
+        protocol: 'https',
+        hostname: 'cdn.morpho.org',
+        port: '',
+        pathname: '**',
       },
       // Merkl reward token and chain icons
       {
-        protocol: "https",
-        hostname: "storage.googleapis.com",
-        port: "",
-        pathname: "/merkl-static-assets/**",
+        protocol: 'https',
+        hostname: 'storage.googleapis.com',
+        port: '',
+        pathname: '/merkl-static-assets/**',
       },
     ],
     // Chain icons are served as .svg, and next/image 400s on SVG upstreams unless this is set.

@@ -1,28 +1,29 @@
-import { parseUnits } from "viem";
-import { describe, expect, vi } from "vitest";
+import { parseUnits } from 'viem';
+import { describe, expect, vi } from 'vitest';
 
-import { erc4626WithdrawAction } from "@/actions/erc4626/withdraw/erc4626WithdrawAction";
-import { erc4626WithdrawActionDirect } from "@/actions/erc4626/withdraw/erc4626WithdrawActionDirect";
-import { erc4626WithdrawViaMorphoSdkAction } from "@/actions/erc4626/withdraw/erc4626WithdrawViaMorphoSdkAction";
-import { APP_CONFIG } from "@/config";
+import { erc4626WithdrawAction } from '@/actions/erc4626/withdraw/erc4626WithdrawAction';
+import { erc4626WithdrawActionDirect } from '@/actions/erc4626/withdraw/erc4626WithdrawActionDirect';
+import { erc4626WithdrawViaMorphoSdkAction } from '@/actions/erc4626/withdraw/erc4626WithdrawViaMorphoSdkAction';
+import { APP_CONFIG } from '@/config';
 
-import { test } from "../../../../config";
+import { test } from '../../../../config';
 
 // Mock the underlying action implementations
-vi.mock("@/actions/erc4626/withdraw/erc4626WithdrawActionDirect");
-vi.mock("@/actions/erc4626/withdraw/erc4626WithdrawViaMorphoSdkAction");
+vi.mock('@/actions/erc4626/withdraw/erc4626WithdrawActionDirect');
+vi.mock('@/actions/erc4626/withdraw/erc4626WithdrawViaMorphoSdkAction');
 
-describe("erc4626WithdrawAction (wrapper)", () => {
-  const vaultAddress = "0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB";
-  const withdrawAmount = parseUnits("1000", 6);
+describe('erc4626WithdrawAction (wrapper)', () => {
+  const vaultAddress = '0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB';
+  const withdrawAmount = parseUnits('1000', 6);
 
-  test("routes to the morpho-sdk implementation when bundler3Config is enabled", async ({ client }) => {
+  test('routes to the morpho-sdk implementation when bundler3Config is enabled', async ({
+    client,
+  }) => {
     const originalEnabled = APP_CONFIG.actionParameters.bundler3Config.enabled;
 
     try {
       // Enable the morpho-sdk path
-      // biome-ignore lint/suspicious/noExplicitAny: Needed to override readonly config for testing
-      (APP_CONFIG.actionParameters.bundler3Config as any).enabled = true;
+      Object.assign(APP_CONFIG.actionParameters.bundler3Config, { enabled: true });
 
       // Setup mock
       const mockResult = {
@@ -53,19 +54,17 @@ describe("erc4626WithdrawAction (wrapper)", () => {
       expect(erc4626WithdrawActionDirect).not.toHaveBeenCalled();
     } finally {
       // Restore original config
-      // biome-ignore lint/suspicious/noExplicitAny: Needed to restore readonly config after testing
-      (APP_CONFIG.actionParameters.bundler3Config as any).enabled = originalEnabled;
+      Object.assign(APP_CONFIG.actionParameters.bundler3Config, { enabled: originalEnabled });
       vi.clearAllMocks();
     }
   });
 
-  test("routes to direct implementation when bundler3Config is disabled", async ({ client }) => {
+  test('routes to direct implementation when bundler3Config is disabled', async ({ client }) => {
     const originalEnabled = APP_CONFIG.actionParameters.bundler3Config.enabled;
 
     try {
       // Disable the morpho-sdk path
-      // biome-ignore lint/suspicious/noExplicitAny: Needed to override readonly config for testing
-      (APP_CONFIG.actionParameters.bundler3Config as any).enabled = false;
+      Object.assign(APP_CONFIG.actionParameters.bundler3Config, { enabled: false });
 
       // Setup mock
       const mockResult = {
@@ -96,8 +95,7 @@ describe("erc4626WithdrawAction (wrapper)", () => {
       expect(erc4626WithdrawViaMorphoSdkAction).not.toHaveBeenCalled();
     } finally {
       // Restore original config
-      // biome-ignore lint/suspicious/noExplicitAny: Needed to restore readonly config after testing
-      (APP_CONFIG.actionParameters.bundler3Config as any).enabled = originalEnabled;
+      Object.assign(APP_CONFIG.actionParameters.bundler3Config, { enabled: originalEnabled });
       vi.clearAllMocks();
     }
   });

@@ -10,46 +10,46 @@
  * - a GraphQL dependency in package.json, or a script mentioning GraphQL;
  * - a GraphQL schema snapshot, generated client or codegen config.
  *
- * Comments are not scanned: they may explain the migration. ALLOWED lists the deliberate exceptions, each
- * matched by exact source text in one file; an entry that matches nothing fails too, so the list stays narrow.
+ * Comments are not scanned: they may explain the migration. ALLOWED matches tokens in one specific file,
+ * independent of string quote style. Unused entries also fail so the list stays narrow.
  *
- * The same file runs in morpho-blueprint and blueprint-anchorage: keep both copies identical.
+ * Keep this guard's coverage in sync with blueprint-anchorage.
  */
-import fs from "node:fs";
-import path from "node:path";
-import ts from "typescript";
-import { describe, expect, it } from "vitest";
+import fs from 'node:fs';
+import path from 'node:path';
+import ts from 'typescript';
+import { describe, expect, it } from 'vitest';
 
-const ROOT = path.resolve(__dirname, "../..");
+const ROOT = path.resolve(__dirname, '../..');
 
 const ALLOWED: readonly { file: string; text: string; why: string }[] = [
   {
-    file: "src/common/utils/morphoApiConfig.ts",
+    file: 'src/common/utils/morphoApiConfig.ts',
     text: '"MORPHO_API_URL"',
-    why: "Deployments that only set the former GraphQL endpoint keep its host for Core REST.",
+    why: 'Deployments that only set the former GraphQL endpoint keep its host for Core REST.',
   },
   {
-    file: "src/common/utils/morphoApiConfig.ts",
-    text: "graphqlUrl",
-    why: "The local variable holding that legacy MORPHO_API_URL value.",
+    file: 'src/common/utils/morphoApiConfig.ts',
+    text: 'graphqlUrl',
+    why: 'The local variable holding that legacy MORPHO_API_URL value.',
   },
   {
-    file: "src/common/utils/morphoApiConfig.ts",
-    text: "/\\/graphql$/",
-    why: "Strips the /graphql path from MORPHO_API_URL to get the Core REST host.",
+    file: 'src/common/utils/morphoApiConfig.ts',
+    text: '/\\/graphql$/',
+    why: 'Strips the /graphql path from MORPHO_API_URL to get the Core REST host.',
   },
 ];
 
-const SCANNED_ROOTS = ["src", "next.config.ts"];
+const SCANNED_ROOTS = ['src', 'next.config.ts'];
 const CODE_FILE = /\.(ts|tsx|js|jsx|mjs|cjs)$/;
 const FORBIDDEN_PATHS = [
-  "schema/morpho-api.graphql",
-  "src/generated/gql",
-  "codegen.ts",
-  "codegen.yml",
-  "codegen.yaml",
-  "graphql.config.ts",
-  "graphql.config.yml",
+  'schema/morpho-api.graphql',
+  'src/generated/gql',
+  'codegen.ts',
+  'codegen.yml',
+  'codegen.yaml',
+  'graphql.config.ts',
+  'graphql.config.yml',
 ];
 const GRAPHQL_FILE = /\.(graphql|gql)$/;
 const GRAPHQL_DEPENDENCY = /graphql|^gql$|^@apollo\/|^@?urql(\/|$)/i;
@@ -73,8 +73,10 @@ const LITERAL_KINDS = new Set([
 ]);
 
 function isGraphqlToken(node: ts.Node, text: string): boolean {
-  if (LITERAL_KINDS.has(node.kind)) return /graphql/i.test(text) || /^["'`]MORPHO_API_URL["'`]$/.test(text);
-  if (ts.isIdentifier(node)) return /graphql/i.test(text) || /^(gql|executeMorphoQuery|MORPHO_API_URL)$/.test(text);
+  if (LITERAL_KINDS.has(node.kind))
+    return /graphql/i.test(text) || /^["'`]MORPHO_API_URL["'`]$/.test(text);
+  if (ts.isIdentifier(node))
+    return /graphql/i.test(text) || /^(gql|executeMorphoQuery|MORPHO_API_URL)$/.test(text);
   return false;
 }
 
@@ -82,15 +84,19 @@ function isGraphqlToken(node: ts.Node, text: string): boolean {
 function findGraphqlTokens(file: string): { file: string; line: number; text: string }[] {
   const source = ts.createSourceFile(
     file,
-    fs.readFileSync(path.join(ROOT, file), "utf8"),
+    fs.readFileSync(path.join(ROOT, file), 'utf8'),
     ts.ScriptTarget.Latest,
     true,
   );
   const found: { file: string; line: number; text: string }[] = [];
   const visit = (node: ts.Node) => {
-    const text = node.getText(source);
+    const text = ts.isStringLiteral(node) ? JSON.stringify(node.text) : node.getText(source);
     if (isGraphqlToken(node, text)) {
-      found.push({ file, line: source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1, text });
+      found.push({
+        file,
+        line: source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1,
+        text,
+      });
     }
     ts.forEachChild(node, visit);
   };
@@ -98,7 +104,7 @@ function findGraphqlTokens(file: string): { file: string; line: number; text: st
   return found;
 }
 
-describe("no Morpho GraphQL", () => {
+describe('no Morpho GraphQL', () => {
   const codeFiles = SCANNED_ROOTS.flatMap(listFiles).filter((file) => CODE_FILE.test(file));
   const tokens = codeFiles.flatMap(findGraphqlTokens);
   const isAllowed = (token: { file: string; text: string }) =>
@@ -108,31 +114,44 @@ describe("no Morpho GraphQL", () => {
     expect(codeFiles.length).toBeGreaterThan(100);
   });
 
-  it("has no GraphQL endpoint, client, query or MORPHO_API_URL read in the code", () => {
-    expect(tokens.filter((token) => !isAllowed(token)).map((t) => `${t.file}:${t.line} ${t.text}`)).toEqual([]);
+  it('has no GraphQL endpoint, client, query or MORPHO_API_URL read in the code', () => {
+    expect(
+      tokens.filter((token) => !isAllowed(token)).map((t) => `${t.file}:${t.line} ${t.text}`),
+    ).toEqual([]);
   });
 
-  it("uses every allow-list entry", () => {
-    const unused = ALLOWED.filter((entry) => !tokens.some((t) => t.file === entry.file && t.text === entry.text));
+  it('uses every allow-list entry', () => {
+    const unused = ALLOWED.filter(
+      (entry) => !tokens.some((t) => t.file === entry.file && t.text === entry.text),
+    );
     expect(unused).toEqual([]);
   });
 
-  it("has no GraphQL dependency or script in package.json", () => {
-    const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
-    const dependencies = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"].flatMap(
-      (field) => Object.keys(pkg[field] ?? {}),
+  it('has no GraphQL dependency or script in package.json', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+    const dependencies = [
+      'dependencies',
+      'devDependencies',
+      'peerDependencies',
+      'optionalDependencies',
+    ].flatMap((field) => Object.keys(pkg[field] ?? {}));
+    const scripts = Object.entries<string>(pkg.scripts ?? {}).map(
+      ([name, command]) => `${name}: ${command}`,
     );
-    const scripts = Object.entries<string>(pkg.scripts ?? {}).map(([name, command]) => `${name}: ${command}`);
     expect([
-      ...dependencies.filter((name) => GRAPHQL_DEPENDENCY.test(name)).map((name) => `dependency ${name}`),
-      ...scripts.filter((script) => /graphql|\bgql\b/i.test(script)).map((script) => `script ${script}`),
+      ...dependencies
+        .filter((name) => GRAPHQL_DEPENDENCY.test(name))
+        .map((name) => `dependency ${name}`),
+      ...scripts
+        .filter((script) => /graphql|\bgql\b/i.test(script))
+        .map((script) => `script ${script}`),
     ]).toEqual([]);
   });
 
-  it("has no GraphQL schema snapshot, generated client or codegen config", () => {
+  it('has no GraphQL schema snapshot, generated client or codegen config', () => {
     const found = new Set([
       ...FORBIDDEN_PATHS.filter((file) => fs.existsSync(path.join(ROOT, file))),
-      ...["src", "schema"].flatMap(listFiles).filter((file) => GRAPHQL_FILE.test(file)),
+      ...['src', 'schema'].flatMap(listFiles).filter((file) => GRAPHQL_FILE.test(file)),
     ]);
     expect([...found]).toEqual([]);
   });

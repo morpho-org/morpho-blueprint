@@ -1,17 +1,19 @@
-import { AdaptiveCurveIrmLib, MarketUtils, MathLib } from "@morpho-org/blue-sdk";
-import { formatUnits, getAddress, type Hex } from "viem";
-import { descale, toAmountWithPrice, toBigInt, toRatio } from "@/common/data/adapters/amount";
-import { type DataPoint, descaleSeries, zipTimeseries } from "@/common/data/adapters/timeseries";
-import type { Apy, ChainInfo, CuratorInfo, RewardApy, TokenInfo } from "@/common/data/types";
-import { numberToString } from "@/common/utils/format";
-import type { Erc4626VaultProtocol } from "@/config/vault-protocol";
+import { AdaptiveCurveIrmLib, MarketUtils, MathLib } from '@morpho-org/blue-sdk';
+import { formatUnits, getAddress, type Hex } from 'viem';
+
+import type { Apy, ChainInfo, CuratorInfo, RewardApy, TokenInfo } from '@/common/data/types';
+import type { Erc4626VaultProtocol } from '@/config/vault-protocol';
 import type {
   IrmCurvePoint,
   MarketHistoricalEntry,
   MarketSummary,
   MarketVaultAllocation,
-} from "@/modules/market/market.types";
-import type { BigIntish } from "@/morpho-types";
+} from '@/modules/market/market.types';
+import type { BigIntish } from '@/morpho-types';
+
+import { descale, toAmountWithPrice, toBigInt, toRatio } from '@/common/data/adapters/amount';
+import { type DataPoint, descaleSeries, zipTimeseries } from '@/common/data/adapters/timeseries';
+import { numberToString } from '@/common/utils/format';
 
 /**
  * AdaptiveCurveIRM target utilization. Not exposed by the API (`Market.targetBorrowUtilization` is
@@ -20,7 +22,10 @@ import type { BigIntish } from "@/morpho-types";
 export const ADAPTIVE_CURVE_IRM_TARGET_UTILIZATION = 0.9;
 
 /** The API exposes no market name; compose one from the asset symbols, as app.morpho.org does. */
-export function composeMarketName(collateralSymbol: string | null | undefined, loanSymbol: string): string {
+export function composeMarketName(
+  collateralSymbol: string | null | undefined,
+  loanSymbol: string,
+): string {
   return collateralSymbol ? `${collateralSymbol} / ${loanSymbol}` : `Idle ${loanSymbol}`;
 }
 
@@ -51,7 +56,7 @@ export function toCollateralPriceInLoanAsset(
 }
 
 /** Core REST's `apy-averages` window keys, as the market list reads them. */
-export type RestApyAverageKey = "6h" | "24h" | "7d" | "30d";
+export type RestApyAverageKey = '6h' | '24h' | '7d' | '30d';
 
 /**
  * A borrow APY from a REST native average and the current Merkl borrow reward APRs. Rewards lower
@@ -59,7 +64,11 @@ export type RestApyAverageKey = "6h" | "24h" | "7d" | "30d";
  */
 function toRestBorrowApy(nativeApy: number | null | undefined, rewards: RewardApy[]): Apy {
   const afterFees = nativeApy ?? 0;
-  return { afterFees, total: rewards.reduce((sum, reward) => sum - reward.apr, afterFees), rewards };
+  return {
+    afterFees,
+    total: rewards.reduce((sum, reward) => sum - reward.apr, afterFees),
+    rewards,
+  };
 }
 
 /** One borrow-table row from Core REST reads. `loanPriceUsd` null leaves the USD value unknown. */
@@ -79,14 +88,18 @@ export function toRestMarketSummary(source: {
     chain: source.chain,
     name: composeMarketName(source.collateralAsset?.symbol, source.loanAsset.symbol),
     marketId: source.marketId,
-    totalBorrowed: toAmountWithPrice(source.totalBorrowAssets, source.loanAsset.decimals, source.loanPriceUsd),
+    totalBorrowed: toAmountWithPrice(
+      source.totalBorrowAssets,
+      source.loanAsset.decimals,
+      source.loanPriceUsd,
+    ),
     collateralAsset: source.collateralAsset,
     loanAsset: source.loanAsset,
     lltv: toRatio(source.lltvWad),
-    borrowApy6h: toRestBorrowApy(averages["6h"], rewards),
-    borrowApy1d: toRestBorrowApy(averages["24h"], rewards),
-    borrowApy7d: toRestBorrowApy(averages["7d"], rewards),
-    borrowApy30d: toRestBorrowApy(averages["30d"], rewards),
+    borrowApy6h: toRestBorrowApy(averages['6h'], rewards),
+    borrowApy1d: toRestBorrowApy(averages['24h'], rewards),
+    borrowApy7d: toRestBorrowApy(averages['7d'], rewards),
+    borrowApy30d: toRestBorrowApy(averages['30d'], rewards),
   };
 }
 
@@ -106,7 +119,10 @@ export function computeIrmCurve(
   return Array.from({ length: numberOfPoints + 1 }, (_, i) => {
     const utilization = (MathLib.WAD * BigInt(i)) / BigInt(numberOfPoints);
     const { endBorrowRate } = AdaptiveCurveIrmLib.getBorrowRate(utilization, rateAtTarget, 0n);
-    const supplyRate = MathLib.wMulUp(MathLib.wMulDown(endBorrowRate, utilization), MathLib.WAD - fee);
+    const supplyRate = MathLib.wMulUp(
+      MathLib.wMulDown(endBorrowRate, utilization),
+      MathLib.WAD - fee,
+    );
     return {
       utilization: i / numberOfPoints,
       borrowApy: MarketUtils.rateToApy(endBorrowRate),
@@ -116,9 +132,14 @@ export function computeIrmCurve(
 }
 
 /** Borrow over supply, 0 for an empty market. */
-export function computeUtilization(totalSupplyAssets: BigIntish, totalBorrowAssets: BigIntish): number {
+export function computeUtilization(
+  totalSupplyAssets: BigIntish,
+  totalBorrowAssets: BigIntish,
+): number {
   const supply = toBigInt(totalSupplyAssets);
-  return supply > 0n ? Number(formatUnits((toBigInt(totalBorrowAssets) * MathLib.WAD) / supply, 18)) : 0;
+  return supply > 0n
+    ? Number(formatUnits((toBigInt(totalBorrowAssets) * MathLib.WAD) / supply, 18))
+    : 0;
 }
 
 /** One configured vault's position on the market, as read from Core REST. */
@@ -142,7 +163,12 @@ export interface RestMarketSupplier {
  */
 export function toMarketVaultAllocation(
   supplier: RestMarketSupplier,
-  market: { chain: ChainInfo; loanAsset: TokenInfo; loanPriceUsd: number | null; totalSupplyAssets: BigIntish },
+  market: {
+    chain: ChainInfo;
+    loanAsset: TokenInfo;
+    loanPriceUsd: number | null;
+    totalSupplyAssets: BigIntish;
+  },
 ): MarketVaultAllocation {
   const { decimals } = market.loanAsset;
   const total = toBigInt(market.totalSupplyAssets);
@@ -163,7 +189,8 @@ export function toMarketVaultAllocation(
       supplyShares: supplier.supplyShares,
     },
     supplyCap: toAmountWithPrice(supplier.supplyCap, decimals, market.loanPriceUsd),
-    marketSupplyShare: total > 0n ? descale(supplier.supplyAssets, decimals) / descale(total, decimals) : 0,
+    marketSupplyShare:
+      total > 0n ? descale(supplier.supplyAssets, decimals) / descale(total, decimals) : 0,
   };
 }
 
@@ -205,7 +232,10 @@ export function toMarketHistoricalEntries(
       bucketTimestamp,
       totalSupplied: { formatted: numberToString(values.supply ?? 0), usd: values.supplyUsd },
       totalBorrowed: { formatted: numberToString(values.borrow ?? 0), usd: values.borrowUsd },
-      totalCollateral: { formatted: numberToString(values.collateral ?? 0), usd: values.collateralUsd },
+      totalCollateral: {
+        formatted: numberToString(values.collateral ?? 0),
+        usd: values.collateralUsd,
+      },
       // Kept null where the upstream series has no sample (a market younger than the window),
       // so the chart shows a gap instead of a spurious 0% line — same rule as the vault chart.
       borrowApy1d: { base: values.base1d ?? null, total: values.total1d ?? null },

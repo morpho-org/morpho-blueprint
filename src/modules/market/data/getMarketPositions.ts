@@ -1,15 +1,22 @@
-import "server-only";
+import 'server-only';
+import { MathLib, ORACLE_PRICE_SCALE, SharesMath } from '@morpho-org/blue-sdk';
+import { type Address, getAddress, type Hex, zeroAddress } from 'viem';
 
-import { MathLib, ORACLE_PRICE_SCALE, SharesMath } from "@morpho-org/blue-sdk";
-import { type Address, getAddress, type Hex, zeroAddress } from "viem";
-import { toAmountWithPrice, toRatio } from "@/common/data/adapters/amount";
-import { getTokenDecimals, getTokenPriceUsd } from "@/common/data/rest/tokens";
-import { getWalletTokenBalances } from "@/common/data/rpc/getWalletTokenBalances";
-import { SECONDS_PER_DAY } from "@/common/utils/constants";
-import { chunk, fetchAllMorphoRestPages, fetchMorphoRestResource, restSelector } from "@/common/utils/fetchMorphoRest";
-import type { SupportedChainId } from "@/config/types";
-import type { MarketPosition } from "@/modules/market/market.types";
-import { getSupportedMarketIds } from "./getSupportedMarketIds";
+import type { SupportedChainId } from '@/config/types';
+import type { MarketPosition } from '@/modules/market/market.types';
+
+import { toAmountWithPrice, toRatio } from '@/common/data/adapters/amount';
+import { getTokenDecimals, getTokenPriceUsd } from '@/common/data/rest/tokens';
+import { getWalletTokenBalances } from '@/common/data/rpc/getWalletTokenBalances';
+import { SECONDS_PER_DAY } from '@/common/utils/constants';
+import {
+  chunk,
+  fetchAllMorphoRestPages,
+  fetchMorphoRestResource,
+  restSelector,
+} from '@/common/utils/fetchMorphoRest';
+
+import { getSupportedMarketIds } from './getSupportedMarketIds';
 
 export type { MarketPosition };
 
@@ -48,13 +55,16 @@ export const getMarketPositions = async (accountAddress: Address): Promise<Marke
   const supportedMarketIds = await getSupportedMarketIds();
 
   const byChain = Object.entries(supportedMarketIds)
-    .map(([chainId, ids]) => [Number.parseInt(chainId) as SupportedChainId, Array.from(ids)] as const)
+    .map(
+      ([chainId, ids]) => [Number.parseInt(chainId) as SupportedChainId, Array.from(ids)] as const,
+    )
     .filter(([, ids]) => ids.length > 0);
 
   const data = {} as MarketPositionMap;
   const perChain = await Promise.all(
     byChain.map(
-      async ([chainId, ids]) => [chainId, await getMarketPositionsForChain(chainId, ids, accountAddress)] as const,
+      async ([chainId, ids]) =>
+        [chainId, await getMarketPositionsForChain(chainId, ids, accountAddress)] as const,
     ),
   );
   for (const [chainId, positions] of perChain) {
@@ -63,7 +73,11 @@ export const getMarketPositions = async (accountAddress: Address): Promise<Marke
   return data;
 };
 
-async function getMarketPositionsForChain(chainId: SupportedChainId, marketIds: Hex[], accountAddress: Address) {
+async function getMarketPositionsForChain(
+  chainId: SupportedChainId,
+  marketIds: Hex[],
+  accountAddress: Address,
+) {
   // The market list rides along so that a market the account has no position in still resolves its
   // assets, and therefore its wallet balances: the table's "in wallet" columns depend on it.
   const [positions, roots] = await Promise.all([
@@ -79,7 +93,7 @@ async function getMarketPositionsForChain(chainId: SupportedChainId, marketIds: 
       chunk(marketIds).map((ids) =>
         // Market params never change.
         fetchAllMorphoRestPages<RestMarketRoot>(
-          "/v0/blue/markets",
+          '/v0/blue/markets',
           { chain_id: [chainId], market_id: ids },
           { revalidate: SECONDS_PER_DAY },
         ),
@@ -110,11 +124,16 @@ async function getMarketPositionsForChain(chainId: SupportedChainId, marketIds: 
 
   const positionByMarket = new Map<string, RestMarketPosition>();
   for (const position of positions.flat()) {
-    if (position.chain_id === chainId) positionByMarket.set(position.market_id.toLowerCase(), position);
+    if (position.chain_id === chainId)
+      positionByMarket.set(position.market_id.toLowerCase(), position);
   }
 
   const tokenAddresses = Array.from(
-    new Set(markets.flatMap((market) => [market.loanToken, market.collateralToken].filter((token) => token != null))),
+    new Set(
+      markets.flatMap((market) =>
+        [market.loanToken, market.collateralToken].filter((token) => token != null),
+      ),
+    ),
   );
 
   const [tokens, balances, borrowAndCollateralValues] = await Promise.all([
@@ -148,12 +167,16 @@ async function getMarketPositionsForChain(chainId: SupportedChainId, marketIds: 
     const loan = tokenByAddress.get(market.loanToken);
     const collateral = market.collateralToken ? tokenByAddress.get(market.collateralToken) : null;
     if (!loan) {
-      console.warn(`Loan token not returned by the API, skipping position: ${chainId}:${market.marketId}`);
+      console.warn(
+        `Loan token not returned by the API, skipping position: ${chainId}:${market.marketId}`,
+      );
       continue;
     }
     // Amounts can't be formatted without decimals; an idle market (no collateral token) needs none.
     if (market.collateralToken && !collateral) {
-      console.warn(`Collateral token not returned by the API, skipping position: ${chainId}:${market.marketId}`);
+      console.warn(
+        `Collateral token not returned by the API, skipping position: ${chainId}:${market.marketId}`,
+      );
       continue;
     }
 
@@ -166,22 +189,32 @@ async function getMarketPositionsForChain(chainId: SupportedChainId, marketIds: 
     const collateralPriceUsd = collateral?.priceUsd ?? null;
 
     const loanBalance = balances.get(market.loanToken.toLowerCase());
-    const collateralBalance = market.collateralToken ? balances.get(market.collateralToken.toLowerCase()) : undefined;
+    const collateralBalance = market.collateralToken
+      ? balances.get(market.collateralToken.toLowerCase())
+      : undefined;
 
     result[market.marketId] = {
       market: { chain: { id: chainId }, marketId: market.marketId },
       // REST serves positions in token units only; USD is priced here from each token's price.
-      collateralAmount: toAmountWithPrice(position?.collateral_assets ?? 0, collateralDecimals, collateralPriceUsd),
+      collateralAmount: toAmountWithPrice(
+        position?.collateral_assets ?? 0,
+        collateralDecimals,
+        collateralPriceUsd,
+      ),
       borrowAmount: toAmountWithPrice(borrowAssets, loan.decimals, loan.priceUsd),
       // Borrow value over the oracle value of the collateral, rounding up, matching the action
       // layer's position-change math.
       ltv: toRatio(collateralValue > 0n ? MathLib.wDivUp(borrowAssets, collateralValue) : 0n),
       walletLoanAssetHolding:
-        loanBalance === undefined ? null : { balance: toAmountWithPrice(loanBalance, loan.decimals, loan.priceUsd) },
+        loanBalance === undefined
+          ? null
+          : { balance: toAmountWithPrice(loanBalance, loan.decimals, loan.priceUsd) },
       walletCollateralAssetHolding:
         collateralBalance === undefined
           ? null
-          : { balance: toAmountWithPrice(collateralBalance, collateralDecimals, collateralPriceUsd) },
+          : {
+              balance: toAmountWithPrice(collateralBalance, collateralDecimals, collateralPriceUsd),
+            },
     };
   }
 
@@ -203,18 +236,29 @@ async function toBorrowAndCollateralValue(
 
   const [state, oracle] = await Promise.all([
     borrowShares > 0n
-      ? fetchMorphoRestResource<RestMarketState>(`/v0/blue/markets/${restSelector(chainId, market.marketId)}/state`)
+      ? fetchMorphoRestResource<RestMarketState>(
+          `/v0/blue/markets/${restSelector(chainId, market.marketId)}/state`,
+        )
       : null,
     collateral > 0n && market.oracle !== zeroAddress
-      ? fetchMorphoRestResource<RestOracleState>(`/v0/oracles/${restSelector(chainId, market.oracle)}/state`)
+      ? fetchMorphoRestResource<RestOracleState>(
+          `/v0/oracles/${restSelector(chainId, market.oracle)}/state`,
+        )
       : null,
   ]);
 
   const borrowAssets = state
-    ? SharesMath.toAssets(borrowShares, state.data.total_borrow_assets, state.data.total_borrow_shares, "Up")
+    ? SharesMath.toAssets(
+        borrowShares,
+        state.data.total_borrow_assets,
+        state.data.total_borrow_shares,
+        'Up',
+      )
     : 0n;
   const oraclePrice = oracle?.data.price;
-  const collateralValue = oraclePrice ? MathLib.mulDivDown(collateral, oraclePrice, ORACLE_PRICE_SCALE) : 0n;
+  const collateralValue = oraclePrice
+    ? MathLib.mulDivDown(collateral, oraclePrice, ORACLE_PRICE_SCALE)
+    : 0n;
 
   return { borrowAssets, collateralValue };
 }

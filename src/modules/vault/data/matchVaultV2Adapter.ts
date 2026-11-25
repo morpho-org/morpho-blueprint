@@ -1,10 +1,10 @@
 /** The `adapter_kind` values Core REST serves today. The field is open-ended: new kinds ship additively. */
 export type RestVaultV2AdapterKind =
-  | "morpho_market_v1"
-  | "morpho_market_v1_v2"
-  | "morpho_vault_v1"
-  | "morpho_vault_v2"
-  | "unknown";
+  | 'morpho_market_v1'
+  | 'morpho_market_v1_v2'
+  | 'morpho_vault_v1'
+  | 'morpho_vault_v2'
+  | 'unknown';
 
 interface RestVaultV2AdapterHandlers<R> {
   /** Wraps markets directly; the adapter carries one `market_v1` cap per market. */
@@ -28,14 +28,14 @@ export function matchRestVaultV2Adapter<R>(
 ): R {
   const kind = adapter.adapter_kind;
   switch (kind) {
-    case "morpho_market_v1":
-    case "morpho_market_v1_v2":
+    case 'morpho_market_v1':
+    case 'morpho_market_v1_v2':
       return handlers.marketV1();
-    case "morpho_vault_v1":
+    case 'morpho_vault_v1':
       return handlers.vaultV1();
-    case "morpho_vault_v2":
+    case 'morpho_vault_v2':
       return handlers.vaultV2();
-    case "unknown":
+    case 'unknown':
       return handlers.unknown(kind);
     default: {
       // REST can serve a new kind at any time: it degrades to a row with no breakdown rather than

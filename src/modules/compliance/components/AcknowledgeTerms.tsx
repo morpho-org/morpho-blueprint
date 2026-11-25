@@ -1,13 +1,19 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useState } from "react";
-import { Button } from "@/common/components/ui/button";
-import { Checkbox } from "@/common/components/ui/checkbox";
-import { DialogDrawer, DialogDrawerContent, DialogDrawerTitle } from "@/common/components/ui/dialog-drawer";
-import { APP_CONFIG } from "@/config";
-import { useAcknowledgeTermsContext } from "@/modules/compliance/AcknowledgeTermsProvider";
-import { Label } from "../../../common/components/ui/label";
+import Link from 'next/link';
+import { useState } from 'react';
+
+import { Button } from '@/common/components/ui/button';
+import { Checkbox } from '@/common/components/ui/checkbox';
+import {
+  DialogDrawer,
+  DialogDrawerContent,
+  DialogDrawerTitle,
+} from '@/common/components/ui/dialog-drawer';
+import { APP_CONFIG } from '@/config';
+import { useAcknowledgeTermsContext } from '@/modules/compliance/AcknowledgeTermsProvider';
+
+import { Label } from '../../../common/components/ui/label';
 
 interface AcknowledgeTermsProps {
   open: boolean;
@@ -34,16 +40,16 @@ export function AcknowledgeTerms(props: AcknowledgeTermsProps) {
           <Checkbox
             id="acknowledge-terms"
             checked={checked}
-            onCheckedChange={(checked) => setChecked(checked === "indeterminate" ? false : checked)}
+            onCheckedChange={(checked) => setChecked(checked === 'indeterminate' ? false : checked)}
           />
           <Label htmlFor="acknowledge-terms" className="body-small text-muted-foreground">
-            By checking this box, you agree to the{" "}
+            By checking this box, you agree to the{' '}
             <Link href="/terms" className="text-primary hover:underline">
               Terms of Use
             </Link>
             {APP_CONFIG.compliance.privacyPolicy && (
               <>
-                , and{" "}
+                , and{' '}
                 <Link href="/privacy" className="text-primary hover:underline">
                   Privacy Policy
                 </Link>
@@ -53,7 +59,12 @@ export function AcknowledgeTerms(props: AcknowledgeTermsProps) {
           </Label>
         </div>
         <div className="mt-2 flex gap-3">
-          <Button variant="secondary" size="lg" className="flex-1" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="secondary"
+            size="lg"
+            className="flex-1"
+            onClick={() => onOpenChange(false)}
+          >
             Reject
           </Button>
           <Button size="lg" className="flex-1" disabled={!checked} onClick={setAcknowledgement}>

@@ -1,7 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useResponsiveContext } from "@/common/providers/ResponsiveProvider";
+import { useEffect, useState } from 'react';
+
+import { useResponsiveContext } from '@/common/providers/ResponsiveProvider';
 
 export function useIntervalX(dataLength: number) {
   const { isDesktop } = useResponsiveContext();

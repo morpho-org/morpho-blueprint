@@ -1,7 +1,8 @@
-import { DataChart } from "@/common/components/DataChart/DataChart";
-import { CHART_RANGES, DATA_RANGES, type DataRange } from "@/common/utils/chart-ranges";
-import { rateLabel } from "@/common/utils/timeframe";
-import type { Vault } from "@/modules/vault/data/getVault";
+import type { Vault } from '@/modules/vault/data/getVault';
+
+import { DataChart } from '@/common/components/DataChart/DataChart';
+import { CHART_RANGES, DATA_RANGES, type DataRange } from '@/common/utils/chart-ranges';
+import { rateLabel } from '@/common/utils/timeframe';
 
 interface VaultHistoricalApyChartProps {
   vaultPromise: Promise<Vault>;
@@ -10,7 +11,7 @@ interface VaultHistoricalApyChartProps {
 export async function VaultHistoricalApyChart({ vaultPromise }: VaultHistoricalApyChartProps) {
   const vault = await vaultPromise;
 
-  if (!vault || !("historical" in vault) || !vault.historical) {
+  if (!vault || !('historical' in vault) || !vault.historical) {
     return null;
   }
 
@@ -30,11 +31,11 @@ export async function VaultHistoricalApyChart({ vaultPromise }: VaultHistoricalA
       defaultTab="netApy"
       tabOptions={[
         {
-          type: "apy",
-          key: "netApy",
+          type: 'apy',
+          key: 'netApy',
           // As in the Vaults app: the REST series as served, so no smoothing window or rewards to name.
-          description: "Net supply APY, after fees.",
-          title: rateLabel("Net APY"),
+          description: 'Net supply APY, after fees.',
+          title: rateLabel('Net APY'),
           totalApy: vault.apy.total,
           averageApy,
         },

@@ -1,14 +1,21 @@
-import { z } from "zod";
-import { createOnchainAmountSchema } from "@/common/utils/schemas";
-import type { MarketNonIdle } from "@/modules/market/data/getMarket";
-import type { MarketPosition } from "@/modules/market/data/getMarketPositions";
-import { computeMaxBorrow } from "@/modules/market/utils/computeMaxBorrow";
+import { z } from 'zod';
 
-export function createMarketSupplyCollateralAndBorrowFormSchema(market: MarketNonIdle, position?: MarketPosition) {
+import type { MarketNonIdle } from '@/modules/market/data/getMarket';
+import type { MarketPosition } from '@/modules/market/data/getMarketPositions';
+
+import { createOnchainAmountSchema } from '@/common/utils/schemas';
+import { computeMaxBorrow } from '@/modules/market/utils/computeMaxBorrow';
+
+export function createMarketSupplyCollateralAndBorrowFormSchema(
+  market: MarketNonIdle,
+  position?: MarketPosition,
+) {
   const walletCollateralAssetBalance = position?.walletCollateralAssetHolding
     ? BigInt(position.walletCollateralAssetHolding.balance.raw)
     : undefined;
-  const positionBorrowBalance = position?.borrowAmount ? BigInt(position.borrowAmount.raw) : undefined;
+  const positionBorrowBalance = position?.borrowAmount
+    ? BigInt(position.borrowAmount.raw)
+    : undefined;
 
   return z
     .object({
@@ -16,7 +23,7 @@ export function createMarketSupplyCollateralAndBorrowFormSchema(market: MarketNo
         decimals: market.collateralAsset.decimals,
         min: 0n, // Allow 0 as value
         max: walletCollateralAssetBalance,
-        maxErrorMessage: "Amount exceeds wallet balance.",
+        maxErrorMessage: 'Amount exceeds wallet balance.',
       }),
       isMaxSupplyCollateral: z.boolean(),
       borrowAmount: createOnchainAmountSchema({
@@ -27,9 +34,9 @@ export function createMarketSupplyCollateralAndBorrowFormSchema(market: MarketNo
     .superRefine((data, ctx) => {
       if (data.supplyCollateralAmount === 0n && data.borrowAmount === 0n) {
         ctx.addIssue({
-          path: ["root"],
-          code: "custom",
-          message: "One amount is required.",
+          path: ['root'],
+          code: 'custom',
+          message: 'One amount is required.',
         });
       }
 
@@ -38,18 +45,18 @@ export function createMarketSupplyCollateralAndBorrowFormSchema(market: MarketNo
 
       if (newBorrowAmount > maxBorrowAmount) {
         ctx.addIssue({
-          path: ["borrowAmount"],
-          code: "custom",
-          message: "Causes unhealthy position.",
+          path: ['borrowAmount'],
+          code: 'custom',
+          message: 'Causes unhealthy position.',
         });
       }
 
       // The market's liquidity plus what the borrow can reallocate in: above it the simulation reverts.
       if (data.borrowAmount > BigInt(market.availableToBorrow.raw)) {
         ctx.addIssue({
-          path: ["borrowAmount"],
-          code: "custom",
-          message: "Amount exceeds available liquidity.",
+          path: ['borrowAmount'],
+          code: 'custom',
+          message: 'Amount exceeds available liquidity.',
         });
       }
     });
